@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef } from "react"
 import type {
   AppUser,
   CartItem,
@@ -7,7 +7,7 @@ import type {
   Product,
   Role,
   View,
-} from "@repo/shared";
+} from "@repo/shared"
 import {
   Search,
   ShoppingCart,
@@ -25,7 +25,7 @@ import {
   AlertCircle,
   X,
   User,
-} from "lucide-react";
+} from "lucide-react"
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ const MOCK_USERS: (AppUser & { password: string })[] = [
     role: "admin",
     password: "admin123",
   },
-];
+]
 
 const CATEGORIES = [
   { id: "dairy", name: "Dairy & Eggs", emoji: "🥛" },
@@ -77,7 +77,7 @@ const CATEGORIES = [
   { id: "beverages", name: "Beverages", emoji: "🧃" },
   { id: "cleaning", name: "Cleaning", emoji: "🧹" },
   { id: "kitchen", name: "Kitchen Supplies", emoji: "🍳" },
-];
+]
 
 const PRODUCTS: Product[] = [
   {
@@ -392,7 +392,7 @@ const PRODUCTS: Product[] = [
     minOrder: 3,
     step: 1,
   },
-];
+]
 
 const SAMPLE_ORDERS: Order[] = [
   {
@@ -449,12 +449,12 @@ const SAMPLE_ORDERS: Order[] = [
     createdAt: new Date("2026-06-13T14:00:00"),
     notes: "",
   },
-];
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(value: Date | string) {
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = typeof value === "string" ? new Date(value) : value
   return (
     d.toLocaleDateString("id-ID", {
       day: "2-digit",
@@ -463,7 +463,7 @@ function fmtDate(value: Date | string) {
     }) +
     " · " +
     d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-  );
+  )
 }
 
 const STATUS_CFG: Record<
@@ -479,23 +479,23 @@ const STATUS_CFG: Record<
   },
   delivered: { label: "Delivered", bg: "bg-green-100", text: "text-green-700" },
   cancelled: { label: "Cancelled", bg: "bg-red-100", text: "text-red-700" },
-};
+}
 
 function getCatEmoji(catId: string) {
-  return CATEGORIES.find((c) => c.id === catId)?.emoji ?? "📦";
+  return CATEGORIES.find((c) => c.id === catId)?.emoji ?? "📦"
 }
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: OrderStatus }) {
-  const s = STATUS_CFG[status];
+  const s = STATUS_CFG[status]
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${s.bg} ${s.text}`}
     >
       {s.label}
     </span>
-  );
+  )
 }
 
 function QtyControl({
@@ -517,7 +517,7 @@ function QtyControl({
       >
         <Plus size={13} /> Tambah
       </button>
-    );
+    )
   }
   return (
     <div className="flex items-center gap-2">
@@ -537,7 +537,7 @@ function QtyControl({
         <Plus size={13} />
       </button>
     </div>
-  );
+  )
 }
 
 // Product row — used inside divide-y containers (mobile) and standalone cards (desktop)
@@ -574,7 +574,7 @@ function ProductRow({
         onDecrease={onDecrease}
       />
     </div>
-  );
+  )
 }
 
 // Product list — single column on mobile, 2-col grid on desktop
@@ -620,86 +620,86 @@ function ProductList({
         ))}
       </div>
     </>
-  );
+  )
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [view, setView] = useState<View>("login");
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null)
+  const [view, setView] = useState<View>("login")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>(SAMPLE_ORDERS);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [orderNotes, setOrderNotes] = useState("");
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
-  const [loginError, setLoginError] = useState("");
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  )
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeSearch, setActiveSearch] = useState("")
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [orders, setOrders] = useState<Order[]>(SAMPLE_ORDERS)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [orderNotes, setOrderNotes] = useState("")
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" })
+  const [loginError, setLoginError] = useState("")
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all")
+  const [orderPlaced, setOrderPlaced] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Cart
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   function getQty(pid: string) {
-    return cart.find((i) => i.product.id === pid)?.qty ?? 0;
+    return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
   function setQty(product: Product, qty: number) {
-    if (qty <= 0) setCart((c) => c.filter((i) => i.product.id !== product.id));
+    if (qty <= 0) setCart((c) => c.filter((i) => i.product.id !== product.id))
     else
       setCart((c) => {
-        const ex = c.find((i) => i.product.id === product.id);
+        const ex = c.find((i) => i.product.id === product.id)
         if (ex)
           return c.map((i) =>
             i.product.id === product.id ? { ...i, qty } : i,
-          );
-        return [...c, { product, qty }];
-      });
+          )
+        return [...c, { product, qty }]
+      })
   }
   function increase(product: Product) {
-    const q = getQty(product.id);
-    setQty(product, q === 0 ? product.minOrder : q + product.step);
+    const q = getQty(product.id)
+    setQty(product, q === 0 ? product.minOrder : q + product.step)
   }
   function decrease(product: Product) {
-    const q = getQty(product.id);
-    if (q <= product.minOrder) setQty(product, 0);
-    else setQty(product, q - product.step);
+    const q = getQty(product.id)
+    if (q <= product.minOrder) setQty(product, 0)
+    else setQty(product, q - product.step)
   }
 
   // Auth
   function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+    e.preventDefault()
     const found = MOCK_USERS.find(
       (u) =>
         (u.id === loginForm.username ||
           u.name.toLowerCase().startsWith(loginForm.username.toLowerCase())) &&
         u.password === loginForm.password,
-    );
+    )
     if (found) {
-      const { password: _pw, ...user } = found;
-      setCurrentUser(user);
-      setView(user.role === "admin" ? "admin-orders" : "catalog");
-      setLoginError("");
+      const { password: _pw, ...user } = found
+      setCurrentUser(user)
+      setView(user.role === "admin" ? "admin-orders" : "catalog")
+      setLoginError("")
     } else {
-      setLoginError("Username atau password tidak valid.");
+      setLoginError("Username atau password tidak valid.")
     }
   }
 
   function handleLogout() {
-    setCurrentUser(null);
-    setView("login");
-    setCart([]);
-    setLoginForm({ username: "", password: "" });
-    setLoginError("");
+    setCurrentUser(null)
+    setView("login")
+    setCart([])
+    setLoginForm({ username: "", password: "" })
+    setLoginError("")
   }
 
   // Orders
   function placeOrder() {
-    if (!currentUser || cart.length === 0) return;
+    if (!currentUser || cart.length === 0) return
     const order: Order = {
       id: `ORD-2026-${String(orders.length + 1).padStart(4, "0")}`,
       userId: currentUser.id,
@@ -709,68 +709,68 @@ export default function App() {
       status: "pending",
       createdAt: new Date(),
       notes: orderNotes,
-    };
-    setOrders((o) => [order, ...o]);
-    setCart([]);
-    setOrderNotes("");
-    setOrderPlaced(true);
+    }
+    setOrders((o) => [order, ...o])
+    setCart([])
+    setOrderNotes("")
+    setOrderPlaced(true)
     setTimeout(() => {
-      setOrderPlaced(false);
-      setView("orders");
-    }, 1800);
+      setOrderPlaced(false)
+      setView("orders")
+    }, 1800)
   }
 
   function updateStatus(orderId: string, status: OrderStatus) {
     setOrders((o) =>
       o.map((ord) => (ord.id === orderId ? { ...ord, status } : ord)),
-    );
+    )
   }
 
   // Derived
-  const selectedCategory = CATEGORIES.find((c) => c.id === selectedCategoryId);
+  const selectedCategory = CATEGORIES.find((c) => c.id === selectedCategoryId)
   const categoryProducts = PRODUCTS.filter(
     (p) => p.category === selectedCategoryId,
-  );
+  )
   const searchResults = useMemo(() => {
-    if (!activeSearch.trim()) return [];
-    const q = activeSearch.toLowerCase();
+    if (!activeSearch.trim()) return []
+    const q = activeSearch.toLowerCase()
     return PRODUCTS.filter(
       (p) =>
         p.name.toLowerCase().includes(q) || p.unit.toLowerCase().includes(q),
-    );
-  }, [activeSearch]);
+    )
+  }, [activeSearch])
   const userOrders = useMemo(
     () => orders.filter((o) => o.userId === currentUser?.id),
     [orders, currentUser],
-  );
+  )
   const filteredAdminOrders = useMemo(
     () =>
       statusFilter === "all"
         ? orders
         : orders.filter((o) => o.status === statusFilter),
     [orders, statusFilter],
-  );
-  const selectedOrder = orders.find((o) => o.id === selectedOrderId);
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
+  )
+  const selectedOrder = orders.find((o) => o.id === selectedOrderId)
+  const pendingCount = orders.filter((o) => o.status === "pending").length
 
   // Nav
   function goBack() {
     if (view === "category" || view === "search" || view === "cart")
-      setView("catalog");
-    else if (view === "order-detail") setView("orders");
-    else if (view === "admin-order-detail") setView("admin-orders");
-    else setView("catalog");
+      setView("catalog")
+    else if (view === "order-detail") setView("orders")
+    else if (view === "admin-order-detail") setView("admin-orders")
+    else setView("catalog")
   }
   function goSearch() {
-    setView("search");
-    setTimeout(() => searchInputRef.current?.focus(), 80);
+    setView("search")
+    setTimeout(() => searchInputRef.current?.focus(), 80)
   }
 
   // ─── Inner shared layout components ──────────────────────────────────────────
 
   // Sidebar — desktop only
   const Sidebar = () => {
-    const isAdmin = currentUser?.role === "admin";
+    const isAdmin = currentUser?.role === "admin"
     const customerNav = [
       {
         id: "catalog" as View,
@@ -797,7 +797,7 @@ export default function App() {
         icon: <ClipboardList size={18} />,
         action: () => setView("orders"),
       },
-    ];
+    ]
     const adminNav = [
       {
         id: "admin-orders" as View,
@@ -806,9 +806,9 @@ export default function App() {
         action: () => setView("admin-orders"),
         badge: pendingCount,
       },
-    ];
-    const navItems = isAdmin ? adminNav : customerNav;
-    const activeView = view;
+    ]
+    const navItems = isAdmin ? adminNav : customerNav
+    const activeView = view
 
     return (
       <aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:z-30 lg:w-64 flex-col bg-white border-r border-border">
@@ -830,8 +830,8 @@ export default function App() {
           {navItems.map((item) => {
             const active =
               activeView === item.id ||
-              (item.id === "catalog" && activeView === "category");
-            const badge = typeof item.badge === "number" ? item.badge : 0;
+              (item.id === "catalog" && activeView === "category")
+            const badge = typeof item.badge === "number" ? item.badge : 0
             return (
               <button
                 key={item.id}
@@ -854,7 +854,7 @@ export default function App() {
                   </span>
                 )}
               </button>
-            );
+            )
           })}
         </nav>
 
@@ -882,8 +882,8 @@ export default function App() {
           </button>
         </div>
       </aside>
-    );
-  };
+    )
+  }
 
   // Bottom nav — mobile only
   const BottomNav = () => (
@@ -917,8 +917,8 @@ export default function App() {
           },
         ].map((tab) => {
           const active =
-            view === tab.id || (tab.id === "catalog" && view === "category");
-          const badge = typeof tab.badge === "number" ? tab.badge : 0;
+            view === tab.id || (tab.id === "catalog" && view === "category")
+          const badge = typeof tab.badge === "number" ? tab.badge : 0
           return (
             <button
               key={tab.id}
@@ -937,11 +937,11 @@ export default function App() {
               </span>
               <span className="text-[10px] font-semibold">{tab.label}</span>
             </button>
-          );
+          )
         })}
       </div>
     </nav>
-  );
+  )
 
   // Top header — mobile prominent, desktop minimal
   const AppHeader = ({
@@ -990,7 +990,7 @@ export default function App() {
         <LogOut size={17} />
       </button>
     </header>
-  );
+  )
 
   // Layout shell wrapper for all authenticated views
   const Shell = ({
@@ -1023,7 +1023,7 @@ export default function App() {
         {currentUser?.role === "customer" && <BottomNav />}
       </div>
     </div>
-  );
+  )
 
   // ─── LOGIN ───────────────────────────────────────────────────────────────────
 
@@ -1126,7 +1126,7 @@ export default function App() {
           </form>
         </div>
       </div>
-    );
+    )
   }
 
   // ─── CATALOG ─────────────────────────────────────────────────────────────────
@@ -1168,8 +1168,8 @@ export default function App() {
                 <button
                   key={cat.id}
                   onClick={() => {
-                    setSelectedCategoryId(cat.id);
-                    setView("category");
+                    setSelectedCategoryId(cat.id)
+                    setView("category")
                   }}
                   className="flex flex-col items-center gap-1.5 bg-white border border-border rounded-xl py-3 px-1 hover:border-accent hover:bg-accent/5 active:scale-95 transition-all"
                 >
@@ -1196,7 +1196,7 @@ export default function App() {
           </section>
         </div>
       </Shell>
-    );
+    )
   }
 
   // ─── CATEGORY ────────────────────────────────────────────────────────────────
@@ -1214,7 +1214,7 @@ export default function App() {
           decrease={decrease}
         />
       </Shell>
-    );
+    )
   }
 
   // ─── SEARCH ──────────────────────────────────────────────────────────────────
@@ -1241,7 +1241,7 @@ export default function App() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") setActiveSearch(searchQuery);
+                  if (e.key === "Enter") setActiveSearch(searchQuery)
                 }}
                 placeholder="Cari produk..."
                 className="flex-1 bg-transparent py-2.5 text-sm focus:outline-none"
@@ -1249,8 +1249,8 @@ export default function App() {
               {searchQuery && (
                 <button
                   onClick={() => {
-                    setSearchQuery("");
-                    setActiveSearch("");
+                    setSearchQuery("")
+                    setActiveSearch("")
                   }}
                 >
                   <X size={14} className="text-muted-foreground" />
@@ -1298,7 +1298,7 @@ export default function App() {
           <BottomNav />
         </div>
       </div>
-    );
+    )
   }
 
   // ─── CART ────────────────────────────────────────────────────────────────────
@@ -1318,7 +1318,7 @@ export default function App() {
             Kirim Order — {cart.length} produk ({cartCount} qty)
           </button>
         )
-      ) : undefined;
+      ) : undefined
 
     return (
       <Shell title="Keranjang" showBack actionBar={cartActionBar}>
@@ -1392,7 +1392,7 @@ export default function App() {
           </div>
         )}
       </Shell>
-    );
+    )
   }
 
   // ─── USER ORDERS ─────────────────────────────────────────────────────────────
@@ -1412,8 +1412,8 @@ export default function App() {
               <button
                 key={order.id}
                 onClick={() => {
-                  setSelectedOrderId(order.id);
-                  setView("order-detail");
+                  setSelectedOrderId(order.id)
+                  setView("order-detail")
                 }}
                 className="bg-white rounded-2xl border border-border p-4 text-left hover:border-accent/50 active:scale-[0.99] transition-all"
               >
@@ -1446,7 +1446,7 @@ export default function App() {
           </div>
         )}
       </Shell>
-    );
+    )
   }
 
   // ─── USER ORDER DETAIL ───────────────────────────────────────────────────────
@@ -1506,7 +1506,7 @@ export default function App() {
           </div>
         </div>
       </Shell>
-    );
+    )
   }
 
   // ─── ADMIN ORDERS ────────────────────────────────────────────────────────────
@@ -1519,7 +1519,7 @@ export default function App() {
       "processing",
       "delivered",
       "cancelled",
-    ];
+    ]
     return (
       <Shell title="Admin — Semua Order">
         <div className="space-y-4">
@@ -1534,8 +1534,8 @@ export default function App() {
                 "cancelled",
               ] as OrderStatus[]
             ).map((s) => {
-              const count = orders.filter((o) => o.status === s).length;
-              const cfg = STATUS_CFG[s];
+              const count = orders.filter((o) => o.status === s).length
+              const cfg = STATUS_CFG[s]
               return (
                 <button
                   key={s}
@@ -1555,7 +1555,7 @@ export default function App() {
                     {count}
                   </p>
                 </button>
-              );
+              )
             })}
           </div>
 
@@ -1593,8 +1593,8 @@ export default function App() {
                 <button
                   key={order.id}
                   onClick={() => {
-                    setSelectedOrderId(order.id);
-                    setView("admin-order-detail");
+                    setSelectedOrderId(order.id)
+                    setView("admin-order-detail")
                   }}
                   className="bg-white rounded-2xl border border-border p-4 text-left hover:border-accent/50 active:scale-[0.99] transition-all"
                 >
@@ -1623,7 +1623,7 @@ export default function App() {
           )}
         </div>
       </Shell>
-    );
+    )
   }
 
   // ─── ADMIN ORDER DETAIL ──────────────────────────────────────────────────────
@@ -1635,8 +1635,8 @@ export default function App() {
       processing: ["delivered", "cancelled"],
       delivered: [],
       cancelled: [],
-    };
-    const nextStatuses = nextMap[selectedOrder.status];
+    }
+    const nextStatuses = nextMap[selectedOrder.status]
 
     const actionBar =
       nextStatuses.length > 0 ? (
@@ -1645,8 +1645,8 @@ export default function App() {
             <button
               key={s}
               onClick={() => {
-                updateStatus(selectedOrder.id, s);
-                setView("admin-orders");
+                updateStatus(selectedOrder.id, s)
+                setView("admin-orders")
               }}
               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors active:scale-[0.98] ${
                 s === "cancelled"
@@ -1658,7 +1658,7 @@ export default function App() {
             </button>
           ))}
         </div>
-      ) : undefined;
+      ) : undefined
 
     return (
       <Shell title={selectedOrder.id} showBack actionBar={actionBar}>
@@ -1735,8 +1735,8 @@ export default function App() {
           </div>
         </div>
       </Shell>
-    );
+    )
   }
 
-  return null;
+  return null
 }

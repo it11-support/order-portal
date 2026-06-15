@@ -1,4 +1,3 @@
-export type Role = "customer" | "admin" | "sales_admin";
 
 export type OrderStatus =
   | "pending"
@@ -18,15 +17,6 @@ export type View =
   | "admin-orders"
   | "admin-order-detail";
 
-export interface AppUser {
-  id: string;
-  email: string;
-  name: string;
-  company: string;
-  cardCode?: string;
-  role: Role;
-  isActive: boolean;
-}
 
 export interface Product {
   id: string;
@@ -54,21 +44,17 @@ export interface Order {
   notes: string;
 }
 
-export interface ApiSuccess<T> {
-  data: T;
-}
 
-export interface ApiError {
-  message: string;
-  code?: string;
-}
-
-export interface LoginRequest {
+export interface AppUser {
+  id: string;
   email: string;
-  password: string;
+  name: string;
+  company: string;
+  cardCode?: string;
+  role: "customer" | "admin" | "sales_admin";
+  isActive: boolean;
 }
 
-export interface LoginResponse {
-  user: AppUser;
-  token: string;
-}
+export * from './auth/index.js'
+export * from './customer/index.js'
+export * from './user/index.js'
