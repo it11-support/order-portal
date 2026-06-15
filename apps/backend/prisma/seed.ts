@@ -1,8 +1,5 @@
-
 import { prisma } from '../src/utils/prisma'
 import * as bcrypt from 'bcrypt'
-
-
 
 async function main() {
   console.log('🔄 Memulai seeding master data portal...')

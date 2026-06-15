@@ -6,9 +6,8 @@ import { LoginRequest, LoginResponse, ApiError, RoleType, User } from '@repo/sha
 
 export const login = async (
   req: Request<{}, LoginResponse | ApiError, LoginRequest>,
-  res: Response<LoginResponse | ApiError>
+  res: Response<LoginResponse | ApiError>,
 ): Promise<void> => {
-
   const { username, password } = req.body
 
   // 1. Validasi awal jika input data kosong
@@ -22,8 +21,8 @@ export const login = async (
     where: { username },
     include: {
       role: true,
-      customer: true
-    }
+      customer: true,
+    },
   })
 
   // 3. Validasi keberadaan user dan status keaktifan akun
@@ -51,10 +50,10 @@ export const login = async (
     role: {
       id: user.role.id,
       name: user.role.name as RoleType,
-      createdAt: user.role.createdAt
+      createdAt: user.role.createdAt,
     },
     customerId: user.customerId,
-    customer: user.customer
+    customer: user.customer,
   }
 
   const token = generateToken(userPayload)
@@ -63,7 +62,7 @@ export const login = async (
     user: {
       id: user.id,
       username: user.username,
-      email: user.email ?? "",
+      email: user.email ?? '',
       name: user.name,
       roleId: user.roleId,
       isActive: user.isActive,
@@ -74,9 +73,9 @@ export const login = async (
       role: {
         id: user.role.id,
         name: user.role.name as RoleType,
-        createdAt: user.role.createdAt
-      }
+        createdAt: user.role.createdAt,
+      },
     },
-    token
+    token,
   })
 }

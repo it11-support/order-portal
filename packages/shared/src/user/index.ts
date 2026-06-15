@@ -1,5 +1,5 @@
-import { Customer } from "../customer"
-export type RoleType = "customer" | "admin" | "sales_admin";
+import { Customer } from '../customer'
+export type RoleType = 'customer' | 'admin' | 'sales_admin'
 
 export interface User {
   id: number | bigint | null
@@ -17,7 +17,7 @@ export interface User {
 }
 
 export interface Role {
-  id: number;
-  name: RoleType;
+  id: number
+  name: RoleType
   createdAt: Date | string | null
 }

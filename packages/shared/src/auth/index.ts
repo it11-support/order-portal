@@ -1,45 +1,45 @@
-import { User } from "../user"
+import { User } from '../user'
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
 export interface LoginResponse {
-  user: User;
-  token: string;
+  user: User
+  token: string
 }
 
 export interface LoginRequestBody {
-  username?: string;
-  password?: string;
+  username?: string
+  password?: string
 }
 
-export interface AuthUserResponse extends User { }
+export interface AuthUserResponse extends User {}
 
 export interface LoginSuccessResponse {
-  message: string;
-  token: string;
-  user: AuthUserResponse;
+  message: string
+  token: string
+  user: AuthUserResponse
 }
 
 export interface AuthErrorResponse {
-  message: string;
-  error?: string;
+  message: string
+  error?: string
 }
 
 export interface JWTPayload {
-  userId: number;
-  username: string;
-  role: string;
-  customerId: string | null;
+  userId: number
+  username: string
+  role: string
+  customerId: string | null
 }
 
 export interface ApiSuccess<T> {
-  data: T;
+  data: T
 }
 
 export interface ApiError {
-  message: string;
-  code?: string;
+  message: string
+  code?: string
 }

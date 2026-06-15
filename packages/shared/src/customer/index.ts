@@ -1,9 +1,9 @@
-import { User } from "../user"
+import { User } from '../user'
 
 export interface Subgroup {
-  indCode: number;
-  indName: string;
-  indDesc: string;
+  indCode: number
+  indName: string
+  indDesc: string
 }
 
 export interface Customer {

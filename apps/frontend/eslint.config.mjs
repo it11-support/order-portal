@@ -1,4 +1,5 @@
 import typescriptParser from '@typescript-eslint/parser'
+import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default [
   {
@@ -9,8 +10,6 @@ export default [
         project: true,
       },
     },
-    rules: {
-      semi: ['error', 'never'],
-    },
   },
+  eslintConfigPrettier,
 ]

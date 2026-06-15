@@ -5,7 +5,7 @@
     "noEmit": true,
     "outDir": "dist",
     "skipLibCheck": true,
-    "composite": true 
+    "composite": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "vite.config.ts"]
