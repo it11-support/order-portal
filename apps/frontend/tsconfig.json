@@ -3,11 +3,13 @@
   "compilerOptions": {
     "types": ["vite/client"],
     "noEmit": true,
+    "rootDir": ".",
     "outDir": "dist",
     "paths": {
-      "@repo/shared": ["../../packages/shared/src/index.ts"]
+      "@repo/shared": ["../../packages/shared/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "references": [{ "path": "../../packages/shared" }],
   "exclude": ["node_modules", "dist", "vite.config.ts"]
 }
