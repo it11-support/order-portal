@@ -8,7 +8,7 @@ import { getCatEmoji } from '../lib/utils'
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>()
   const navigate = useNavigate()
-  const { cart, increase, decrease } = useCart()
+  const { cart, increase, decrease, remove } = useCart()
 
   const category = CATEGORIES.find((c) => c.id === categoryId)
   const categoryProducts = PRODUCTS.filter((p) => p.category === categoryId)
@@ -24,6 +24,7 @@ const CategoryPage = () => {
         cart={cart}
         increase={increase}
         decrease={decrease}
+        remove={remove}
       />
     </Shell>
   )
