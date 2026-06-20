@@ -3,6 +3,7 @@ import { generateToken, prisma } from '../../utils'
 import * as bcrypt from 'bcrypt'
 
 import { LoginRequest, LoginResponse, ApiError, RoleType, User } from '@repo/shared'
+import { AuthenticatedRequest } from '@/auth/middleware'
 
 export const login = async (
   req: Request<{}, LoginResponse | ApiError, LoginRequest>,
@@ -10,13 +11,17 @@ export const login = async (
 ): Promise<void> => {
   const { username, password } = req.body
 
-  // 1. Validasi awal jika input data kosong
   if (!username || !password) {
-    res.status(400).json({ message: 'Username dan password wajib diisi' })
+    res.status(400).json({
+      message: 'Validasi gagal',
+      errors: {
+        username: !username ? 'Username wajib diisi' : undefined,
+        password: !password ? 'Password wajib diisi' : undefined,
+      },
+    })
     return
   }
 
-  // 2. Cari user berdasarkan username di database PostgreSQL portal beserta relasinya
   const user = await prisma.user.findUnique({
     where: { username },
     include: {
@@ -25,16 +30,35 @@ export const login = async (
     },
   })
 
-  // 3. Validasi keberadaan user dan status keaktifan akun
-  if (!user || !user.isActive) {
-    res.status(401).json({ message: 'Username tidak ditemukan atau status non-aktif' })
+  if (!user) {
+    res.status(401).json({
+      message: 'Login gagal',
+      errors: {
+        username: 'Username tidak ditemukan',
+      },
+    })
     return
   }
 
-  // 4. Validasi kecocokan password menggunakan bcrypt
+  if (!user.isActive) {
+    res.status(403).json({
+      message: 'Login gagal',
+      errors: {
+        username: 'Akun tidak aktif',
+      },
+    })
+    return
+  }
+
   const isPasswordValid = await bcrypt.compare(password, user.password)
+
   if (!isPasswordValid) {
-    res.status(401).json({ message: 'Password salah' })
+    res.status(401).json({
+      message: 'Login gagal',
+      errors: {
+        password: 'Password salah',
+      },
+    })
     return
   }
 
@@ -59,23 +83,39 @@ export const login = async (
   const token = generateToken(userPayload)
 
   res.status(200).json({
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email ?? '',
-      name: user.name,
-      roleId: user.roleId,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      customerId: user.customerId,
-      customer: user.customer,
-      role: {
-        id: user.role.id,
-        name: user.role.name as RoleType,
-        createdAt: user.role.createdAt,
-      },
-    },
+    user: { ...userPayload },
     token,
   })
+}
+
+export const me = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: Number(req.user?.id),
+      },
+      include: {
+        role: true,
+        customer: true,
+      },
+    })
+
+    if (!user) {
+      res.status(404).json({
+        message: 'User tidak ditemukan',
+      })
+      return
+    }
+    const { password, ...userWithoutPassword } = user
+
+    res.status(200).json(userWithoutPassword)
+  } catch (error) {
+    res.status(500).json({
+      message: 'Internal server error',
+    })
+  }
 }

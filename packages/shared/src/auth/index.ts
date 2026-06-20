@@ -15,7 +15,7 @@ export interface LoginRequestBody {
   password?: string
 }
 
-export interface AuthUserResponse extends User {}
+export interface AuthUserResponse extends User { }
 
 export interface LoginSuccessResponse {
   message: string
@@ -41,5 +41,9 @@ export interface ApiSuccess<T> {
 
 export interface ApiError {
   message: string
-  code?: string
+  errors?: {
+    username?: string
+    password?: string
+    general?: string
+  }
 }
