@@ -1,6 +1,6 @@
 import { Product } from '@repo/shared'
-import { CATEGORIES } from '../lib/mock-data'
-import { QtyControl } from './QtyControl'
+import { CATEGORIES } from '../../lib/mock-data'
+import { QtyControl } from '../QtyControl'
 
 const getCatEmoji = (catId: string) => {
   return CATEGORIES.find((c) => c.id === catId)?.emoji ?? '📦'

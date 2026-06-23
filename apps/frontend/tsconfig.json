@@ -6,10 +6,13 @@
     "rootDir": ".",
     "outDir": "dist",
     "paths": {
-      "@repo/shared": ["../../packages/shared/dist/index.d.ts"]
+      "@repo/shared": ["../../packages/shared/src/index.ts"],
+      "@/*": ["./src/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@hooks/*": ["./src/app/hooks/*"],    
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "vite.config.ts"],
   "references": [{ "path": "../../packages/shared" }],
-  "exclude": ["node_modules", "dist", "vite.config.ts"]
+  "exclude": ["node_modules", "dist"]
 }

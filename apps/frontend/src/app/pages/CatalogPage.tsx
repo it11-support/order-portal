@@ -2,7 +2,7 @@ import { Search } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Shell from '../layouts/Shell'
 import { useNavigate } from 'react-router-dom'
-import { ProductList } from '../components/ProductList'
+import { ProductList } from '../components/products/ProductList'
 import { CATEGORIES, PRODUCTS } from '../lib/mock-data'
 import { useCart } from '../contexts/CartContext'
 

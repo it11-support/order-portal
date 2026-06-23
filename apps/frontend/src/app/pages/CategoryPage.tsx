@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import Shell from '../layouts/Shell'
-import { ProductList } from '../components/ProductList'
+import { ProductList } from '../components/products/ProductList'
 import { CATEGORIES, PRODUCTS } from '../lib/mock-data'
 import { useCart } from '../contexts/CartContext'
 import { getCatEmoji } from '../lib/utils'

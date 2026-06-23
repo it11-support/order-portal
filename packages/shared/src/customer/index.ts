@@ -34,7 +34,7 @@ export interface Customer {
 }
 
 export interface Subgroup {
-  ind_code: number
-  ind_name: string
-  ind_desc: string
+  IndCode: number
+  IndName: string
+  IndDesc: string
 }

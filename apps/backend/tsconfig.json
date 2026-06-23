@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@repo/shared": ["../../packages/shared/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "prisma/**/*.ts"],

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "pnpm --filter @repo/shared build && tsc --noEmit -p tsconfig.json",
     "lint": "eslint src/**/*.ts --fix",

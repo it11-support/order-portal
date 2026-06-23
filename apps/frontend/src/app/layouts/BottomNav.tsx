@@ -30,7 +30,7 @@ const BottomNav = () => {
   ]
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-border">
+    <nav data-bottom-nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-border">
       <div className="flex">
         {tabs.map((tab) => (
           <NavLink

@@ -11,6 +11,7 @@ import OrderDetailPage from '../pages/OrderDetailPage'
 import AdminOrdersPage from '../pages/AdminOrdersPage'
 import AdminOrderDetailPage from '../pages/AdminOrderDetailPage'
 import AppLayout from '../layouts/AppLayout'
+import CustomersPage from '../pages/CustomersPage'
 
 export const router = createBrowserRouter([
   {
@@ -57,6 +58,11 @@ export const router = createBrowserRouter([
         path: 'admin/orders/:orderId',
         element: <AdminOrderDetailPage />,
       },
+      {
+        path: 'admin/customers',
+        element: <CustomersPage />,
+
+      }
     ],
   },
 ])

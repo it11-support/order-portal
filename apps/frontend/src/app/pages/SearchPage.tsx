@@ -1,5 +1,5 @@
 import { Search, X, Package, ArrowLeft } from 'lucide-react'
-import { ProductList } from '../components/ProductList'
+import { ProductList } from '../components/products/ProductList'
 import { PRODUCTS } from '../lib/mock-data'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
