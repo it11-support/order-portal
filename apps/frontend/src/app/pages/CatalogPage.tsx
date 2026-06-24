@@ -1,10 +1,9 @@
 import { Search } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-import Shell from '../layouts/Shell'
+import { Shell } from '@layouts'
 import { useNavigate } from 'react-router-dom'
-import { ProductList } from '../components/products/ProductList'
-import { CATEGORIES, PRODUCTS } from '../lib/mock-data'
-import { useCart } from '../contexts/CartContext'
+import { ProductList } from '@components'
+import { CATEGORIES, PRODUCTS } from '@lib'
+import { useAuth, useCart } from '@contexts'
 
 const CatalogPage = () => {
   const { user: currentUser } = useAuth()

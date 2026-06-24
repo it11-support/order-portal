@@ -8,9 +8,8 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, useCart } from '@contexts'
 import { NavLink, useLocation } from 'react-router-dom'
-import { useCart } from '../contexts/CartContext'
 
 type NavItem = {
   id: string
@@ -21,10 +20,9 @@ type NavItem = {
 }
 
 const Sidebar = () => {
-  const { user: currentUser, logout } = useAuth()
+  const { user: currentUser, logout, isAdmin } = useAuth()
   const { cartCount } = useCart()
-  const location = useLocation()
-  const isAdmin = currentUser?.role.name === 'admin'
+  const location = useLocation()  
 
   const customerNav: NavItem[] = [
     {

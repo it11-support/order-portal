@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, Dispatch, SetStateAction } from 'react'
 import type { Order, OrderStatus, CartItem } from '@repo/shared'
-import { PRODUCTS } from '../lib/mock-data'
+import { PRODUCTS } from '@lib'
 
 type OrderContextType = {
   orders: Order[]

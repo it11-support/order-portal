@@ -1,9 +1,9 @@
 import { Request, Response } from 'express'
-import { generateToken, prisma } from '../../utils'
+import { generateToken, prisma } from '@utils'
 import * as bcrypt from 'bcrypt'
 
 import { LoginRequest, LoginResponse, ApiError, RoleType, User } from '@repo/shared'
-import { AuthenticatedRequest } from '@/auth/middleware'
+import { AuthenticatedRequest } from '@auth'
 
 export const login = async (
   req: Request<{}, LoginResponse | ApiError, LoginRequest>,

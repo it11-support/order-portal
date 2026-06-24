@@ -1,7 +1,6 @@
 import { ArrowLeft, LogOut, Package, ShoppingCart } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
+import { useAuth, useCart } from '@contexts'
 
 type AppHeaderProps = {
   title: string

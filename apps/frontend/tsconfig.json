@@ -8,8 +8,12 @@
     "paths": {
       "@repo/shared": ["../../packages/shared/src/index.ts"],
       "@/*": ["./src/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@hooks/*": ["./src/app/hooks/*"],    
+      "@lib": ["./src/lib/index.ts"],
+      "@hooks": ["./src/app/hooks/index.ts"],
+      "@components": ["./src/app/components/index.ts"],
+      "@contexts": ["./src/app/contexts/index.ts"],
+      "@layouts": ["./src/app/layouts/index.ts"],
+      "@pages": ["./src/app/pages/index.ts"],
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "vite.config.ts"],

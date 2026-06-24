@@ -1,9 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import Shell from '../layouts/Shell'
-import { ProductList } from '../components/products/ProductList'
-import { CATEGORIES, PRODUCTS } from '../lib/mock-data'
-import { useCart } from '../contexts/CartContext'
-import { getCatEmoji } from '../lib/utils'
+import { Shell } from '@layouts'
+import { ProductList } from '@components'
+import { CATEGORIES, PRODUCTS } from '@lib'
+import { useCart } from '@contexts'
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>()

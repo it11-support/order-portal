@@ -1,5 +1,5 @@
 import { Product } from '@repo/shared'
-import { CATEGORIES } from '../../lib/mock-data'
+import { CATEGORIES } from '@lib'
 import { QtyControl } from '../QtyControl'
 
 const getCatEmoji = (catId: string) => {

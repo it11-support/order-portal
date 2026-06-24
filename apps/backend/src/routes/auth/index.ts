@@ -1,4 +1,4 @@
-import { login } from '@/controllers/auth'
+import { login } from '@controllers'
 import { Router } from 'express'
 const router = Router()
 

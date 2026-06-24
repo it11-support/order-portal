@@ -1,12 +1,12 @@
 import { ClipboardList } from 'lucide-react'
-import Shell from '../layouts/Shell'
-import { StatusBadge } from '../components/StatusBadge'
+import { StatusBadge } from '@components'
 import { STATUS_CONFIG } from '../components/StatusBadge'
 import { useOrders } from '../contexts/OrderContext'
-import { fmtDate } from '../lib/utils'
+import { fmtDate } from '@lib'
 import { useNavigate } from 'react-router-dom'
 import type { OrderStatus } from '@repo/shared'
 import { useState, useMemo } from 'react'
+import { Shell } from '@layouts'
 
 const AdminOrdersPage = () => {
   const { orders } = useOrders()

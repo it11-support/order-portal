@@ -1,8 +1,8 @@
 import { ClipboardList } from 'lucide-react'
-import Shell from '../layouts/Shell'
-import { StatusBadge } from '../components/StatusBadge'
-import { useOrders } from '../contexts/OrderContext'
-import { fmtDate } from '../lib/utils'
+import { Shell } from '@layouts'
+import { StatusBadge } from '@components'
+import { useOrders } from '@contexts'
+import { fmtDate } from '@lib'
 import { useNavigate } from 'react-router-dom'
 
 const OrdersPage = () => {

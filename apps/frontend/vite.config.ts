@@ -26,8 +26,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@hooks': path.resolve(__dirname, './src/app/hooks'),
+      '@lib': path.resolve(__dirname, './src/lib/index.ts'),
+      '@hooks': path.resolve(__dirname, './src/app/hooks/index.ts'),
+      '@components': path.resolve(__dirname, './src/app/components/index.ts'),
+      '@contexts': path.resolve(__dirname, './src/app/contexts/index.ts'),
+      '@layouts': path.resolve(__dirname, './src/app/layouts/index.ts'),
+      '@pages': path.resolve(__dirname, './src/app/pages/index.ts'),
     },
   },
 

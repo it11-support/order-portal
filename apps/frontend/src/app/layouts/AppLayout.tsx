@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
-import { ScrollToTopButton } from '../components/scroll-top/ScrollTopButton'
+import { ScrollToTopButton } from '@components'
 
 export default function AppLayout() {
   return (

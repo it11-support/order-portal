@@ -1,5 +1,5 @@
-import CustomerList from '../components/customers/CustomerList'
-import Shell from '../layouts/Shell'
+import { CustomerList } from '@components'
+import { Shell } from '@layouts'
 
 const CustomersPage = () => {
   return (

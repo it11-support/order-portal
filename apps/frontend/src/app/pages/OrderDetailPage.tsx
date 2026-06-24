@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import Shell from '../layouts/Shell'
-import { StatusBadge } from '../components/StatusBadge'
-import { useOrders } from '../contexts/OrderContext'
-import { fmtDate, getCatEmoji } from '../lib/utils'
+import { Shell } from '@layouts'
+import { StatusBadge } from '@components'
+import { useOrders } from '@contexts'
+import { fmtDate, getCatEmoji } from '@lib'
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>()
@@ -16,7 +16,7 @@ const OrderDetailPage = () => {
   }
 
   return (
-    <Shell title={order.id} showBack backTo={"/orders"}>
+    <Shell title={order.id} showBack backTo={'/orders'}>
       <div className="max-w-2xl space-y-4">
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
           <div className="flex items-start justify-between">

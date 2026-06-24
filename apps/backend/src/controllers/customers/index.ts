@@ -1,5 +1,5 @@
 import { CustomersWhereInput } from "@/generated/prisma/models";
-import { prisma } from "@/utils"
+import { prisma } from "@utils"
 import { Request, Response } from "express";
 import { DEFAULT_LIMIT, DEFAULT_PAGE } from "@repo/shared"
 

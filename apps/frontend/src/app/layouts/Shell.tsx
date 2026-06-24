@@ -1,6 +1,6 @@
 import AppHeader from './AppHeader'
 import BottomNav from './BottomNav'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@contexts'
 
 const Shell = ({
   children,

@@ -1,6 +1,6 @@
 import { User } from '@repo/shared'
 import { createContext, Dispatch, SetStateAction, useContext, useEffect, useState } from 'react'
-import { api } from '../../lib/api'
+import { api } from '@lib'
 
 type AuthContextType = {
   user: User | null
@@ -10,6 +10,7 @@ type AuthContextType = {
     password?: string
     general?: string
   }
+  isAdmin: boolean
   setLoginError: Dispatch<SetStateAction<{ username?: string; password?: string; general?: string }>>
   logout: () => void
   loading: boolean
@@ -25,6 +26,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     password?: string
     general?: string
   }>({})
+  const isAdmin = user?.role.name === 'admin'
 
   useEffect(() => {
     const init = async () => {
@@ -71,7 +73,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, loginError, setLoginError }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, loginError, setLoginError, isAdmin }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import authRoute from './auth'
-import { me } from '@/controllers/auth'
-import { requireAuth } from '@/auth/middleware'
+import { me } from '@controllers'
+import { requireAuth } from '@auth'
 import customerRoutes from './customers'
 
 const router = Router()

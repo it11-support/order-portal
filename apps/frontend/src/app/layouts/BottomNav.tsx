@@ -1,11 +1,27 @@
-import { ClipboardList, Home, Search, ShoppingCart } from 'lucide-react'
+import {
+  ClipboardList,
+  Home,
+  Package,
+  Search,
+  ShoppingCart,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { NavLink } from 'react-router-dom'
-import { useCart } from '../contexts/CartContext'
+import { useAuth, useCart } from '@contexts'
+
+type BottomNavTab = {
+  label: string
+  icon: LucideIcon
+  path: string
+  badge?: number
+}
 
 const BottomNav = () => {
   const { cartCount } = useCart()
+  const { isAdmin } = useAuth()
 
-  const tabs = [
+  const customerTabs: BottomNavTab[] = [
     {
       label: 'Home',
       icon: Home,
@@ -29,8 +45,30 @@ const BottomNav = () => {
     },
   ]
 
+  const adminTabs: BottomNavTab[] = [
+    {
+      label: 'Users',
+      icon: Users,
+      path: '/users',
+    },
+    {
+      label: 'Products',
+      icon: Package,
+      path: '/products',
+    },
+    {
+      label: 'Customers',
+      icon: Users,
+      path: 'admin/customers',
+    },
+  ]
+
+  const tabs = isAdmin ? adminTabs : customerTabs
   return (
-    <nav data-bottom-nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-border">
+    <nav
+      data-bottom-nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-border"
+    >
       <div className="flex">
         {tabs.map((tab) => (
           <NavLink
@@ -49,7 +87,7 @@ const BottomNav = () => {
 
                   {(tab.badge ?? 0) > 0 && (
                     <span className="absolute -top-1 -right-1.5 w-4 h-4 bg-accent text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {tab.badge! > 9 ? '9+' : tab.badge}
+                      {(tab.badge ?? 0) > 9 ? '9+' : tab.badge}
                     </span>
                   )}
                 </span>

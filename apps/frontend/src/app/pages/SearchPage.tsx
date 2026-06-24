@@ -1,11 +1,11 @@
 import { Search, X, Package, ArrowLeft } from 'lucide-react'
-import { ProductList } from '../components/products/ProductList'
-import { PRODUCTS } from '../lib/mock-data'
-import { useCart } from '../contexts/CartContext'
-import { useAuth } from '../contexts/AuthContext'
-import BottomNav from '../layouts/BottomNav'
+import { ProductList } from '@components'
+import { PRODUCTS } from '@lib'
+
+import { BottomNav } from '@layouts'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth, useCart } from '@contexts'
 
 const SearchPage = () => {
   const { cart, increase, decrease, remove } = useCart()

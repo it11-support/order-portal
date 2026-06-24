@@ -1,8 +1,8 @@
 import cors from 'cors'
 import express from 'express'
-import { prisma } from '@/utils/prisma'
+import { prisma } from '@utils'
 import helmet from 'helmet'
-import routes from './routes'
+import routes from '@routes'
 
 const app = express()
 app.set('trust proxy', 2)

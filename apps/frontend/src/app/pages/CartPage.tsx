@@ -1,10 +1,9 @@
 import { ShoppingCart, CheckCircle } from 'lucide-react'
-import Shell from '../layouts/Shell'
-import { useCart } from '../contexts/CartContext'
-import { useOrders } from '../contexts/OrderContext'
-import { getCatEmoji } from '../lib/utils'
+import { Shell } from '@layouts'
+import { getCatEmoji } from '@lib'
 import { useState } from 'react'
-import { QtyControl } from '../components/QtyControl'
+import { QtyControl } from '@components'
+import { useCart, useOrders } from '@contexts'
 
 const CartPage = () => {
   const { cart, increase, decrease, setCart, cartQty } = useCart()

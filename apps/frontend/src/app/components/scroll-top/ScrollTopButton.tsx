@@ -33,7 +33,7 @@ export const ScrollToTopButton: React.FC = () => {
       <button
         type="button"
         onClick={scrollToTop}
-        className={`fixed bottom-20 right-10 z-50 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform flex items-center justify-center ${
+        className={`fixed lg:bottom-10 bottom-20 right-10 z-50 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform flex items-center justify-center ${
           isVisible
             ? 'opacity-100 translate-y-0 scale-100'
             : 'opacity-0 translate-y-4 scale-75 pointer-events-none'
