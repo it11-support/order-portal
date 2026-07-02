@@ -23,7 +23,7 @@ async function main() {
   // Ubah string password di bawah ini sesuai standar keamanan perusahaan Anda
   const saltRounds = 10
   const adminPassword = await bcrypt.hash('AdminPortal2026!', saltRounds)
-  const salesAdminPassword = await bcrypt.hash('SalesAdmin2026!', saltRounds)
+  const customerPassword = await bcrypt.hash('Customer2026!', saltRounds)
 
   // 3. INSERT USER: SUPER ADMIN
   // Kolom customerId diisi null karena admin tidak punya data di tabel Customers
@@ -42,22 +42,21 @@ async function main() {
   })
   console.log('👤 User Created: admin@portal.com')
 
-  // 4. INSERT USER: SALES ADMIN
-  // Kolom customerId diisi null karena sales_admin tidak terikat ke master customer SAP
+  // 4. INSERT USER: CUSTOMER
   await prisma.user.upsert({
-    where: { email: 'sales.admin@portal.com' },
+    where: { email: 'customer@portal.com' },
     update: {},
     create: {
-      username: 'sales.admin',
-      email: 'sales.admin@portal.com',
-      password: salesAdminPassword,
-      name: 'Sales Administrator',
-      roleId: roleMap['sales_admin'],
+      username: 'customer',
+      email: 'customer@portal.com',
+      password: customerPassword,
+      name: 'Customer Portal',
+      roleId: roleMap['customer'],
       isActive: true,
       customerId: null,
     },
   })
-  console.log('👤 User Created: sales.admin@portal.com')
+  console.log('👤 User Created: customer@portal.com')
 
   console.log('🏁 Proses seeding selesai dengan sukses!')
 }

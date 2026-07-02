@@ -111,7 +111,7 @@ const Login = () => {
             </p>
             <div className="flex gap-2 flex-wrap">
               {[
-                { label: 'Customer', user: 'sales.admin', pass: 'SalesAdmin2026!' },
+                { label: 'Customer', user: 'customer', pass: 'Customer2026!' },
                 { label: 'Admin', user: 'admin', pass: 'AdminPortal2026!' },
               ].map((d) => (
                 <button
