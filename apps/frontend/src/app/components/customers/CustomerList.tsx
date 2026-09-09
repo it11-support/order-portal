@@ -1,13 +1,123 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
-import useSWRInfinite, { SWRInfiniteKeyLoader } from 'swr/infinite'
-import { AxiosRequestConfig } from 'axios'
-import { swrFetcher } from '@lib'
+import React, { useEffect, useState, useRef } from 'react'
+import useSWRInfinite from 'swr/infinite'
+import { api, swrFetcher } from '@lib'
+import { useAuth } from '@/app/contexts/AuthContext'
 import { useIntersectionObserver } from '@hooks'
 import { InfiniteScrollWatcher } from '@/app/components/common/InfiniteScrollWatcher'
 import { Customer, ApiResponse, DEFAULT_LIMIT } from '@repo/shared'
-import { Search, X } from 'lucide-react'
+import { Check, Copy, Eye, EyeOff, Search, X } from 'lucide-react'
+
+const CustomerCredentials = ({
+  username,
+  password,
+}: {
+  username: string
+  password?: string | null
+}) => {
+  const [visible, setVisible] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [usernameCopied, setUsernameCopied] = useState(false)
+  const [copyError, setCopyError] = useState('')
+
+  const copyPassword = async () => {
+    if (!password) return
+    setCopyError('')
+    try {
+      await navigator.clipboard.writeText(password)
+      setCopied(true)
+    } catch {
+      setCopyError('Gagal menyalin. Silakan salin password secara manual.')
+    }
+  }
+
+  const copyUsername = async () => {
+    setCopyError('')
+    try {
+      await navigator.clipboard.writeText(username)
+      setUsernameCopied(true)
+    } catch {
+      setCopyError('Gagal menyalin. Silakan salin username secara manual.')
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-2">
+        <span>
+          Username: <code className="font-mono font-semibold select-all">{username || '-'}</code>
+        </span>
+        {username && (
+          <button
+            type="button"
+            aria-label={usernameCopied ? 'Username tersalin' : 'Salin username'}
+            title={usernameCopied ? 'Username tersalin' : 'Salin username'}
+            onClick={copyUsername}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+          >
+            {usernameCopied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+          </button>
+        )}
+        <span role="status" className="sr-only">
+          {usernameCopied ? 'Username tersalin' : ''}
+        </span>
+      </div>
+      {password ? (
+        <div className="flex items-center gap-2">
+          <span>
+            Password:{' '}
+            <code className={`font-mono font-semibold ${visible ? 'select-all' : ''}`}>
+              {visible ? password : '••••••'}
+            </code>
+          </span>
+          <button
+            type="button"
+            aria-label={visible ? 'Sembunyikan password' : 'Lihat password'}
+            title={visible ? 'Sembunyikan password' : 'Lihat password'}
+            aria-pressed={visible}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+            onClick={() => {
+              setVisible(!visible)
+              setCopied(false)
+              setCopyError('')
+            }}
+          >
+            {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+          {visible && (
+            <button
+              type="button"
+              aria-label={copied ? 'Password tersalin' : 'Salin password'}
+              title={copied ? 'Password tersalin' : 'Salin password'}
+              onClick={copyPassword}
+              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+            >
+              {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+            </button>
+          )}
+          <span role="status" className="sr-only">
+            {visible && copied ? 'Password tersalin' : ''}
+          </span>
+        </div>
+      ) : (
+        <span className="text-gray-500">
+          Password lama tidak tersedia. Nonaktifkan lalu aktifkan kembali untuk membuat password
+          baru.
+        </span>
+      )}
+      {copyError && (
+        <p role="alert" className="mt-1 text-red-600">
+          {copyError}
+        </p>
+      )}
+    </div>
+  )
+}
 
 const CustomerList: React.FC = () => {
+  const { isAdmin } = useAuth()
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [loginError, setLoginError] = useState('')
+  const pendingLogin = useRef(false)
   const [search, setSearch] = useState<string>('')
   const [showInactive, setShowInactive] = useState<boolean>(false)
   const limit = DEFAULT_LIMIT
@@ -31,11 +141,12 @@ const CustomerList: React.FC = () => {
 
   const {
     data: pages,
-    size,
+
     setSize,
-    error,
+
     isLoading,
     isValidating,
+    mutate,
   } = useSWRInfinite<ApiResponse<Customer>>(getKey, swrFetcher, {
     revalidateFirstPage: false,
   })
@@ -43,6 +154,39 @@ const CustomerList: React.FC = () => {
   const customers: Customer[] = pages
     ? pages.reduce<Customer[]>((acc, page) => acc.concat(page.data), [])
     : []
+
+  const setLoginEnabled = async (customer: Customer, enabled: boolean) => {
+    if (!isAdmin || pendingLogin.current || customer.id == null) return
+    pendingLogin.current = true
+    setBusyId(String(customer.id))
+    setLoginError('')
+    try {
+      const response = enabled
+        ? await api.post(`/customers/${customer.id}/login`)
+        : await api.delete(`/customers/${customer.id}/login`)
+      await mutate(
+        (current) =>
+          current?.map((page) => ({
+            ...page,
+            data: page.data.map((row) =>
+              String(row.id) === String(customer.id)
+                ? {
+                    ...row,
+                    hasLogin: enabled,
+                    loginPassword: enabled ? response.data.data.password : null,
+                  }
+                : row,
+            ),
+          })),
+        { revalidate: false },
+      )
+    } catch (error: any) {
+      setLoginError(error.response?.data?.message ?? 'Gagal mengubah login pelanggan.')
+    } finally {
+      pendingLogin.current = false
+      setBusyId(null)
+    }
+  }
 
   const isEmpty = pages?.[0]?.data?.length === 0
   const isReachingEnd = isEmpty || (pages && pages[pages.length - 1]?.data?.length < limit) || false
@@ -58,6 +202,11 @@ const CustomerList: React.FC = () => {
   })
   return (
     <div className="p-4 max-w-7xl mx-auto bg-gray-50 min-h-screen">
+      {loginError && (
+        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {loginError}
+        </p>
+      )}
       {/* HEADER & SEARCH BAR */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
@@ -112,6 +261,7 @@ const CustomerList: React.FC = () => {
                 <th className="p-4 w-44">SubGroub</th>
                 <th className="p-4">Area</th>
                 <th className="p-4 w-28 text-center">Status</th>
+                {isAdmin && <th className="p-4">Login pelanggan</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -126,6 +276,7 @@ const CustomerList: React.FC = () => {
                   >
                     <td className="p-4">
                       <div className="font-medium">{customer.CardName}</div>
+                      <div className="text-xs text-gray-500 font-mono">{customer.CardCode}</div>
                       {customer.Address && (
                         <div className="text-xs text-gray-400 line-clamp-1 mt-0.5">
                           {customer.Address}
@@ -156,19 +307,48 @@ const CustomerList: React.FC = () => {
                         </span>
                       )}
                     </td>
+                    {isAdmin && (
+                      <td className="p-4">
+                        <label className="flex items-center gap-2 text-xs font-medium">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(customer.hasLogin)}
+                            aria-label={`Aktifkan login ${customer.CardCode ?? customer.CardName}`}
+                            disabled={
+                              busyId !== null ||
+                              customer.id == null ||
+                              (!customer.hasLogin &&
+                                (customer.NonActive === 'Y' || !customer.CardCode))
+                            }
+                            onChange={(event) => setLoginEnabled(customer, event.target.checked)}
+                            className="h-4 w-4 rounded accent-blue-600 disabled:opacity-40"
+                          />
+                          {busyId === String(customer.id) ? 'Memproses...' : 'Login aktif'}
+                        </label>
+                        {customer.hasLogin && (
+                          <div className="mt-2 text-xs">
+                            <CustomerCredentials
+                              key={`${customer.CardCode}:${customer.loginPassword}`}
+                              username={customer.CardCode ?? ''}
+                              password={customer.loginPassword}
+                            />
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
 
               {/* JIKA DATA MEMANG KOSONG */}
               {isEmpty && !isLoading && (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-sm text-gray-400">
+                  <td colSpan={isAdmin ? 6 : 5} className="p-12 text-center text-sm text-gray-400">
                     Tidak ada data yang ditemukan.
                   </td>
                 </tr>
               )}
               <tr>
-                <td colSpan={5} className="p-0">
+                <td colSpan={isAdmin ? 6 : 5} className="p-0">
                   <InfiniteScrollWatcher
                     ref={observerTargetRef}
                     isLoading={isLoading}

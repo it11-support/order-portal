@@ -1,8 +1,8 @@
-import { AxiosRequestConfig } from "axios"
-import { api } from "./api"
+import { AxiosRequestConfig } from 'axios'
+import { api } from './api'
 
 export const swrFetcher = async <T = any>(
-  args: string | [string, AxiosRequestConfig]
+  args: string | [string, AxiosRequestConfig],
 ): Promise<T> => {
   if (typeof args === 'string') {
     const res = await api.get<T>(args)

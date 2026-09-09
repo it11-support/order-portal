@@ -13,7 +13,7 @@
       "@components": ["./src/app/components/index.ts"],
       "@contexts": ["./src/app/contexts/index.ts"],
       "@layouts": ["./src/app/layouts/index.ts"],
-      "@pages": ["./src/app/pages/index.ts"],
+      "@pages": ["./src/app/pages/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "vite.config.ts"],

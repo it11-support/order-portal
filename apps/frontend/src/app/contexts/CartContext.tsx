@@ -1,14 +1,15 @@
-import { createContext, useContext, useState, Dispatch, SetStateAction } from 'react'
+import { createContext, useContext, useEffect, useState, Dispatch, SetStateAction } from 'react'
 import type { CartItem, Product } from '@repo/shared'
+import { useAuth } from './AuthContext'
 
 type CartContextType = {
   cart: CartItem[]
   setCart: Dispatch<SetStateAction<CartItem[]>>
-  getQty: (pid: string) => number
+  getQty: (pid: number) => number
   setQty: (product: Product, qty: number) => void
   increase: (product: Product) => void
   decrease: (product: Product) => void
-  remove: (productId: string) => void
+  remove: (productId: number) => void
   cartCount: number
   cartQty: number
 }
@@ -16,9 +17,23 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([])
+  const { user, isCustomer } = useAuth()
+  const identity = user ? `${user.role.name}:${user.id}` : ''
+  const [items, setItems] = useState<CartItem[]>([])
+  const [owner, setOwner] = useState(identity)
+  const cart = isCustomer && owner === identity ? items : []
 
-  function getQty(pid: string) {
+  useEffect(() => {
+    setItems([])
+    setOwner(identity)
+  }, [identity])
+
+  const setCart: Dispatch<SetStateAction<CartItem[]>> = (next) => {
+    if (!isCustomer) return
+    setItems(next)
+  }
+
+  function getQty(pid: number) {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
 
@@ -34,26 +49,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   function increase(product: Product) {
     const q = getQty(product.id)
-    setQty(product, q === 0 ? product.minOrder : q + product.step)
+    setQty(product, q === 0 ? 1 : q + 1)
   }
 
   function decrease(product: Product) {
     const q = getQty(product.id)
-    if (q <= product.minOrder) setQty(product, 0)
-    else setQty(product, q - product.step)
+    if (q <= 1) setQty(product, 0)
+    else setQty(product, q - 1)
   }
- 
-  const remove = (productId: string) => {
-  setCart((prev) =>
-    prev.filter((item) => item.product.id !== productId),
-  )
-}
+
+  const remove = (productId: number) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId))
+  }
 
   const cartCount = cart.length
-  const cartQty = cart.reduce((s, i) => s + i.qty, 0)
+  const cartQty = cart.reduce((s, i) => s + (i.qty ?? 0), 0)
 
   return (
-    <CartContext.Provider value={{ cart, setCart, getQty, setQty, increase, decrease, cartCount, cartQty, remove }}>
+    <CartContext.Provider
+      value={{ cart, setCart, getQty, setQty, increase, decrease, cartCount, cartQty, remove }}
+    >
       {children}
     </CartContext.Provider>
   )

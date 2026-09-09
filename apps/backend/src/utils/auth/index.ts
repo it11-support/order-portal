@@ -20,6 +20,6 @@ export const verifyToken = (token: string): { id: string } => {
   try {
     return jwt.verify(token, JWT_SECRET) as { id: string }
   } catch {
-    throw new Error("Invalid or expired token")
+    throw new Error('Invalid or expired token')
   }
 }

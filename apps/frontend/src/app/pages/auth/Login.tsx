@@ -1,4 +1,4 @@
-import { Package } from 'lucide-react'
+import { Package, User, LogIn } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -6,21 +6,58 @@ import { Navigate, useNavigate } from 'react-router-dom'
 const Login = () => {
   const { login, user, loginError, setLoginError } = useAuth()
   const [loginForm, setLoginForm] = useState({ username: '', password: '' })
+  const [submitting, setSubmitting] = useState(false)
 
   const navigate = useNavigate()
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
     try {
       await login(loginForm.username, loginForm.password)
-      navigate('/')
+
+      if (user?.role.name === 'customer') {
+        navigate('/customer-dashboard', { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
     } catch {
-      // error sudah ditangani context
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleQuickLogin = async (
+    username: string,
+    password: string,
+    role: 'customer' | 'admin',
+  ) => {
+    setLoginForm({ username, password })
+    setLoginError({})
+    setSubmitting(true)
+    try {
+      await login(username, password)
+
+      if (role === 'customer') {
+        navigate('/customer-dashboard', { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
+    } catch {
+    } finally {
+      setSubmitting(false)
     }
   }
 
   if (user) {
-    return <Navigate to="/" replace />
+    return <Navigate to={user.role.name === 'customer' ? '/customer-dashboard' : '/'} replace />
   }
+
+  const customerAccounts = [
+    { cardCode: 'C001', name: 'Budi Santoso', password: 'Customer2026!' },
+    { cardCode: 'C002', name: 'Siti Rahma', password: 'Customer2026!' },
+    { cardCode: 'C003', name: 'Dedi Kurniawan', password: 'Customer2026!' },
+  ]
 
   return (
     <div className="min-h-screen bg-primary flex flex-col lg:flex-row">
@@ -54,7 +91,7 @@ const Login = () => {
         >
           <div>
             <label className="block text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
-              Username
+              Username / Kode Pelanggan
             </label>
             <input
               type="text"
@@ -63,7 +100,7 @@ const Login = () => {
                 setLoginForm((f) => ({ ...f, username: e.target.value }))
                 setLoginError({})
               }}
-              placeholder="Masukkan username"
+              placeholder="Masukkan username atau kode pelanggan"
               className={`w-full rounded-xl px-4 py-3 text-sm bg-input-background border focus:outline-none focus:ring-2 ${
                 loginError?.username
                   ? 'border-destructive focus:ring-destructive'
@@ -87,7 +124,7 @@ const Login = () => {
               }}
               placeholder="••••••••"
               className={`w-full rounded-xl px-4 py-3 text-sm bg-input-background border focus:outline-none focus:ring-2 ${
-                loginError.password
+                loginError?.password
                   ? 'border-destructive focus:ring-destructive'
                   : 'border-border focus:ring-accent'
               }`}
@@ -95,35 +132,59 @@ const Login = () => {
             {loginError?.password && (
               <p className="text-xs text-destructive font-semibold">{loginError.password}</p>
             )}
+            {loginError?.general && (
+              <p className="text-xs text-destructive font-semibold mt-1">{loginError.general}</p>
+            )}
           </div>
 
           <button
             type="submit"
-            className="w-full bg-accent text-white font-bold py-3.5 rounded-xl hover:bg-accent/90 active:scale-[0.98] transition-all text-sm"
+            disabled={submitting}
+            className="w-full bg-accent text-white font-bold py-3.5 rounded-xl hover:bg-accent/90 active:scale-[0.98] transition-all text-sm disabled:opacity-50"
           >
-            Masuk
+            {submitting ? 'Memproses...' : 'Masuk'}
           </button>
 
-          {/* Demo creds */}
+          {/* Admin demo */}
           <div className="pt-2 border-t border-border space-y-2">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Demo Akun
+              Login Admin (Satu Klik)
             </p>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { label: 'Customer', user: 'customer', pass: 'Customer2026!' },
-                { label: 'Admin', user: 'admin', pass: 'AdminPortal2026!' },
-              ].map((d) => (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin', 'AdminPortal2026!', 'admin')}
+                className="flex-1 text-xs bg-secondary hover:bg-border text-foreground px-3 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-1"
+              >
+                <User size={14} />
+                Admin Portal
+              </button>
+            </div>
+          </div>
+
+          {/* Customer demo — one-click login */}
+          <div className="pt-2 border-t border-border space-y-2">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <LogIn size={12} />
+              Login Pelanggan (Satu Klik)
+            </p>
+            <div className="flex flex-col gap-2">
+              {customerAccounts.map((c) => (
                 <button
-                  key={d.user}
+                  key={c.cardCode}
                   type="button"
-                  onClick={() => setLoginForm({ username: d.user, password: d.pass })}
-                  className="text-xs bg-secondary hover:bg-border text-foreground px-3 py-1.5 rounded-lg transition-colors font-medium"
+                  onClick={() => handleQuickLogin(c.cardCode, c.password, 'customer')}
+                  className="text-left text-xs bg-secondary hover:bg-border text-foreground px-3 py-2.5 rounded-lg transition-colors font-medium"
                 >
-                  {d.label}: {d.user}
+                  <div className="font-semibold">
+                    {c.cardCode} · {c.name}
+                  </div>
                 </button>
               ))}
             </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Atau masukkan kode pelanggan dan password secara manual di form di atas.
+            </p>
           </div>
         </form>
       </div>

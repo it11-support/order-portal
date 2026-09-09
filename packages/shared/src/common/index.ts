@@ -1,6 +1,6 @@
-import { MetaData } from "../pagination";
+import { MetaData } from '../pagination'
 
 export interface ApiResponse<T> {
-  data: T[];
-  meta: MetaData;
+  data: T[]
+  meta: MetaData
 }

@@ -1,6 +1,7 @@
 import { Product } from '@repo/shared'
 import { Minus, Plus, Trash2, TrashIcon } from 'lucide-react'
 import React from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 type QtyControlProps = {
   product: Product
@@ -17,6 +18,10 @@ const QtyControlComponent = ({
   onDecrease,
   onRemove,
 }: QtyControlProps) => {
+  const { isCustomer } = useAuth()
+
+  if (!isCustomer) return null
+
   if (qty === 0) {
     return (
       <button

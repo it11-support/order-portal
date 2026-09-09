@@ -3,11 +3,18 @@ import authRoute from './auth'
 import { me } from '@controllers'
 import { requireAuth } from '@auth'
 import customerRoutes from './customers'
-
+import categoryRoutes from './categories'
+import productRoutes from './products'
+import userRoutes from './users'
+import requestRoutes from './requests'
 const router = Router()
 
 router.use('/auth', authRoute)
 router.get('/me', requireAuth, me)
 router.use('/customers', customerRoutes)
+router.use('/categories', categoryRoutes)
+router.use('/products', productRoutes)
+router.use('/users', userRoutes)
+router.use('/requests', requestRoutes)
 
 export default router

@@ -49,3 +49,11 @@ export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: Nex
 
   next()
 }
+
+export const requireSalesAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (!req.user || !['admin', 'sales_admin'].includes(req.user.role.name)) {
+    res.status(403).json({ message: 'Akses khusus admin dan sales admin.' })
+    return
+  }
+  next()
+}

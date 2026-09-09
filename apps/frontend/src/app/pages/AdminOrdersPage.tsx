@@ -9,13 +9,19 @@ import { useState, useMemo } from 'react'
 import { Shell } from '@layouts'
 
 const AdminOrdersPage = () => {
-  const { orders } = useOrders()
+  const { orders, loading, error } = useOrders()
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
+  const [kindFilter, setKindFilter] = useState<'all' | 'order' | 'quote'>('all')
 
   const filteredOrders = useMemo(
-    () => (statusFilter === 'all' ? orders : orders.filter((o) => o.status === statusFilter)),
-    [orders, statusFilter],
+    () =>
+      orders.filter(
+        (o) =>
+          (statusFilter === 'all' || o.status === statusFilter) &&
+          (kindFilter === 'all' || (o.kind ?? 'order') === kindFilter),
+      ),
+    [orders, statusFilter, kindFilter],
   )
 
   const allStatuses: (OrderStatus | 'all')[] = [
@@ -30,6 +36,24 @@ const AdminOrdersPage = () => {
   return (
     <Shell title="Admin — Semua Order" showBack={false}>
       <div className="space-y-4">
+        {error && (
+          <p role="alert" className="text-red-600">
+            {error}
+          </p>
+        )}
+        {loading && <p>Memuat permintaan...</p>}
+        <label className="block text-sm">
+          Jenis permintaan{' '}
+          <select
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value as typeof kindFilter)}
+            className="ml-2 rounded-lg border p-2"
+          >
+            <option value="all">Semua</option>
+            <option value="order">Pesanan</option>
+            <option value="quote">Permintaan Penawaran Harga</option>
+          </select>
+        </label>
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {(['pending', 'confirmed', 'processing', 'delivered', 'cancelled'] as OrderStatus[]).map(
@@ -91,11 +115,17 @@ const AdminOrdersPage = () => {
                     <p className="text-sm font-bold mt-0.5">{order.company}</p>
                     <p className="text-xs text-muted-foreground">{order.userName}</p>
                   </div>
-                  <StatusBadge status={order.status} />
+                  <StatusBadge status={order.status} kind={order.kind} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">{fmtDate(order.createdAt)}</p>
+                <p className="text-sm font-semibold">
+                  {order.kind === 'quote' ? 'Permintaan Penawaran Harga' : 'Pesanan'}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {order.items.length} produk · {order.items.reduce((s, i) => s + i.qty, 0)} qty
+                  {order.items.length} produk ·{' '}
+                  {order.kind === 'quote'
+                    ? '-'
+                    : `${order.items.reduce((s, i) => s + (i.qty ?? 0), 0)} qty`}
                 </p>
               </button>
             ))}

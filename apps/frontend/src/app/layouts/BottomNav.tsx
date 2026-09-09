@@ -1,6 +1,7 @@
 import {
   ClipboardList,
   Home,
+  LayoutDashboard,
   Package,
   Search,
   ShoppingCart,
@@ -19,9 +20,14 @@ type BottomNavTab = {
 
 const BottomNav = () => {
   const { cartCount } = useCart()
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
 
   const customerTabs: BottomNavTab[] = [
+    {
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      path: '/customer-dashboard',
+    },
     {
       label: 'Home',
       icon: Home,
@@ -46,24 +52,25 @@ const BottomNav = () => {
   ]
 
   const adminTabs: BottomNavTab[] = [
+    { label: 'Permintaan', icon: ClipboardList, path: '/admin/orders' },
     {
       label: 'Users',
       icon: Users,
       path: '/users',
     },
     {
-      label: 'Products',
+      label: 'Kategori',
       icon: Package,
-      path: '/products',
+      path: '/admin/categories',
     },
     {
       label: 'Customers',
       icon: Users,
-      path: 'admin/customers',
+      path: '/admin/customers',
     },
   ]
 
-  const tabs = isAdmin ? adminTabs : customerTabs
+  const tabs = isAdmin || user?.role.name === 'sales_admin' ? adminTabs : customerTabs
   return (
     <nav
       data-bottom-nav

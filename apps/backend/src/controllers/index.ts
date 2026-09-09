@@ -1,2 +1,5 @@
 export * from './auth'
 export * from './customers'
+export * from './categories'
+export * from './products'
+export * from './users'

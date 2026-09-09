@@ -10,7 +10,7 @@ const Shell = ({
   actionBar,
 }: {
   children: React.ReactNode
-  title: string
+  title: React.ReactNode
   showBack?: boolean
   backTo?: string | number
   actionBar?: React.ReactNode

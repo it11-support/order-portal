@@ -26,6 +26,9 @@ export interface Customer {
   JoinDate: Date | string | null
   IndustryC: number | null
   NonActive: string | null
+  password?: string | null
+  hasLogin?: boolean
+  loginPassword?: string | null
   createdAt: Date | string | null
   updatedAt: Date | string | null
 

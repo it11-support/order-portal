@@ -1,124 +1,139 @@
-import { createContext, useContext, useState, Dispatch, SetStateAction } from 'react'
+﻿import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  Dispatch,
+  SetStateAction,
+} from 'react'
 import type { Order, OrderStatus, CartItem } from '@repo/shared'
-import { PRODUCTS } from '@lib'
+import { api } from '@lib'
+import { useAuth } from './AuthContext'
 
 type OrderContextType = {
   orders: Order[]
+  loading: boolean
+  submitting: boolean
+  error: string
   placeOrder: (
     cart: CartItem[],
     notes: string,
     setNotes: Dispatch<SetStateAction<string>>,
     clearCart: () => void,
-  ) => void
+  ) => Promise<void>
+  sendQuote: (items: CartItem[], notes: string) => Promise<void>
   orderPlaced: boolean
   setOrderPlaced: Dispatch<SetStateAction<boolean>>
-  updateStatus: (orderId: string, status: OrderStatus) => void
+  updateStatus: (id: string, status: OrderStatus, salesNotes?: string) => Promise<void>
 }
-
 const OrderContext = createContext<OrderContextType | null>(null)
-
-const SAMPLE_ORDERS: Order[] = [
-  {
-    id: 'ORD-2026-0001',
-    userId: 'u1',
-    userName: 'Budi Santoso',
-    company: 'Hotel Grand Nusantara',
-    items: [
-      { product: PRODUCTS[0], qty: 50 },
-      { product: PRODUCTS[5], qty: 10 },
-      { product: PRODUCTS[7], qty: 20 },
-    ],
-    status: 'confirmed',
-    createdAt: new Date('2026-06-12T08:30:00'),
-    notes: 'Delivery sebelum jam 8 pagi',
-  },
-  {
-    id: 'ORD-2026-0002',
-    userId: 'u2',
-    userName: 'Siti Rahma',
-    company: 'Restoran Nusantara',
-    items: [
-      { product: PRODUCTS[13], qty: 15 },
-      { product: PRODUCTS[15], qty: 10 },
-    ],
-    status: 'pending',
-    createdAt: new Date('2026-06-13T09:15:00'),
-    notes: '',
-  },
-  {
-    id: 'ORD-2026-0003',
-    userId: 'u1',
-    userName: 'Budi Santoso',
-    company: 'Hotel Grand Nusantara',
-    items: [
-      { product: PRODUCTS[31], qty: 10 },
-      { product: PRODUCTS[32], qty: 5 },
-      { product: PRODUCTS[1], qty: 8 },
-    ],
-    status: 'delivered',
-    createdAt: new Date('2026-06-10T11:00:00'),
-    notes: 'Sertakan invoice',
-  },
-  {
-    id: 'ORD-2026-0004',
-    userId: 'u3',
-    userName: 'Dedi Kurniawan',
-    company: 'Café Mentari',
-    items: [
-      { product: PRODUCTS[32], qty: 10 },
-      { product: PRODUCTS[29], qty: 5 },
-    ],
-    status: 'processing',
-    createdAt: new Date('2026-06-13T14:00:00'),
-    notes: '',
-  },
-]
-
 export function OrderProvider({ children }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(SAMPLE_ORDERS)
+  const { user } = useAuth()
+  const identity = user ? `${user.role.name}:${user.id}` : ''
+  const [data, setData] = useState<{ owner: string; orders: Order[] }>({ owner: '', orders: [] })
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [orderPlaced, setOrderPlaced] = useState(false)
-
-  function placeOrder(
-    cart: CartItem[],
-    notes: string,
-    setNotes: Dispatch<SetStateAction<string>>,
-    clearCart: () => void,
-  ) {
-    if (cart.length === 0) return
-    const order: Order = {
-      id: `ORD-2026-${String(orders.length + 1).padStart(4, '0')}`,
-      userId: 'u1',
-      userName: 'Budi Santoso',
-      company: 'Hotel Grand Nusantara',
-      items: [...cart],
-      status: 'pending',
-      createdAt: new Date(),
+  const busy = useRef(false)
+  const requestKeys = useRef(new Map<string, string>())
+  const refresh = useCallback(async () => {
+    if (!identity) return
+    const response = await api.get('/requests')
+    setData({ owner: identity, orders: response.data.data })
+  }, [identity])
+  useEffect(() => {
+    let disposed = false
+    setError('')
+    setOrderPlaced(false)
+    setLoading(Boolean(identity))
+    if (identity)
+      api
+        .get('/requests')
+        .then((response) => {
+          if (!disposed) setData({ owner: identity, orders: response.data.data })
+        })
+        .catch(() => {
+          if (!disposed) setError('Gagal memuat pesanan dan penawaran.')
+        })
+        .finally(() => {
+          if (!disposed) setLoading(false)
+        })
+    return () => {
+      disposed = true
+    }
+  }, [identity])
+  const send = async (kind: 'order' | 'quote', items: CartItem[], notes: string) => {
+    if (busy.current) throw new Error('Permintaan sedang dikirim.')
+    busy.current = true
+    setSubmitting(true)
+    setError('')
+    const payload = {
+      kind,
+      items: items.map((i) => ({ productId: String(i.product.id), qty: i.qty })),
       notes,
     }
-    setOrders((o) => [order, ...o])
+    const signature = `${identity}:${JSON.stringify(payload)}`
+    const requestId = requestKeys.current.get(signature) ?? crypto.randomUUID()
+    requestKeys.current.set(signature, requestId)
+    try {
+      const response = await api.post('/requests', { ...payload, requestId })
+      const order: Order = response.data.data
+      setData((previous) => ({
+        owner: identity,
+        orders: [
+          order,
+          ...(previous.owner === identity ? previous.orders.filter((o) => o.id !== order.id) : []),
+        ],
+      }))
+      requestKeys.current.delete(signature)
+    } catch (e: any) {
+      const message = e.response?.data?.message ?? 'Gagal mengirim. Silakan coba lagi.'
+      setError(message)
+      throw new Error(message)
+    } finally {
+      busy.current = false
+      setSubmitting(false)
+    }
+  }
+  const placeOrder: OrderContextType['placeOrder'] = async (cart, notes, setNotes, clearCart) => {
+    await send('order', cart, notes)
     clearCart()
     setNotes('')
     setOrderPlaced(true)
-    setTimeout(() => {
-      setOrderPlaced(false)
-    }, 1800)
   }
-
-  function updateStatus(orderId: string, status: OrderStatus) {
-    setOrders((o) => o.map((ord) => (ord.id === orderId ? { ...ord, status } : ord)))
+  const updateStatus: OrderContextType['updateStatus'] = async (id, status, salesNotes = '') => {
+    setError('')
+    try {
+      await api.patch(`/requests/${id}`, { status, salesNotes })
+      await refresh()
+    } catch (e: any) {
+      setError(e.response?.data?.message ?? 'Gagal menyimpan tindak lanjut.')
+      throw e
+    }
   }
-
   return (
-    <OrderContext.Provider value={{ orders, placeOrder, orderPlaced, setOrderPlaced, updateStatus }}>
+    <OrderContext.Provider
+      value={{
+        orders: data.owner === identity ? data.orders : [],
+        loading,
+        submitting,
+        error,
+        placeOrder,
+        sendQuote: (items, notes) => send('quote', items, notes),
+        orderPlaced,
+        setOrderPlaced,
+        updateStatus,
+      }}
+    >
       {children}
     </OrderContext.Provider>
   )
 }
-
-export const useOrders = () => {
-  const ctx = useContext(OrderContext)
-  if (!ctx) {
-    throw new Error('useOrders must be used within OrderProvider')
-  }
-  return ctx
+export function useOrders() {
+  const context = useContext(OrderContext)
+  if (!context) throw new Error('useOrders must be used within OrderProvider')
+  return context
 }

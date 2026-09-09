@@ -10,9 +10,7 @@ export default [
         project: true,
       },
     },
-    ignores: [
-      'prisma.config.ts'
-    ]
+    ignores: ['prisma.config.ts'],
   },
   eslintConfigPrettier,
 ]

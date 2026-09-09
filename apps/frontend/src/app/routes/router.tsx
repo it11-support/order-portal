@@ -11,6 +11,10 @@ import {
   AdminOrdersPage,
   AdminOrderDetailPage,
   CustomersPage,
+  AdminCategoriesPage,
+  AdminProductListPage,
+  UsersPage,
+  CustomerDashboardPage,
 } from '@pages'
 
 import { AppLayout } from '@layouts'
@@ -24,7 +28,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={['admin', 'customer', 'sales_admin']}>
         <AppLayout />
       </ProtectedRoute>
     ),
@@ -43,7 +47,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'cart',
-        element: <CartPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['customer']}>
+            <CartPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'orders',
@@ -55,15 +63,59 @@ export const router = createBrowserRouter([
       },
       {
         path: 'admin/orders',
-        element: <AdminOrdersPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminOrdersPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'admin/orders/:orderId',
-        element: <AdminOrderDetailPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminOrderDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'admin/customers',
-        element: <CustomersPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <CustomersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/products',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminProductListPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/categories',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminCategoriesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'users',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <UsersPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'customer-dashboard',
+        element: (
+          <ProtectedRoute allowedRoles={['customer']}>
+            <CustomerDashboardPage />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

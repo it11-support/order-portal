@@ -8,13 +8,21 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; tex
   cancelled: { label: 'Cancelled', bg: 'bg-red-100', text: 'text-red-700' },
 }
 
-export function StatusBadge({ status }: { status: OrderStatus }) {
+export const QUOTE_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: 'Menunggu sales',
+  processing: 'Ditindaklanjuti',
+  confirmed: 'Harga ditawarkan',
+  delivered: 'Selesai',
+  cancelled: 'Dibatalkan',
+}
+
+export function StatusBadge({ status, kind }: { status: OrderStatus; kind?: string }) {
   const s = STATUS_CONFIG[status]
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${s.bg} ${s.text}`}
     >
-      {s.label}
+      {kind === 'quote' ? QUOTE_STATUS_LABELS[status] : s.label}
     </span>
   )
 }

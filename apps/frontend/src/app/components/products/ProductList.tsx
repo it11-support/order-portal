@@ -6,11 +6,11 @@ type ProductListProps = {
   cart: CartItem[]
   increase: (p: Product) => void
   decrease: (p: Product) => void
-  remove: (p: string) => void
+  remove: (p: number) => void
 }
 
 export const ProductList = ({ products, cart, increase, decrease, remove }: ProductListProps) => {
-  const getQty = (pid: string) => {
+  const getQty = (pid: number) => {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
 

@@ -11,7 +11,10 @@ type AuthContextType = {
     general?: string
   }
   isAdmin: boolean
-  setLoginError: Dispatch<SetStateAction<{ username?: string; password?: string; general?: string }>>
+  isCustomer: boolean
+  setLoginError: Dispatch<
+    SetStateAction<{ username?: string; password?: string; general?: string }>
+  >
   logout: () => void
   loading: boolean
 }
@@ -27,6 +30,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     general?: string
   }>({})
   const isAdmin = user?.role.name === 'admin'
+  const isCustomer = user?.role.name === 'customer'
 
   useEffect(() => {
     const init = async () => {
@@ -73,7 +77,9 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, loginError, setLoginError, isAdmin }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, loginError, setLoginError, isAdmin, isCustomer }}
+    >
       {children}
     </AuthContext.Provider>
   )

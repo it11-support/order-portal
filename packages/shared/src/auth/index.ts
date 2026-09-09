@@ -10,12 +10,17 @@ export interface LoginResponse {
   token: string
 }
 
+export interface CustomerLoginRequest {
+  cardCode: string
+  password: string
+}
+
 export interface LoginRequestBody {
   username?: string
   password?: string
 }
 
-export interface AuthUserResponse extends User { }
+export interface AuthUserResponse extends User {}
 
 export interface LoginSuccessResponse {
   message: string

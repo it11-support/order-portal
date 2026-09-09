@@ -1,3 +1,14 @@
+export interface Category {
+  id: number
+  code: string
+  name: string
+  icon?: string
+  sortOrder: number
+  isActive: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
+}
+
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'delivered' | 'cancelled'
 
 export type View =
@@ -8,25 +19,41 @@ export type View =
   | 'cart'
   | 'orders'
   | 'order-detail'
+  | 'customer-dashboard'
   | 'admin-orders'
   | 'admin-order-detail'
+  | 'admin-customers'
+  | 'admin-users'
 
 export interface Product {
-  id: string
-  name: string
-  category: string
-  unit: string
-  minOrder: number
-  step: number
-  price?: number
+  id: number
+  itemCode: string
+  itemName: string
+  foreignName?: string
+  productGroupCode?: number
+  productGroupName?: string
+  productCategory: string
+  isDistributor: boolean
+  salesUnit?: string
+  salesPackSize?: number
+  salesPackUnit?: string
+  launchDate?: Date | string
+  isActive: boolean
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export interface CartItem {
   product: Product
-  qty: number
+  qty?: number
 }
 
 export interface Order {
+  kind?: 'order' | 'quote'
+  salesNotes?: string
+  cardCode?: string
+  phone?: string
+  salesName?: string
   id: string
   userId: string
   userName: string

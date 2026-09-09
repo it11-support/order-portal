@@ -1,17 +1,22 @@
 import { ShoppingCart, CheckCircle } from 'lucide-react'
 import { Shell } from '@layouts'
-import { getCatEmoji } from '@lib'
 import { useState } from 'react'
 import { QtyControl } from '@components'
-import { useCart, useOrders } from '@contexts'
+import { useCart, useOrders, useCategories } from '@contexts'
+import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 const CartPage = () => {
   const { cart, increase, decrease, setCart, cartQty } = useCart()
-  const { placeOrder, orderPlaced } = useOrders()
+  const { placeOrder, orderPlaced, submitting, error } = useOrders()
+  const { getCategoryIcon } = useCategories()
   const [orderNotes, setOrderNotes] = useState('')
 
-  const handlePlaceOrder = () => {
-    placeOrder(cart, orderNotes, setOrderNotes, () => setCart([]))
+  const handlePlaceOrder = async () => {
+    try {
+      await placeOrder(cart, orderNotes, setOrderNotes, () => setCart([]))
+    } catch {
+      /* Error is displayed below. */
+    }
   }
 
   const cartActionBar =
@@ -23,6 +28,7 @@ const CartPage = () => {
       ) : (
         <button
           onClick={handlePlaceOrder}
+          disabled={submitting}
           className="w-full bg-accent text-white py-3.5 rounded-xl font-bold text-sm hover:bg-accent/90 active:scale-[0.98] transition-all"
         >
           Kirim Order — {cart.length} produk ({cartQty} qty)
@@ -32,6 +38,16 @@ const CartPage = () => {
 
   return (
     <Shell title="Keranjang" showBack actionBar={cartActionBar}>
+      {error && (
+        <p role="alert" className="mb-3 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      {orderPlaced && (
+        <p role="status" className="mb-3 rounded-xl bg-green-50 p-3 text-sm text-green-700">
+          Pesanan berhasil dikirim. Lihat status pada menu Order.
+        </p>
+      )}
       {cart.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <ShoppingCart size={52} className="mx-auto mb-4 opacity-20" />
@@ -45,15 +61,19 @@ const CartPage = () => {
             {cart.map((item) => (
               <div key={item.product.id} className="flex items-center gap-3 py-3">
                 <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">
-                  {getCatEmoji(item.product.category)}
+                  {getCategoryIcon(item.product.productCategory) ? (
+                    <CategoryIcon name={getCategoryIcon(item.product.productCategory)} size={20} />
+                  ) : (
+                    '-'
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-tight">{item.product.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.product.unit}</p>
+                  <p className="text-sm font-semibold leading-tight">{item.product.itemName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.product.salesUnit}</p>
                 </div>
                 <QtyControl
                   product={item.product}
-                  qty={item.qty}
+                  qty={item.qty ?? 0}
                   onIncrease={() => increase(item.product)}
                   onDecrease={() => decrease(item.product)}
                   onRemove={() => decrease(item.product)}

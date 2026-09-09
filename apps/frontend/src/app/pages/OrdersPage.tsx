@@ -6,14 +6,20 @@ import { fmtDate } from '@lib'
 import { useNavigate } from 'react-router-dom'
 
 const OrdersPage = () => {
-  const { orders } = useOrders()
+  const { orders, loading, error } = useOrders()
   const navigate = useNavigate()
 
-  // Filter orders for current user (mock - in real app would use auth user id)
-  const userOrders = orders.filter((o) => o.userId === 'u1')
+  // The API scopes these requests to the authenticated customer.
+  const userOrders = orders
 
   return (
     <Shell title="Riwayat Order" showBack={true}>
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
+      {loading && <p>Memuat permintaan...</p>}
       {userOrders.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <ClipboardList size={48} className="mx-auto mb-4 opacity-20" />
@@ -30,16 +36,19 @@ const OrdersPage = () => {
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono font-bold">{order.id}</span>
-                <StatusBadge status={order.status} />
+                <StatusBadge status={order.status} kind={order.kind} />
               </div>
               <p className="text-xs text-muted-foreground mb-2">{fmtDate(order.createdAt)}</p>
+              <p className="text-sm font-semibold mb-2">
+                {order.kind === 'quote' ? 'Permintaan Penawaran Harga' : 'Pesanan'}
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {order.items.slice(0, 2).map((i) => (
                   <span
                     key={i.product.id}
                     className="text-xs bg-secondary text-foreground px-2 py-0.5 rounded-full"
                   >
-                    {i.product.name} ×{i.qty}
+                    {i.product.itemName} {order.kind === 'quote' ? '' : `×${i.qty}`}
                   </span>
                 ))}
                 {order.items.length > 2 && (

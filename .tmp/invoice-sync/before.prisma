@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  users     User[]
+
+  @@map("roles")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
+  email      String?  @unique
+  password   String   @map("password")
+  name       String
+  roleId     Int      @map("role_id")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  role       Role     @relation(fields: [roleId], references: [id])
+  customerId BigInt?  @unique @map("customer_id")
+
+  customer Customers? @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([username])
+  @@index([email])
+  @@index([roleId])
+  @@map("users")
+}
+
+model Customers {
+  id          BigInt    @id @default(autoincrement()) @db.BigInt
+  CardCode    String?   @unique(map: "customers_cardcode_unique") @map("card_code") @db.VarChar(15)
+  CardName    String?   @map("card_name") @db.VarChar(100)
+  GroupName   String?   @map("group_name") @db.VarChar(20)
+  CntctPrsn   String?   @map("cntct_prsn") @db.VarChar(90)
+  Phone1      String?   @map("phone1") @db.VarChar(20)
+  Cellular    String?   @map("cellular") @db.VarChar(50)
+  SlpCode     Int?      @map("slp_code") @db.SmallInt
+  SalesName   String?   @map("sales_name") @db.VarChar(155)
+  Address     String?   @map("address") @db.VarChar(100)
+  Block       String?   @map("block") @db.VarChar(100)
+  City        String?   @map("city") @db.VarChar(100)
+  ZipCode     String?   @map("zip_code") @db.VarChar(20)
+  Country     String?   @map("country") @db.VarChar(3)
+  PaymentTerm String?   @map("payment_term") @db.VarChar(100)
+  PriceList   String?   @map("price_list") @db.VarChar(32)
+  JoinDate    DateTime? @map("join_date") @db.Timestamp(0)
+  IndustryC   Int?      @map("industry_c")
+  NonActive   String?   @map("non_active") @db.Char(1)
+  password    String?   @map("password") @db.VarChar(255)
+  loginPasswordEncrypted String? @map("login_password_encrypted") @db.Text
+
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
+
+  Subgroup Subgroups? @relation(fields: [IndustryC], references: [IndCode])
+
+  user User?
+  requests PortalRequest[]
+
+  @@map("customers")
+}
+
+model Subgroups {
+  IndCode Int    @id @map("ind_code")
+  IndName String @map("ind_name") @db.VarChar(255)
+  IndDesc String @map("ind_desc") @db.VarChar(255)
+
+  Customers Customers[]
+
+  @@map("subgroups")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(32)
+  name      String   @db.VarChar(100)
+  icon      String?  @db.VarChar(50)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("categories")
+}
+
+model Product {
+  id               BigInt    @id @default(autoincrement())
+  itemCode         String    @unique @map("item_code")
+  itemName         String    @map("item_name")
+  foreignName      String?   @map("foreign_name")
+
+  productGroupCode Int?      @map("product_group_code")
+  productGroupName String?   @map("product_group_name")
+  productCategory  String    @default("OTHER") @map("product_category")
+
+  isDistributor    Boolean   @default(false) @map("is_distributor")
+
+  salesUnit        String?   @map("sales_unit")
+  salesPackSize    Decimal?  @map("sales_pack_size") @db.Decimal(19, 6)
+  salesPackUnit    String?   @map("sales_pack_unit")
+
+  launchDate       DateTime? @map("launch_date") @db.Date
+  isActive         Boolean   @default(true) @map("is_active")
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([productGroupCode])
+  @@index([productCategory])
+  @@index([isActive])
+  @@map("products")
+}
+
+model PortalRequest {
+  id String @id
+  customerId BigInt @map("customer_id")
+  kind String
+  status String @default("pending")
+  items Json
+  notes String @default("")
+  salesNotes String @default("") @map("sales_notes")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  customer Customers @relation(fields: [customerId], references: [id])
+
+  @@index([customerId, createdAt])
+  @@map("portal_requests")
+}
+

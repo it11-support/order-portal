@@ -1,9 +1,3 @@
-import { CATEGORIES } from './mock-data'
-
-export function getCatEmoji(catId: string) {
-  return CATEGORIES.find((c) => c.id === catId)?.emoji ?? '📦'
-}
-
 export function fmtDate(value: Date | string) {
   const d = typeof value === 'string' ? new Date(value) : value
   return (

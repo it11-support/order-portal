@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth, useCart } from '@contexts'
 
 type AppHeaderProps = {
-  title: string
+  title: React.ReactNode
   showBack?: boolean
   backTo?: string | number
 }

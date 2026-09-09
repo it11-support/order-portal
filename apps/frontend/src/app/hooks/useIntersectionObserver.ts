@@ -41,7 +41,7 @@ export const useIntersectionObserver = ({
       {
         rootMargin,
         threshold,
-      }
+      },
     )
 
     const el = targetRef.current

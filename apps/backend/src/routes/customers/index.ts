@@ -1,8 +1,11 @@
-import { getCustomers } from '@controllers';
-import { Router } from 'express';
+import { getCustomers, enableCustomerLogin, disableCustomerLogin } from '@controllers'
+import { requireAuth, requireAdmin } from '@auth'
+import { Router } from 'express'
 
-const router = Router();
+const router = Router()
 
-router.get('/', getCustomers);
+router.get('/', requireAuth, getCustomers)
+router.post('/:id/login', requireAuth, requireAdmin, enableCustomerLogin)
+router.delete('/:id/login', requireAuth, requireAdmin, disableCustomerLogin)
 
-export default router;
+export default router

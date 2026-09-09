@@ -59,6 +59,41 @@ CREATE TABLE "subgroups" (
     CONSTRAINT "subgroups_pkey" PRIMARY KEY ("ind_code")
 );
 
+-- CreateTable
+CREATE TABLE "categories" (
+    "id" SERIAL NOT NULL,
+    "code" VARCHAR(32) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "icon" VARCHAR(50),
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "products" (
+    "id" BIGSERIAL NOT NULL,
+    "item_code" TEXT NOT NULL,
+    "item_name" TEXT NOT NULL,
+    "foreign_name" TEXT,
+    "product_group_code" INTEGER,
+    "product_group_name" TEXT,
+    "product_category" TEXT NOT NULL DEFAULT 'OTHER',
+    "is_distributor" BOOLEAN NOT NULL DEFAULT false,
+    "sales_unit" TEXT,
+    "sales_pack_size" DECIMAL(19,6),
+    "sales_pack_unit" TEXT,
+    "launch_date" DATE,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 
@@ -82,6 +117,21 @@ CREATE INDEX "users_role_id_idx" ON "users"("role_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "customers_cardcode_unique" ON "customers"("card_code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "categories_code_key" ON "categories"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "products_item_code_key" ON "products"("item_code");
+
+-- CreateIndex
+CREATE INDEX "products_product_group_code_idx" ON "products"("product_group_code");
+
+-- CreateIndex
+CREATE INDEX "products_product_category_idx" ON "products"("product_category");
+
+-- CreateIndex
+CREATE INDEX "products_is_active_idx" ON "products"("is_active");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
