@@ -4,11 +4,7 @@ import { Product } from '@repo/shared'
 import { useAuth } from './AuthContext'
 
 export type ProductSortField =
-  | 'itemCode'
-  | 'itemName'
-  | 'productCategory'
-  | 'salesUnit'
-  | 'launchDate'
+  'itemCode' | 'itemName' | 'productCategory' | 'salesUnit' | 'launchDate'
 
 export type SortDirection = 'asc' | 'desc'
 

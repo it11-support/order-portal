@@ -1,6 +1,7 @@
-import { ArrowLeft, LogOut, Package, ShoppingCart } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth, useCart } from '@contexts'
+import { ArrowLeft, LogOut, Package, Search, ShoppingCart } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth, useCart, useCategories, useNotifications } from '@contexts'
+import NotificationPanel from '@/app/components/notifications/NotificationPanel'
 
 type AppHeaderProps = {
   title: React.ReactNode
@@ -10,8 +11,12 @@ type AppHeaderProps = {
 
 const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user: currentUser, logout } = useAuth()
   const { cartCount } = useCart()
+  const { search, selectedCategory } = useCategories()
+
+  const isSearchPage = location.pathname === '/search'
 
   const goBack = () => {
     if (typeof backTo === 'number') {
@@ -24,7 +29,7 @@ const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
   }
 
   return (
-    <header className="sticky top-0 z-20 bg-white border-b border-border flex items-center gap-3 px-4 h-14 lg:h-14">
+    <header className="sticky top-0 z-20 bg-white border-b border-border flex items-center gap-3 px-4 h-16 lg:h-16">
       {showBack && (
         <button
           onClick={goBack}
@@ -39,6 +44,22 @@ const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
         </div>
       )}
       <h1 className="flex-1 text-[15px] font-bold text-foreground truncate">{title}</h1>
+      {!isSearchPage && (
+        <button
+          onClick={() => navigate('/search')}
+          className="hidden lg:flex items-center gap-2 bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-muted-foreground hover:border-accent/40 transition-colors shrink-0 max-w-md"
+        >
+          <Search size={15} className="shrink-0" />
+          <span className="truncate">
+            {search
+              ? search
+              : selectedCategory
+                ? `Cari produk pada kategori ${selectedCategory} ...`
+                : 'Cari semua produk ...'}
+          </span>
+        </button>
+      )}
+      <NotificationPanel />
       {/* Cart icon — mobile only, in sidebar on desktop */}
       {currentUser?.role.name === 'customer' && !showBack && (
         <button

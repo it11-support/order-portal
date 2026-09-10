@@ -27,6 +27,7 @@ type OrderContextType = {
   orderPlaced: boolean
   setOrderPlaced: Dispatch<SetStateAction<boolean>>
   updateStatus: (id: string, status: OrderStatus, salesNotes?: string) => Promise<void>
+  fetchOrder: (id: string) => Promise<Order | null>
 }
 const OrderContext = createContext<OrderContextType | null>(null)
 export function OrderProvider({ children }: { children: React.ReactNode }) {
@@ -114,6 +115,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       throw e
     }
   }
+  const fetchOrder = async (id: string): Promise<Order | null> => {
+    try {
+      const response = await api.get(`/requests/${id}`)
+      return response.data.data
+    } catch {
+      return null
+    }
+  }
   return (
     <OrderContext.Provider
       value={{
@@ -126,6 +135,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         orderPlaced,
         setOrderPlaced,
         updateStatus,
+        fetchOrder,
       }}
     >
       {children}

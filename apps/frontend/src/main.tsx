@@ -8,18 +8,24 @@ import AuthProvider, {
   OrderProvider,
   CategoriesProvider,
   ProductsProvider,
+  NotificationsProvider,
+  WebSocketProvider,
 } from '@contexts'
 
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
-    <CategoriesProvider>
-      <ProductsProvider>
-        <OrderProvider>
-          <CartProvider>
-            <RouterProvider router={router} />
-          </CartProvider>
-        </OrderProvider>
-      </ProductsProvider>
-    </CategoriesProvider>
+    <WebSocketProvider>
+      <CategoriesProvider>
+        <ProductsProvider>
+          <OrderProvider>
+            <CartProvider>
+              <NotificationsProvider>
+                <RouterProvider router={router} />
+              </NotificationsProvider>
+            </CartProvider>
+          </OrderProvider>
+        </ProductsProvider>
+      </CategoriesProvider>
+    </WebSocketProvider>
   </AuthProvider>,
 )

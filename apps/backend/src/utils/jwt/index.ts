@@ -11,3 +11,15 @@ export const generateToken = (payload: { id: string }) => {
     expiresIn: '1d',
   })
 }
+
+export const verifyAccessToken = (token: string): { userId: number } | null => {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET)
+    if (typeof payload === 'string') return null
+    const userId = Number(payload.id)
+    if (!Number.isSafeInteger(userId) || userId <= 0) return null
+    return { userId }
+  } catch {
+    return null
+  }
+}

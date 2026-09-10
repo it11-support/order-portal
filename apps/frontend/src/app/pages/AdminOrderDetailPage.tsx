@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { StatusBadge } from '@components'
-import { useOrders, useCategories } from '@contexts'
+import { useOrders, useCategories, useNotifications } from '@contexts'
 import { fmtDate } from '@lib'
 import { AlertCircle } from 'lucide-react'
-import type { OrderStatus } from '@repo/shared'
+import type { Order, OrderStatus } from '@repo/shared'
 import { STATUS_CONFIG } from '../components/StatusBadge'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useState, useEffect } from 'react'
@@ -13,17 +13,42 @@ import { QUOTE_STATUS_LABELS } from '../components/StatusBadge'
 const AdminOrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const { orders, updateStatus, loading, error } = useOrders()
+  const { orders, updateStatus, loading, error, fetchOrder } = useOrders()
+  const { getCategoryIcon } = useCategories()
+  const { notifications, markRead } = useNotifications()
   const [salesNotes, setSalesNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const { getCategoryIcon } = useCategories()
+  const [order, setOrder] = useState<Order | null>(null)
+  const [orderLoading, setOrderLoading] = useState(true)
 
-  const order = orders.find((o) => o.id === orderId)
   useEffect(() => {
     setSalesNotes(order?.salesNotes ?? '')
   }, [order?.id, order?.salesNotes])
 
-  if (loading) return <Shell title="Memuat permintaan">Memuat...</Shell>
+  useEffect(() => {
+    if (!orderId) return
+    const relatedNotifications = notifications.filter((n) => n.relatedId === orderId && !n.read)
+    relatedNotifications.forEach((n) => markRead(n.id))
+  }, [orderId, notifications, markRead])
+
+  useEffect(() => {
+    const loadOrder = async () => {
+      setOrderLoading(true)
+      // First check if order is already in the list
+      const existingOrder = orders.find((o) => o.id === orderId)
+      if (existingOrder) {
+        setOrder(existingOrder)
+      } else {
+        // Fetch from API if not in list
+        const fetchedOrder = await fetchOrder(orderId!)
+        setOrder(fetchedOrder)
+      }
+      setOrderLoading(false)
+    }
+    loadOrder()
+  }, [orderId, orders, fetchOrder])
+
+  if (loading || orderLoading) return <Shell title="Memuat permintaan">Memuat...</Shell>
 
   if (!order) {
     return <Shell title="Order tidak ditemukan">Order tidak ditemukan</Shell>

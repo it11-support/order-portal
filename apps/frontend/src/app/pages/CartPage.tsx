@@ -1,15 +1,19 @@
 import { ShoppingCart, CheckCircle } from 'lucide-react'
 import { Shell } from '@layouts'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { QtyControl } from '@components'
 import { useCart, useOrders, useCategories } from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 const CartPage = () => {
-  const { cart, increase, decrease, setCart, cartQty } = useCart()
-  const { placeOrder, orderPlaced, submitting, error } = useOrders()
+  const { cart, increase, decrease, remove, setCart, cartQty } = useCart()
+  const { placeOrder, orderPlaced, setOrderPlaced, submitting, error } = useOrders()
   const { getCategoryIcon } = useCategories()
   const [orderNotes, setOrderNotes] = useState('')
+
+  useEffect(() => {
+    setOrderPlaced(false)
+  }, [setOrderPlaced])
 
   const handlePlaceOrder = async () => {
     try {
@@ -76,7 +80,7 @@ const CartPage = () => {
                   qty={item.qty ?? 0}
                   onIncrease={() => increase(item.product)}
                   onDecrease={() => decrease(item.product)}
-                  onRemove={() => decrease(item.product)}
+                  onRemove={() => remove(item.product.id)}
                 />
               </div>
             ))}

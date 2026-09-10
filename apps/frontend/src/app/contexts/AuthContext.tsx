@@ -4,6 +4,7 @@ import { api } from '@lib'
 
 type AuthContextType = {
   user: User | null
+  accessToken: string | null
   login: (username: string, password: string) => Promise<void>
   loginError: {
     username?: string
@@ -31,6 +32,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }>({})
   const isAdmin = user?.role.name === 'admin'
   const isCustomer = user?.role.name === 'customer'
+  const accessToken = localStorage.getItem('token')
 
   useEffect(() => {
     const init = async () => {
@@ -78,7 +80,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, loading, loginError, setLoginError, isAdmin, isCustomer }}
+      value={{
+        user,
+        accessToken,
+        login,
+        logout,
+        loading,
+        loginError,
+        setLoginError,
+        isAdmin,
+        isCustomer,
+      }}
     >
       {children}
     </AuthContext.Provider>

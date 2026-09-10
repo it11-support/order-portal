@@ -5,14 +5,15 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
-  Search,
   ShoppingCart,
   User,
   Users,
+  Bell,
 } from 'lucide-react'
-import { useAuth, useCart } from '@contexts'
+import { useAuth, useCart, useNotifications } from '@contexts'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import NotificationPanel from '@/app/components/notifications/NotificationPanel'
 
 type NavItem = {
   id: string
@@ -26,6 +27,7 @@ type NavItem = {
 const Sidebar = () => {
   const { user: currentUser, logout, isAdmin } = useAuth()
   const { cartCount } = useCart()
+  const { unreadCount } = useNotifications()
   const location = useLocation()
   const [openMenus, setOpenMenus] = useState<string[]>([])
 
@@ -45,12 +47,6 @@ const Sidebar = () => {
       label: 'Home',
       icon: <Home size={18} />,
       path: '/',
-    },
-    {
-      id: 'search',
-      label: 'Cari',
-      icon: <Search size={18} />,
-      path: '/search',
     },
     {
       id: 'cart',

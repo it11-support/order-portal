@@ -48,7 +48,7 @@ const CustomerDashboard = () => {
   ]
 
   return (
-    <Shell title="Dashboard Pelanggan" showBack={false}>
+    <Shell title="Dashboard" showBack={false}>
       <div className="space-y-6">
         <div className="bg-primary text-white rounded-2xl p-5 lg:p-7 relative overflow-hidden">
           <div className="absolute right-6 top-1/2 -translate-y-1/2 text-7xl opacity-10 select-none pointer-events-none">
@@ -131,7 +131,7 @@ const CustomerDashboard = () => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Syarat Pembayaran</span>
+              <span className="text-sm text-muted-foreground">Ppayment Term</span>
               <span className="text-sm font-medium text-foreground">
                 {currentUser?.customer?.PaymentTerm ?? '-'}
               </span>

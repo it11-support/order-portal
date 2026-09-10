@@ -1,18 +1,44 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { StatusBadge } from '@components'
-import { useOrders, useCategories } from '@contexts'
+import { useOrders, useCategories, useNotifications } from '@contexts'
 import { fmtDate } from '@lib'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
+import { useEffect, useState } from 'react'
+import type { Order } from '@repo/shared'
 
 const OrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const { orders, loading, error } = useOrders()
+  const { orders, loading, error, fetchOrder } = useOrders()
   const { getCategoryIcon } = useCategories()
+  const { notifications, markRead } = useNotifications()
+  const [order, setOrder] = useState<Order | null>(null)
+  const [orderLoading, setOrderLoading] = useState(true)
 
-  const order = orders.find((o) => o.id === orderId)
-  if (loading) return <Shell title="Memuat permintaan">Memuat...</Shell>
+  useEffect(() => {
+    const loadOrder = async () => {
+      if (!orderId) return
+      setOrderLoading(true)
+      const existing = orders.find((o) => o.id === orderId)
+      if (existing) {
+        setOrder(existing)
+      } else {
+        const fetched = await fetchOrder(orderId)
+        setOrder(fetched)
+      }
+      setOrderLoading(false)
+    }
+    loadOrder()
+  }, [orderId, orders, fetchOrder])
+
+  useEffect(() => {
+    if (!orderId) return
+    const relatedNotifications = notifications.filter((n) => n.relatedId === orderId && !n.read)
+    relatedNotifications.forEach((n) => markRead(n.id))
+  }, [orderId, notifications, markRead])
+
+  if (loading || orderLoading) return <Shell title="Memuat permintaan">Memuat...</Shell>
 
   if (!order) {
     return <Shell title="Order tidak ditemukan">Order tidak ditemukan</Shell>
@@ -76,7 +102,7 @@ const OrderDetailPage = () => {
                 <p className="text-xs text-muted-foreground">{item.product.salesUnit}</p>
               </div>
               <span className="text-sm font-bold tabular-nums">
-                {order.kind === 'quote' ? '-' : `×${item.qty}`}
+                {order.kind === 'quote' ? '' : `×${item.qty}`}
               </span>
             </div>
           ))}

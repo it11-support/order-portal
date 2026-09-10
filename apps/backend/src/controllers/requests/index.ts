@@ -2,6 +2,7 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { currentCustomer, customerProductFilter } from '@/services/customer-catalog'
+import { ws } from '@/services/websocket'
 
 const customerSelect = {
   id: true,
@@ -39,6 +40,21 @@ export async function listRequests(req: AuthenticatedRequest, res: Response) {
   })
   res.setHeader('Cache-Control', 'no-store')
   return res.json({ data: rows.map(serialize) })
+}
+
+export async function getRequest(req: AuthenticatedRequest, res: Response) {
+  const staff = ['admin', 'sales_admin'].includes(req.user?.role.name ?? '')
+  const customer = staff ? null : await currentCustomer(req)
+  if (!staff && !customer) return res.status(403).json({ message: 'Akun pelanggan tidak aktif.' })
+  const row = await prisma.portalRequest.findUnique({
+    where: { id: String(req.params.id) },
+    include: { customer: { select: customerSelect } },
+  })
+  if (!row) return res.status(404).json({ message: 'Permintaan tidak ditemukan.' })
+  if (!staff && String(row.customerId) !== String(customer!.id))
+    return res.status(403).json({ message: 'Akses ditolak.' })
+  res.setHeader('Cache-Control', 'no-store')
+  return res.json({ data: serialize(row) })
 }
 
 export async function createRequest(req: AuthenticatedRequest, res: Response) {
@@ -112,6 +128,41 @@ export async function createRequest(req: AuthenticatedRequest, res: Response) {
   })
   if (String(row.customerId) !== String(customer.id))
     return res.status(409).json({ message: 'ID permintaan sudah digunakan.' })
+  const admins = await prisma.user.findMany({
+    where: { role: { name: { in: ['admin', 'sales_admin'] } }, isActive: true },
+    select: { id: true },
+  })
+  if (admins.length) {
+    const kindLabel = kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
+    const createdNotifications = await prisma.notification.createManyAndReturn({
+      data: admins.map((admin) => ({
+        userId: admin.id,
+        title: `${kindLabel} baru dari ${row.customer.CardName || row.customer.CntctPrsn || 'pelanggan'}`,
+        message: `${kindLabel} ${row.id} menunggu tindakan.`,
+        type: kind === 'quote' ? 'new_quote' : 'new_order',
+        relatedId: row.id,
+      })),
+    })
+    for (const notification of createdNotifications) {
+      ws.emitNotificationCreated(notification)
+    }
+    const itemsWithPricing = snapshot.map((item: any) => ({
+      productId: String(item.product?.id ?? item.productId),
+      productName: item.product?.itemName ?? item.product?.name ?? 'Unknown',
+      qty: item.qty ?? 1,
+      price: item.product?.priceBefDisc ?? 0,
+      total: (item.qty ?? 1) * (item.product?.priceBefDisc ?? 0),
+    }))
+    const totalAmount = itemsWithPricing.reduce((sum: number, item: any) => sum + item.total, 0)
+    ws.emitOrderCreated(
+      row.id,
+      String(row.customerId),
+      row.customer.CardName || row.customer.CntctPrsn || 'pelanggan',
+      kind,
+      itemsWithPricing,
+      totalAmount,
+    )
+  }
   return res.status(201).json({ data: serialize(row) })
 }
 
@@ -149,5 +200,32 @@ export async function updateRequest(req: AuthenticatedRequest, res: Response) {
   })
   if (updated.count !== 1)
     return res.status(409).json({ message: 'Status berubah. Muat ulang daftar.' })
+  if (updated.count === 1) {
+    const kindLabel = row.kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
+    const customerUser = await prisma.user.findFirst({
+      where: { customerId: BigInt(String(row.customerId)), isActive: true },
+      select: { id: true },
+    })
+    if (customerUser) {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: customerUser.id,
+          title: `${kindLabel} ${row.id} diperbarui`,
+          message: `Status sekarang: ${status}.`,
+          type: 'status_update',
+          relatedId: row.id,
+        },
+      })
+      ws.emitNotificationCreated(notification)
+    }
+    ws.emitOrderStatusChanged(
+      row.id,
+      String(row.customerId),
+      row.status,
+      status,
+      row.kind as 'order' | 'quote',
+      salesNotes,
+    )
+  }
   return res.json({ success: true })
 }

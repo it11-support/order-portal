@@ -30,6 +30,7 @@ model User {
   customerId BigInt?  @unique @map("customer_id")
 
   customer Customers? @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  notifications Notification[]
 
   @@index([username])
   @@index([email])
@@ -223,5 +224,21 @@ model ReturInvoice {
   @@index([docDate])
   @@index([companyId, cardCode])
   @@map("retur_invoices")
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  userId     Int       @map("user_id")
+  title      String    @db.VarChar(255)
+  message    String    @db.Text
+  type       String    @db.VarChar(50)
+  relatedId  String?   @map("related_id") @db.VarChar(255)
+  read       Boolean   @default(false)
+  dismissed  Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, dismissed, createdAt])
+  @@map("notifications")
 }
 

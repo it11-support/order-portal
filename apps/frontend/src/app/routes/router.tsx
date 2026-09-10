@@ -15,6 +15,7 @@ import {
   AdminProductListPage,
   UsersPage,
   CustomerDashboardPage,
+  NotificationsPage,
 } from '@pages'
 
 import { AppLayout } from '@layouts'
@@ -114,6 +115,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['customer']}>
             <CustomerDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'notifications',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'customer', 'sales_admin']}>
+            <NotificationsPage />
           </ProtectedRoute>
         ),
       },

@@ -94,7 +94,7 @@ export function CategoriesProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const timer = setTimeout(() => {
       void getProducts(selectedCategory, search)
-    }, 300)
+    }, 150)
     return () => {
       clearTimeout(timer)
       ++requestId.current
