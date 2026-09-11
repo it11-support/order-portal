@@ -9,7 +9,7 @@ import { useAuth, useCart, useCategories } from '@contexts'
 import SuggestedItems from '@/app/components/products/SuggestedItems'
 
 const SearchPage = () => {
-  const { cart, increase, decrease, remove } = useCart()
+  const { cart, increase, decrease, remove, setQty } = useCart()
   const { user: currentUser } = useAuth()
   const navigate = useNavigate()
 
@@ -106,6 +106,7 @@ const SearchPage = () => {
                 increase={increase}
                 decrease={decrease}
                 remove={remove}
+                onQtyChange={(product, qty) => setQty(product, qty)}
               />
             </div>
           )}

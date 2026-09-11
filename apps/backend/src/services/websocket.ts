@@ -69,7 +69,11 @@ class WebSocketService {
           console.log('[WS Auth] Customer not found or inactive')
           return next(new Error('User not found or inactive'))
         }
-        socket.userId = Number(customer.id)
+        const customerUser = await prisma.user.findFirst({
+          where: { customerId: customer.id, isActive: true },
+          select: { id: true },
+        })
+        socket.userId = customerUser ? customerUser.id : Number(customer.id)
         socket.userRole = 'customer'
         socket.customerId = customer.id.toString()
         next()

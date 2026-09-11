@@ -9,6 +9,7 @@ import { STATUS_CONFIG } from '../components/StatusBadge'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useState, useEffect } from 'react'
 import { QUOTE_STATUS_LABELS } from '../components/StatusBadge'
+import { toast } from 'sonner'
 
 const AdminOrderDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>()
@@ -54,6 +55,20 @@ const AdminOrderDetailPage = () => {
     return <Shell title="Order tidak ditemukan">Order tidak ditemukan</Shell>
   }
 
+  const handleSaveNotes = async (status: OrderStatus) => {
+    setSaving(true)
+    try {
+      await toast.promise(updateStatus(order.id, status, salesNotes), {
+        loading: 'Menyimpan perubahan...',
+        success: 'Status berhasil diperbarui',
+        error: 'Gagal memperbarui status',
+      })
+      navigate('/admin/orders')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const nextMap: Record<OrderStatus, OrderStatus[]> = {
     pending: ['confirmed', 'cancelled'],
     confirmed: ['processing', 'cancelled'],
@@ -76,23 +91,13 @@ const AdminOrderDetailPage = () => {
 
   const actionBar =
     nextStatuses.length > 0 ? (
-      <div className="flex gap-3">
+      <div className="flex gap-3 justify-center">
         {nextStatuses.map((s) => (
           <button
             key={s}
             disabled={saving}
-            onClick={async () => {
-              setSaving(true)
-              try {
-                await updateStatus(order.id, s, salesNotes)
-                navigate('/admin/orders')
-              } catch {
-                /* Context displays the failure. */
-              } finally {
-                setSaving(false)
-              }
-            }}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors active:scale-[0.98] ${
+            onClick={() => handleSaveNotes(s)}
+            className={`w-full sm:w-auto sm:min-w-[140px] sm:px-6 py-3 rounded-xl text-sm font-bold transition-colors active:scale-[0.98] ${
               s === 'cancelled'
                 ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                 : 'bg-accent text-white hover:bg-accent/90'
@@ -136,7 +141,11 @@ const AdminOrderDetailPage = () => {
             onClick={async () => {
               setSaving(true)
               try {
-                await updateStatus(order.id, order.status, salesNotes)
+                await toast.promise(updateStatus(order.id, order.status, salesNotes), {
+                  loading: 'Menyimpan catatan...',
+                  success: 'Catatan berhasil disimpan',
+                  error: 'Gagal menyimpan catatan',
+                })
               } catch {
                 /* Error is shown above. */
               } finally {

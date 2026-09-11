@@ -11,6 +11,7 @@ import AuthProvider, {
   NotificationsProvider,
   WebSocketProvider,
 } from '@contexts'
+import { Toaster } from '@/app/components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
               <NotificationsProvider>
                 <RouterProvider router={router} />
               </NotificationsProvider>
+              <Toaster />
             </CartProvider>
           </OrderProvider>
         </ProductsProvider>

@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import { toast } from 'sonner'
 
 interface UserForm {
   username: string
@@ -138,7 +139,11 @@ const UserList: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!confirm('Hapus user ini?')) return
     try {
-      await api.delete(`/users/${id}`)
+      await toast.promise(api.delete(`/users/${id}`), {
+        loading: 'Menghapus user...',
+        success: 'User berhasil dihapus',
+        error: 'Gagal menghapus user',
+      })
       fetchUsers()
     } catch (e) {
       console.error(e)

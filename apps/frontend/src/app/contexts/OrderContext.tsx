@@ -11,6 +11,7 @@
 import type { Order, OrderStatus, CartItem } from '@repo/shared'
 import { api } from '@lib'
 import { useAuth } from './AuthContext'
+import { useWSEvent } from './WebSocketContext'
 
 type OrderContextType = {
   orders: Order[]
@@ -66,6 +67,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       disposed = true
     }
   }, [identity])
+  useWSEvent('order.status_changed', () => {
+    if (identity) void refresh()
+  })
   const send = async (kind: 'order' | 'quote', items: CartItem[], notes: string) => {
     if (busy.current) throw new Error('Permintaan sedang dikirim.')
     busy.current = true

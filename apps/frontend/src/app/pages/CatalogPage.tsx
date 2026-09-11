@@ -9,7 +9,7 @@ import SuggestedItems from '@/app/components/products/SuggestedItems'
 const CatalogPage = () => {
   const { user: currentUser } = useAuth()
   const navigate = useNavigate()
-  const { cart, increase, decrease, remove } = useCart()
+  const { cart } = useCart()
 
   const {
     categories,
@@ -325,13 +325,7 @@ const CatalogPage = () => {
             </div>
           ) : (
             <div className="space-y-5">
-              <ProductList
-                products={visibleProducts}
-                cart={cart}
-                increase={increase}
-                decrease={decrease}
-                remove={remove}
-              />
+              <ProductList products={visibleProducts} cart={cart} />
 
               {hasMore && (
                 <div className="flex items-center gap-4">

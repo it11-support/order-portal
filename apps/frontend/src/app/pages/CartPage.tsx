@@ -3,10 +3,11 @@ import { Shell } from '@layouts'
 import { useState, useEffect } from 'react'
 import { QtyControl } from '@components'
 import { useCart, useOrders, useCategories } from '@contexts'
+import { toast } from 'sonner'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 const CartPage = () => {
-  const { cart, increase, decrease, remove, setCart, cartQty } = useCart()
+  const { cart, setCart, cartQty } = useCart()
   const { placeOrder, orderPlaced, setOrderPlaced, submitting, error } = useOrders()
   const { getCategoryIcon } = useCategories()
   const [orderNotes, setOrderNotes] = useState('')
@@ -17,7 +18,14 @@ const CartPage = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      await placeOrder(cart, orderNotes, setOrderNotes, () => setCart([]))
+      await toast.promise(
+        placeOrder(cart, orderNotes, setOrderNotes, () => setCart([])),
+        {
+          loading: 'Mengirim order...',
+          success: 'Order berhasil dikirim',
+          error: 'Gagal mengirim order',
+        },
+      )
     } catch {
       /* Error is displayed below. */
     }
@@ -75,13 +83,7 @@ const CartPage = () => {
                   <p className="text-sm font-semibold leading-tight">{item.product.itemName}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{item.product.salesUnit}</p>
                 </div>
-                <QtyControl
-                  product={item.product}
-                  qty={item.qty ?? 0}
-                  onIncrease={() => increase(item.product)}
-                  onDecrease={() => decrease(item.product)}
-                  onRemove={() => remove(item.product.id)}
-                />
+                <QtyControl product={item.product} />
               </div>
             ))}
           </div>

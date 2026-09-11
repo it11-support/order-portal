@@ -21,6 +21,10 @@ export const disableCustomerLogin = async (req: Request, res: Response): Promise
     res.status(404).json({ message: 'Pelanggan tidak ditemukan.' })
     return
   }
+  await prisma.user.updateMany({
+    where: { customerId: BigInt(id) },
+    data: { isActive: false },
+  })
   res.setHeader('Cache-Control', 'no-store')
   res.status(200).json({ data: { hasLogin: false, loginPassword: null } })
 }
@@ -52,6 +56,14 @@ export const enableCustomerLogin = async (req: Request, res: Response): Promise<
     res.status(409).json({ message: 'CardCode sudah digunakan sebagai username akun lain.' })
     return
   }
+  const existingLinkedUser = await prisma.user.findFirst({
+    where: { customerId: BigInt(id) },
+    select: { id: true },
+  })
+  if (existingLinkedUser) {
+    res.status(409).json({ message: 'Pelanggan ini sudah memiliki akun user.' })
+    return
+  }
 
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let password: string
@@ -59,21 +71,27 @@ export const enableCustomerLogin = async (req: Request, res: Response): Promise<
     password = Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('')
   } while (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
   const hash = await bcrypt.hash(password, 10)
-  const result = await prisma.customers.updateMany({
-    where: {
-      id: BigInt(id),
-      CardCode: customer.CardCode,
-      AND: [
-        { OR: [{ password: null }, { password: '' }] },
-        { OR: [{ NonActive: null }, { NonActive: { not: 'Y' } }] },
-      ],
-    },
-    data: { password: hash, loginPasswordEncrypted: encryptCustomerPassword(password) },
-  })
-  if (result.count !== 1) {
-    res.status(409).json({ message: 'Data pelanggan berubah. Muat ulang daftar pelanggan.' })
+  const customerRole = await prisma.role.findUnique({ where: { name: 'customer' } })
+  if (!customerRole) {
+    res.status(500).json({ message: 'Role customer tidak ditemukan.' })
     return
   }
+  await prisma.$transaction([
+    prisma.customers.update({
+      where: { id: BigInt(id) },
+      data: { password: hash, loginPasswordEncrypted: encryptCustomerPassword(password) },
+    }),
+    prisma.user.create({
+      data: {
+        username: customer.CardCode,
+        password: hash,
+        name: customer.CardName || customer.CntctPrsn || customer.CardCode,
+        roleId: customerRole.id,
+        customerId: BigInt(id),
+        isActive: true,
+      },
+    }),
+  ])
   res.setHeader('Cache-Control', 'no-store')
   res.status(200).json({ data: { username: customer.CardCode, password } })
 }

@@ -8,7 +8,7 @@ import CategoryIcon from '@/app/components/categories/CategoryIcon'
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>()
 
-  const { cart, increase, decrease, remove } = useCart()
+  const { cart, increase, decrease, remove, setQty } = useCart()
 
   const { loading, getCategory, filteredProducts, setSelectedCategory } = useCategories()
 
@@ -43,13 +43,7 @@ const CategoryPage = () => {
       }
       showBack
     >
-      <ProductList
-        products={filteredProducts}
-        cart={cart}
-        increase={increase}
-        decrease={decrease}
-        remove={remove}
-      />
+      <ProductList products={filteredProducts} cart={cart} />
     </Shell>
   )
 }

@@ -16,6 +16,7 @@ import { Label } from '@/app/components/ui/label'
 import { Switch } from '@/app/components/ui/switch'
 import IconPicker from './IconPicker'
 import CategoryIcon from './CategoryIcon'
+import { toast } from 'sonner'
 
 const EMPTY_FORM = {
   code: '',
@@ -93,7 +94,11 @@ const CategoryList: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!confirm('Hapus kategori ini?')) return
     try {
-      await api.delete(`/categories/${id}`)
+      await toast.promise(api.delete(`/categories/${id}`), {
+        loading: 'Menghapus kategori...',
+        success: 'Kategori berhasil dihapus',
+        error: 'Gagal menghapus kategori',
+      })
       fetchCategories()
     } catch (e) {
       console.error(e)

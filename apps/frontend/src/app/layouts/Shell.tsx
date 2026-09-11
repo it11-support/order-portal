@@ -26,7 +26,7 @@ const Shell = ({
           <div className="max-w-5xl mx-auto px-4 py-4 lg:py-6 lg:px-8">{children}</div>
         </main>
         {actionBar && (
-          <div className="fixed bottom-16 lg:bottom-0 left-0 lg:left-64 right-0 z-10 bg-white border-t border-border px-4 py-3">
+          <div className="fixed bottom-[58px] lg:bottom-0 left-0 lg:left-64 right-0 z-10 bg-white border-t border-border px-4 py-3">
             {actionBar}
           </div>
         )}

@@ -2,6 +2,7 @@ import { Bell, X, CheckCheck, ExternalLink } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '@contexts'
+import { toast } from 'sonner'
 
 const fmtDate = (value: string) => {
   const date = new Date(value)
@@ -51,7 +52,7 @@ const NotificationPanel = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:translate-x-0 sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 md:w-96 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <p className="text-sm font-bold text-foreground">Notifikasi</p>
             <button
@@ -93,7 +94,10 @@ const NotificationPanel = () => {
                       <div className="flex items-center gap-1 shrink-0">
                         {!notification.read && (
                           <button
-                            onClick={() => markRead(notification.id)}
+                            onClick={async () => {
+                              await markRead(notification.id)
+                              toast.success('Notifikasi ditandai dibaca')
+                            }}
                             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
                             title="Tandai dibaca"
                           >
@@ -101,7 +105,10 @@ const NotificationPanel = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => dismiss(notification.id)}
+                          onClick={async () => {
+                            await dismiss(notification.id)
+                            toast.success('Notifikasi diabaikan')
+                          }}
                           className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
                           title="Abaikan"
                         >

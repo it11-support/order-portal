@@ -12,6 +12,7 @@ type CartContextType = {
   remove: (productId: number) => void
   cartCount: number
   cartQty: number
+  onQtyChange: (product: Product, qty: number) => void
 }
 
 const CartContext = createContext<CartContextType | null>(null)
@@ -35,6 +36,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   function getQty(pid: number) {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
+  }
+
+  function onQtyChange(product: Product, qty: number) {
+    setQty(product, qty)
   }
 
   function setQty(product: Product, qty: number) {
@@ -67,7 +72,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, setCart, getQty, setQty, increase, decrease, cartCount, cartQty, remove }}
+      value={{
+        cart,
+        setCart,
+        getQty,
+        setQty,
+        increase,
+        decrease,
+        cartCount,
+        cartQty,
+        remove,
+        onQtyChange,
+      }}
     >
       {children}
     </CartContext.Provider>

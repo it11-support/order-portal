@@ -4,12 +4,9 @@ import ProductRow from './ProductRow'
 type ProductListProps = {
   products: Product[]
   cart: CartItem[]
-  increase: (p: Product) => void
-  decrease: (p: Product) => void
-  remove: (p: number) => void
 }
 
-export const ProductList = ({ products, cart, increase, decrease, remove }: ProductListProps) => {
+export const ProductList = ({ products, cart }: ProductListProps) => {
   const getQty = (pid: number) => {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
@@ -25,13 +22,7 @@ export const ProductList = ({ products, cart, increase, decrease, remove }: Prod
           return (
             <div key={p.id} className={selected ? 'bg-accent/5' : ''}>
               <div className="px-4">
-                <ProductRow
-                  product={p}
-                  qty={qty}
-                  onIncrease={() => increase(p)}
-                  onDecrease={() => decrease(p)}
-                  onRemove={() => remove(p.id)}
-                />
+                <ProductRow product={p} />
               </div>
             </div>
           )
@@ -58,13 +49,7 @@ export const ProductList = ({ products, cart, increase, decrease, remove }: Prod
                 }
               `}
             >
-              <ProductRow
-                product={p}
-                qty={qty}
-                onIncrease={() => increase(p)}
-                onDecrease={() => decrease(p)}
-                onRemove={() => remove(p.id)}
-              />
+              <ProductRow product={p} />
             </div>
           )
         })}
