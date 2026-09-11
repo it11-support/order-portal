@@ -216,7 +216,7 @@ const Sidebar = () => {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{currentUser?.name}</p>
             <p className="text-xs text-muted-foreground truncate">
-              {currentUser?.customer?.CardName}
+              {currentUser?.customer?.CardCode}
             </p>
           </div>
         </div>
