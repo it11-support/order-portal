@@ -5,6 +5,7 @@ import { ProductList, useLoadMore } from '@components'
 import { useAuth, useCart, useCategories } from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import SuggestedItems from '@/app/components/products/SuggestedItems'
+import { useMemo } from 'react'
 
 const CatalogPage = () => {
   const { user: currentUser } = useAuth()
@@ -49,6 +50,19 @@ const CatalogPage = () => {
     setSearch('')
     setSelectedCategory('')
   }
+
+  const categoryLabel = useMemo(() => {
+    if (selectedCategory === 'OTHER') return 'Produk Lain'
+    if (selectedCategory === 'SUGGESTED') return 'Produk Disarankan'
+
+    if (!selectedCategory) {
+      return 'Semua Produk'
+    }
+
+    const category = categories.find((category) => category.code === selectedCategory)
+
+    return category ? `PRODUK ${category.name}` : 'Semua Produk'
+  }, [categories, selectedCategory, currentUser?.role.name])
 
   return (
     <Shell title="TSM Order Portal" showBack={false}>
@@ -96,13 +110,7 @@ const CatalogPage = () => {
           >
             <Search size={15} className="shrink-0" />
 
-            <span>
-              {search
-                ? search
-                : selectedCategory
-                  ? `Cari produk pada kategori ${selectedCategory} ...`
-                  : 'Cari semua produk ...'}
-            </span>
+            <span>{search ? search : 'Cari semua produk ...'}</span>
           </button>
 
           {search && (
@@ -242,12 +250,7 @@ const CatalogPage = () => {
               <button
                 type="button"
                 key={'sugested'}
-                onClick={() => {
-                  document.getElementById('suggested-products')?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  })
-                }}
+                onClick={() => setSelectedCategory('SUGGESTED')}
                 className={`
                   flex flex-col
                   items-center
@@ -266,7 +269,7 @@ const CatalogPage = () => {
                     font-semibold
                     text-center
                     leading-tight
-                    text-foreground
+                    ${selectedCategory === 'SUGGESTED' ? 'text-accent' : 'text-foreground'}
                   `}
                 >
                   Produk Disarankan
@@ -275,7 +278,9 @@ const CatalogPage = () => {
                   <CategoryIcon
                     name={'mdi:chevron-double-right'}
                     size={24}
-                    className={'text-emerald-600'}
+                    className={
+                      selectedCategory === 'SUGGESTED' ? 'text-accent' : 'text-emerald-600'
+                    }
                   />
                 </span>
               </button>
@@ -284,57 +289,52 @@ const CatalogPage = () => {
         </section>
 
         {/* Products */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2
-              className="
+        {selectedCategory !== 'SUGGESTED' && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2
+                className="
                 text-[11px]
                 font-bold
                 text-muted-foreground
                 uppercase
                 tracking-wider
               "
-            >
-              {selectedCategory
-                ? selectedCategory === 'OTHER'
-                  ? 'Produk Lain'
-                  : `Produk ${selectedCategory}`
-                : currentUser?.role.name === 'customer'
-                  ? 'Produk Anda'
-                  : 'Semua Produk'}
-            </h2>
+              >
+                {categoryLabel}
+              </h2>
 
-            {filteredProducts.length > 0 && (
-              <span className="text-[10px] text-muted-foreground">
-                {filteredProducts.length} produk
-              </span>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">Memuat produk...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm font-semibold">Produk tidak ditemukan</p>
-
-              {selectedCategory && (
-                <p className="text-xs mt-1">Tidak ada produk pada kategori {selectedCategory}</p>
+              {filteredProducts.length > 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  {filteredProducts.length} produk
+                </span>
               )}
             </div>
-          ) : (
-            <div className="space-y-5">
-              <ProductList products={visibleProducts} cart={cart} />
 
-              {hasMore && (
-                <div className="flex items-center gap-4">
-                  <hr className="flex-1 border-border" />
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-sm">Memuat produk...</p>
+              </div>
+            ) : filteredProducts.length === 0 && selectedCategory !== 'SUGGESTED' ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-sm font-semibold">Produk tidak ditemukan</p>
 
-                  <button
-                    type="button"
-                    onClick={loadMore}
-                    className="
+                {selectedCategory && (
+                  <p className="text-xs mt-1">Tidak ada produk pada kategori {selectedCategory}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <ProductList products={visibleProducts} cart={cart} />
+
+                {hasMore && (
+                  <div className="flex items-center gap-4">
+                    <hr className="flex-1 border-border" />
+
+                    <button
+                      type="button"
+                      onClick={loadMore}
+                      className="
                       shrink-0
                       rounded-full
                       border border-border
@@ -349,20 +349,23 @@ const CatalogPage = () => {
                       justify-center
                       gap-2
                     "
-                  >
-                    Lebih banyak
-                    <ChevronDown size={16} />
-                  </button>
+                    >
+                      Lebih banyak
+                      <ChevronDown size={16} />
+                    </button>
 
-                  <hr className="flex-1 border-border" />
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-        <div id="suggested-products" className="scroll-mt-[25px] space-y-3 pt-2">
-          <SuggestedItems key={String(currentUser?.id)} />
-        </div>
+                    <hr className="flex-1 border-border" />
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+        {selectedCategory === 'SUGGESTED' && (
+          <div id="suggested-products" className="scroll-mt-[25px] space-y-3 pt-2">
+            <SuggestedItems key={String(currentUser?.id)} />
+          </div>
+        )}
       </div>
     </Shell>
   )

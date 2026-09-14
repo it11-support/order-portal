@@ -50,13 +50,7 @@ const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
           className="hidden lg:flex items-center gap-2 bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-muted-foreground hover:border-accent/40 transition-colors shrink-0 max-w-md"
         >
           <Search size={15} className="shrink-0" />
-          <span className="truncate">
-            {search
-              ? search
-              : selectedCategory
-                ? `Cari produk pada kategori ${selectedCategory} ...`
-                : 'Cari semua produk ...'}
-          </span>
+          <span className="truncate">{search ? search : 'Cari semua produk ...'}</span>
         </button>
       )}
       <NotificationPanel />

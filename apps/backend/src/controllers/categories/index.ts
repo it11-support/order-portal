@@ -8,10 +8,10 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   const isCustomer = req.user?.role.name === 'customer'
   const products = isCustomer
     ? await prisma.product.findMany({
-        where: await customerProductFilter(req),
-        select: { productCategory: true },
-        distinct: ['productCategory'],
-      })
+      where: await customerProductFilter(req),
+      select: { productCategory: true },
+      distinct: ['productCategory'],
+    })
     : []
   const categories = await prisma.category.findMany({
     where: isCustomer
@@ -103,28 +103,68 @@ export const getProductsByCategory = async (
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
-  const { category, search } = req.query
+  const category =
+    typeof req.query.category === 'string'
+      ? req.query.category
+      : ''
 
-  const categoryCode = category as string
+  const search =
+    typeof req.query.search === 'string'
+      ? req.query.search.trim()
+      : ''
+
+  const isCustomer = req.user?.role.name === 'customer'
+  const isSuggested = category === 'SUGGESTED'
+
+  // Suggested hanya relevan untuk customer
+  if (isSuggested && !isCustomer) {
+    res.status(200).json({ data: [] })
+    return
+  }
+
+  const customerFilter = isCustomer
+    ? await customerProductFilter(req, isSuggested)
+    : { isActive: true }
 
   const where: ProductWhereInput = {
-    ...(req.user?.role.name === 'customer'
-      ? await customerProductFilter(req, req.query.suggested === 'true')
+    ...customerFilter,
+
+    // SUGGESTED adalah virtual category,
+    // jangan diteruskan ke productCategory.
+    ...(category && !isSuggested
+      ? {
+        productCategory: category,
+      }
       : {}),
-    ...(categoryCode ? { productCategory: categoryCode } : {}),
+
     ...(search
       ? {
-          OR: [
-            { itemName: { contains: search as string, mode: 'insensitive' as const } },
-            { itemCode: { contains: search as string, mode: 'insensitive' as const } },
-          ],
-        }
+        OR: [
+          {
+            itemName: {
+              contains: search,
+              mode: 'insensitive' as const,
+            },
+          },
+          {
+            itemCode: {
+              contains: search,
+              mode: 'insensitive' as const,
+            },
+          },
+        ],
+      }
       : {}),
   }
+
   const products = await prisma.product.findMany({
     where,
-    orderBy: { itemName: 'asc' },
+    orderBy: {
+      itemName: 'asc',
+    },
   })
 
-  res.status(200).json({ data: products })
+  res.status(200).json({
+    data: products,
+  })
 }

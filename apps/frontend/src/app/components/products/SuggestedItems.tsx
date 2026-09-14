@@ -6,7 +6,7 @@ import { useLoadMore } from '@components'
 
 export default function SuggestedItems() {
   const { isCustomer } = useAuth()
-  const { suggestedProducts, loading } = useCategories()
+  const { suggestedProducts, suggestedLoading } = useCategories()
   const { sendQuote, submitting } = useOrders()
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [notes, setNotes] = useState('')
@@ -30,17 +30,18 @@ export default function SuggestedItems() {
     setSent(false)
     try {
       await sendQuote(items, notes)
+
       setSelected({})
       setNotes('')
+      setQuoteOpen(false)
       setSent(true)
     } catch (e: any) {
       setError(e.message)
     }
   }
   return (
-    <section className="space-y-3 pt-6">
+    <section className="space-y-3">
       <div>
-        <h2 className="font-bold text-foreground">Produk Disarankan</h2>
         <p className="text-sm text-muted-foreground">Produk yang dibeli pelanggan lain.</p>
         <p className="text-sm text-muted-foreground">
           Masukkan produk yang ingin Anda beli ke dalam permintaan penawaran, lalu tim sales akan
@@ -60,8 +61,10 @@ export default function SuggestedItems() {
           {error}
         </p>
       )}
-      {loading ? (
-        <p>Memuat saran...</p>
+      {suggestedLoading ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p className="text-sm">Memuat produk disarankan...</p>
+        </div>
       ) : !suggestedProducts.length ? (
         <p className="text-sm text-muted-foreground">Belum ada produk saran yang tersedia.</p>
       ) : (
