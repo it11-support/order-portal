@@ -36,7 +36,7 @@ const CustomerCredentials = ({
       await navigator.clipboard.writeText(username)
       setUsernameCopied(true)
     } catch {
-      setCopyError('Gagal menyalin. Silakan salin username secara manual.')
+      setCopyError('Gagal menyalin username secara manual.')
     }
   }
 
@@ -141,7 +141,6 @@ const CustomerList: React.FC = () => {
 
   const {
     data: pages,
-
     setSize,
 
     isLoading,
@@ -161,9 +160,28 @@ const CustomerList: React.FC = () => {
     setBusyId(String(customer.id))
     setLoginError('')
     try {
-      const response = enabled
-        ? await api.post(`/customers/${customer.id}/login`)
-        : await api.delete(`/customers/${customer.id}/login`)
+      if (enabled) {
+        await api.post(`/customers/${customer.id}/login`)
+      } else {
+        await api.delete(`/customers/${customer.id}/login`)
+      }
+      await mutate()
+    } catch (error: any) {
+      setLoginError(error.response?.data?.message ?? 'Gagal mengubah login pelanggan.')
+    } finally {
+      pendingLogin.current = false
+      setBusyId(null)
+    }
+  }
+
+  const handleReset = async (customer: Customer) => {
+    if (!isAdmin || customer.id == null) return
+    if (!confirm('Reset password pelanggan ini? Password baru akan dibuat.')) return
+    setBusyId(String(customer.id))
+    setLoginError('')
+    try {
+      const res = await api.post(`/customers/${customer.id}/login/reset`)
+      const { username, password } = res.data.data
       await mutate(
         (current) =>
           current?.map((page) => ({
@@ -172,8 +190,9 @@ const CustomerList: React.FC = () => {
               String(row.id) === String(customer.id)
                 ? {
                     ...row,
-                    hasLogin: enabled,
-                    loginPassword: enabled ? response.data.data.password : null,
+                    loginUsername: username ?? null,
+                    loginPassword: password ?? null,
+                    hasLogin: true,
                   }
                 : row,
             ),
@@ -181,9 +200,8 @@ const CustomerList: React.FC = () => {
         { revalidate: false },
       )
     } catch (error: any) {
-      setLoginError(error.response?.data?.message ?? 'Gagal mengubah login pelanggan.')
+      setLoginError(error.response?.data?.message ?? 'Gagal mereset password pelanggan.')
     } finally {
-      pendingLogin.current = false
       setBusyId(null)
     }
   }
@@ -326,11 +344,21 @@ const CustomerList: React.FC = () => {
                           {busyId === String(customer.id) ? 'Memproses...' : 'Login aktif'}
                         </label>
                         {customer.hasLogin && (
+                          <button
+                            type="button"
+                            onClick={() => handleReset(customer)}
+                            disabled={busyId !== null}
+                            className="mt-2 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            Reset password
+                          </button>
+                        )}
+                        {customer.hasLogin && (
                           <div className="mt-2 text-xs">
                             <CustomerCredentials
-                              key={`${customer.CardCode}:${customer.loginPassword}`}
-                              username={customer.CardCode ?? ''}
-                              password={customer.loginPassword}
+                              key={`${customer.CardCode}:${customer.loginPassword ?? ''}`}
+                              username={customer.loginUsername ?? customer.CardCode ?? ''}
+                              password={customer.loginPassword ?? null}
                             />
                           </div>
                         )}

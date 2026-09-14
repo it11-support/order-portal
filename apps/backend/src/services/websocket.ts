@@ -49,33 +49,17 @@ class WebSocketService {
           select: { id: true, role: { select: { name: true } }, customerId: true, isActive: true },
         })
 
-        if (user) {
-          if (!user.isActive) {
-            console.log('[WS Auth] User not active')
-            return next(new Error('User not active'))
-          }
-          socket.userId = user.id
-          socket.userRole = user.role.name
-          socket.customerId = user.customerId?.toString()
-          next()
-          return
-        }
-        const customer = await prisma.customers.findUnique({
-          where: { id: BigInt(payload.userId) },
-          select: { id: true, NonActive: true },
-        })
-
-        if (!customer || customer.NonActive === 'Y') {
-          console.log('[WS Auth] Customer not found or inactive')
+        if (!user) {
+          console.log('[WS Auth] User not found')
           return next(new Error('User not found or inactive'))
         }
-        const customerUser = await prisma.user.findFirst({
-          where: { customerId: customer.id, isActive: true },
-          select: { id: true },
-        })
-        socket.userId = customerUser ? customerUser.id : Number(customer.id)
-        socket.userRole = 'customer'
-        socket.customerId = customer.id.toString()
+        if (!user.isActive) {
+          console.log('[WS Auth] User not active')
+          return next(new Error('User not found or inactive'))
+        }
+        socket.userId = user.id
+        socket.userRole = user.role.name
+        socket.customerId = user.customerId?.toString()
         next()
       } catch (e) {
         console.log('[WS Auth] Error:', e)
@@ -147,14 +131,6 @@ class WebSocketService {
     })
     if (user) {
       this.emitToUser(user.id, event, payload)
-      return
-    }
-    const customer = await prisma.customers.findUnique({
-      where: { id: BigInt(customerId) },
-      select: { id: true, NonActive: true },
-    })
-    if (customer && customer.NonActive !== 'Y') {
-      this.emitToUser(Number(customer.id), event, payload)
     }
   }
 

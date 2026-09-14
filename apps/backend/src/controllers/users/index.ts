@@ -4,8 +4,13 @@ import * as bcrypt from 'bcrypt'
 import { RoleType, User } from '@repo/shared'
 import { AuthenticatedRequest } from '@auth'
 
+const serializeUser = (user: any) => {
+  const { password: _password, encryptedPassword, ...rest } = user
+  return { ...rest, password: encryptedPassword ?? null }
+}
+
 export interface UserListResponse {
-  data: Omit<User, 'password'>[]
+  data: User[]
   total: number
   page: number
   totalPages: number
@@ -43,7 +48,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     prisma.user.count({ where }),
     prisma.user.findMany({
       where,
-      include: { role: true, customer: { omit: { password: true, loginPasswordEncrypted: true } } },
+      include: { role: true, customer: true },
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -52,10 +57,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
   const totalPages = Math.ceil(total / limit)
 
-  const safeUsers = users.map((u) => {
-    const { password, ...rest } = u
-    return rest
-  })
+  const safeUsers = users.map((u) => serializeUser(u))
 
   res.status(200).json({
     data: safeUsers,
@@ -70,7 +72,7 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 
   const user = await prisma.user.findUnique({
     where: { id: parseInt(String(id)) },
-    include: { role: true, customer: { omit: { password: true, loginPasswordEncrypted: true } } },
+    include: { role: true, customer: true },
   })
 
   if (!user) {
@@ -78,8 +80,7 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
     return
   }
 
-  const { password, ...safeUser } = user
-  res.status(200).json({ data: safeUser })
+  res.status(200).json({ data: serializeUser(user) })
 }
 
 export interface CreateUserRequest {
@@ -150,16 +151,16 @@ export const createUser = async (
     data: {
       username,
       password: hashedPassword,
+      encryptedPassword: password,
       name,
       email: email || null,
       roleId,
       isActive,
     },
-    include: { role: true, customer: { omit: { password: true, loginPasswordEncrypted: true } } },
+    include: { role: true, customer: true },
   })
 
-  const { password: _pw, ...safeUser } = user
-  res.status(201).json({ data: safeUser })
+  res.status(201).json({ data: serializeUser(user) })
 }
 
 export interface UpdateUserRequest {
@@ -189,7 +190,10 @@ export const updateUser = async (
 
   const updateData: any = {}
   if (username) updateData.username = username
-  if (password) updateData.password = await bcrypt.hash(password, 10)
+  if (password) {
+    updateData.password = await bcrypt.hash(password, 10)
+    updateData.encryptedPassword = password
+  }
   if (name) updateData.name = name
   if (email !== undefined) updateData.email = email || null
   if (roleId) updateData.roleId = roleId
@@ -198,11 +202,10 @@ export const updateUser = async (
   const user = await prisma.user.update({
     where: { id: parseInt(id) },
     data: updateData,
-    include: { role: true, customer: { omit: { password: true, loginPasswordEncrypted: true } } },
+    include: { role: true, customer: true },
   })
 
-  const { password: _pw, ...safeUser } = user
-  res.status(200).json({ data: safeUser })
+  res.status(200).json({ data: serializeUser(user) })
 }
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {

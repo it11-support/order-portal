@@ -2,8 +2,8 @@ import { prisma } from '@/utils'
 import type { AuthenticatedRequest } from '@auth'
 
 export async function currentCustomer(req: AuthenticatedRequest) {
-  if (req.user?.role.name !== 'customer') return null
-  const id = String(req.user.customerId ?? req.user.id)
+  if (req.user?.role.name !== 'customer' || req.user.customerId == null) return null
+  const id = String(req.user.customerId)
   if (!/^\d+$/.test(id)) return null
   const customer = await prisma.customers.findUnique({
     where: { id: BigInt(id) },

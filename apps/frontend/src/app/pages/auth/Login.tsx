@@ -1,4 +1,4 @@
-import { Package, User, LogIn } from 'lucide-react'
+import { Package, User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -52,12 +52,6 @@ const Login = () => {
   if (user) {
     return <Navigate to={user.role.name === 'customer' ? '/customer-dashboard' : '/'} replace />
   }
-
-  const customerAccounts = [
-    { cardCode: 'C001', name: 'Budi Santoso', password: 'Customer2026!' },
-    { cardCode: 'C002', name: 'Siti Rahma', password: 'Customer2026!' },
-    { cardCode: 'C003', name: 'Dedi Kurniawan', password: 'Customer2026!' },
-  ]
 
   return (
     <div className="min-h-screen bg-primary flex flex-col lg:flex-row">
@@ -160,31 +154,6 @@ const Login = () => {
                 Admin Portal
               </button>
             </div>
-          </div>
-
-          {/* Customer demo — one-click login */}
-          <div className="pt-2 border-t border-border space-y-2">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <LogIn size={12} />
-              Login Pelanggan (Satu Klik)
-            </p>
-            <div className="flex flex-col gap-2">
-              {customerAccounts.map((c) => (
-                <button
-                  key={c.cardCode}
-                  type="button"
-                  onClick={() => handleQuickLogin(c.cardCode, c.password, 'customer')}
-                  className="text-left text-xs bg-secondary hover:bg-border text-foreground px-3 py-2.5 rounded-lg transition-colors font-medium"
-                >
-                  <div className="font-semibold">
-                    {c.cardCode} · {c.name}
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              Atau masukkan kode pelanggan dan password secara manual di form di atas.
-            </p>
           </div>
         </form>
       </div>

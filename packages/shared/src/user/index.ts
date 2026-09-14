@@ -1,11 +1,10 @@
-import { Customer } from '../customer'
+import type { Customer } from '../customer'
 export type RoleType = 'customer' | 'admin' | 'sales_admin'
 
 export interface User {
   id: number | bigint | null
   username: string
   email?: string
-  password?: string
   name: string
   roleId: number | bigint | null
   isActive: boolean
@@ -14,6 +13,7 @@ export interface User {
   role: Role
   customerId?: number | bigint | null
   customer?: Customer | null
+  password?: string | null
 }
 
 export interface Role {

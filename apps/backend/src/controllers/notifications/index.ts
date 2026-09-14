@@ -18,11 +18,16 @@ const serialize = (row: any) => ({
 const getNotificationUserId = async (req: AuthenticatedRequest): Promise<number> => {
   if (!req.user) return 0
   if (req.user.role.name !== 'customer') return Number(req.user.id)
+  if (!req.user.customerId) return 0
   const customerUser = await prisma.user.findFirst({
-    where: { customerId: BigInt(String(req.user.id)), isActive: true },
+    where: {
+      id: Number(req.user.id),
+      customerId: BigInt(String(req.user.customerId)),
+      isActive: true,
+    },
     select: { id: true },
   })
-  return customerUser ? customerUser.id : Number(req.user.id)
+  return customerUser?.id ?? 0
 }
 
 export async function listNotifications(req: AuthenticatedRequest, res: Response) {

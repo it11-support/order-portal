@@ -57,8 +57,6 @@ model Customers {
   JoinDate    DateTime? @map("join_date") @db.Timestamp(0)
   IndustryC   Int?      @map("industry_c")
   NonActive   String?   @map("non_active") @db.Char(1)
-  password    String?   @map("password") @db.VarChar(255)
-  loginPasswordEncrypted String? @map("login_password_encrypted") @db.Text
 
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)

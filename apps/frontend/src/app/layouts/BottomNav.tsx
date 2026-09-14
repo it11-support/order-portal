@@ -82,7 +82,7 @@ const BottomNav = () => {
             key={tab.path}
             to={tab.path}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors ${
+              `flex-1 flex flex-col items-center min-w-0 py-2.5 gap-0.5 transition-colors ${
                 isActive ? 'text-accent' : 'text-muted-foreground'
               }`
             }
@@ -99,7 +99,9 @@ const BottomNav = () => {
                   )}
                 </span>
 
-                <span className={`text-[10px] font-semibold ${isActive ? 'text-accent' : ''}`}>
+                <span
+                  className={`text-[10px] font-semibold truncate ${isActive ? 'text-accent' : ''}`}
+                >
                   {tab.label}
                 </span>
               </>

@@ -1,4 +1,4 @@
-import { User } from '../user'
+import type { User } from '../user'
 
 export interface LoginRequest {
   username: string
@@ -8,11 +8,6 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User
   token: string
-}
-
-export interface CustomerLoginRequest {
-  cardCode: string
-  password: string
 }
 
 export interface LoginRequestBody {

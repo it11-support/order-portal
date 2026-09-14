@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { api } from '@lib'
 import { User, Role, RoleType } from '@repo/shared'
-import { Plus, Pencil, Trash2, Search, Check, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Check, X, Copy, Eye, EyeOff } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,8 @@ const UserList: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [visiblePw, setVisiblePw] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300)
@@ -190,6 +192,7 @@ const UserList: React.FC = () => {
                 <th className="p-4">Username</th>
                 <th className="p-4">Nama</th>
                 <th className="p-4">Email</th>
+                <th className="p-4 w-40">Password</th>
                 <th className="p-4 w-32">Role</th>
                 <th className="p-4 w-24 text-center">Status</th>
                 <th className="p-4 w-28 text-right">Aksi</th>
@@ -206,6 +209,51 @@ const UserList: React.FC = () => {
                     </td>
                     <td className="p-4 font-medium">{user.name}</td>
                     <td className="p-4 text-gray-500">{user.email ?? '-'}</td>
+                    <td className="p-4 w-40">
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-sm text-gray-800 break-all">
+                          {user.password
+                            ? visiblePw === Number(user.id)
+                              ? user.password
+                              : '•'.repeat(Math.max((user.password as string).length, 6))
+                            : '-'}
+                        </span>
+                        {user.password && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVisiblePw(visiblePw === Number(user.id) ? null : Number(user.id))
+                              }
+                              aria-label={visiblePw === Number(user.id) ? 'Sembunyikan' : 'Lihat'}
+                              className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                            >
+                              {visiblePw === Number(user.id) ? (
+                                <EyeOff size={14} />
+                              ) : (
+                                <Eye size={14} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await navigator.clipboard.writeText(user.password as string)
+                                setCopiedId(Number(user.id))
+                                setTimeout(() => setCopiedId(null), 1500)
+                              }}
+                              aria-label="Salin password"
+                              className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                            >
+                              {copiedId === Number(user.id) ? (
+                                <Check size={14} />
+                              ) : (
+                                <Copy size={14} />
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-4">
                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-medium">
                         {roleLabel(Number(user.roleId ?? 0))}
@@ -245,14 +293,14 @@ const UserList: React.FC = () => {
 
               {!loading && users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
                     Tidak ada user ditemukan.
                   </td>
                 </tr>
               )}
               {loading && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
                     Memuat...
                   </td>
                 </tr>

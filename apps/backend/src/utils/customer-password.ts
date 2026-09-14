@@ -1,11 +1,23 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'node:crypto'
+import * as bcrypt from 'bcrypt'
 
-// Keep this secret stable to retain access to displayed customer passwords.
-// A dedicated CUSTOMER_PASSWORD_SECRET can be configured independently of JWT rotation.
 function key() {
   const secret = process.env.CUSTOMER_PASSWORD_SECRET || process.env.JWT_SECRET
   if (!secret) throw new Error('Customer password encryption secret is missing')
   return createHash('sha256').update(`customer-password:v1:${secret}`).digest()
+}
+
+export function generateCustomerPassword(): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let password: string
+  do {
+    password = Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('')
+  } while (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
+  return password
+}
+
+export async function hashCustomerPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10)
 }
 
 export function encryptCustomerPassword(password: string): string {

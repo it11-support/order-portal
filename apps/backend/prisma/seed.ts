@@ -42,25 +42,7 @@ async function main() {
   })
   console.log('👤 User Created: admin@portal.com')
 
-  // 4. INSERT USER: CUSTOMER
-  await prisma.user.upsert({
-    where: { email: 'customer@portal.com' },
-    update: {},
-    create: {
-      username: 'customer',
-      email: 'customer@portal.com',
-      password: customerPassword,
-      name: 'Customer Portal',
-      roleId: roleMap['customer'],
-      isActive: true,
-      customerId: null,
-    },
-  })
-  console.log('👤 User Created: customer@portal.com')
-
-  // 5. INSERT DEMO CUSTOMERS (with login credentials)
-  const customerPasswordHash = await bcrypt.hash('Customer2026!', saltRounds)
-
+  // 5. INSERT DEMO CUSTOMERS
   const demoCustomers = [
     {
       cardCode: 'C001',
@@ -95,7 +77,7 @@ async function main() {
   ]
 
   for (const dc of demoCustomers) {
-    await prisma.customers.upsert({
+    const customer = await prisma.customers.upsert({
       where: { CardCode: dc.cardCode },
       update: {
         CardName: dc.cardName,
@@ -106,7 +88,6 @@ async function main() {
         City: dc.city,
         PaymentTerm: dc.paymentTerm,
         NonActive: 'N',
-        password: customerPasswordHash,
       },
       create: {
         CardCode: dc.cardCode,
@@ -118,7 +99,24 @@ async function main() {
         City: dc.city,
         NonActive: 'N',
         PaymentTerm: dc.paymentTerm,
-        password: customerPasswordHash,
+      },
+    })
+    await prisma.user.upsert({
+      where: { username: dc.cardCode },
+      update: {
+        password: customerPassword,
+        name: dc.cardName,
+        roleId: roleMap['customer'],
+        isActive: true,
+        customerId: BigInt(String(customer.id)),
+      },
+      create: {
+        username: dc.cardCode,
+        password: customerPassword,
+        name: dc.cardName,
+        roleId: roleMap['customer'],
+        isActive: true,
+        customerId: BigInt(String(customer.id)),
       },
     })
     console.log(`👥 Customer Created: ${dc.cardCode} - ${dc.cardName}`)

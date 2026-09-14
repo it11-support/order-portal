@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "fmt": "pnpm format",
     "check:format": "prettier --check .",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "db:generate": "cd apps/backend && prisma generate"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

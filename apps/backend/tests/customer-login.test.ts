@@ -7,7 +7,6 @@ import {
   disableCustomerLogin,
   getCustomers,
 } from '../src/controllers/customers/index'
-import { decryptCustomerPassword, encryptCustomerPassword } from '../src/utils/customer-password'
 import { login } from '../src/controllers/auth/index'
 import { requireAdmin } from '../src/auth/middleware'
 
@@ -30,7 +29,7 @@ function response() {
   }
 }
 
-test('customer login provisioning and authentication', async (t) => {
+test('customer login credentials are stored only on User', async (t) => {
   const mockMethod = (target: any, key: string, implementation: (...args: any[]) => any) => {
     const original = target[key]
     const mocked = t.mock.fn(implementation)
@@ -40,25 +39,31 @@ test('customer login provisioning and authentication', async (t) => {
     })
     return mocked
   }
+
   const customer = {
     id: '123',
     CardCode: 'TEST123',
     CardName: 'Test Customer',
     NonActive: 'N',
-    password: null as string | null,
-    loginPasswordEncrypted: null as string | null,
     createdAt: null,
     updatedAt: null,
   }
-  mockMethod(prisma.customers, 'findUnique', async () => customer)
-  mockMethod(prisma.user, 'findUnique', async () => null)
-  mockMethod(prisma.role, 'findUnique', async () => ({ id: 3, name: 'customer', createdAt: null }))
-  const update = mockMethod(prisma.customers, 'updateMany', async (args: any) => {
-    if (args.data.password)
-      assert.deepEqual(args.where.AND[0], { OR: [{ password: null }, { password: '' }] })
-    customer.password = args.data.password
-    customer.loginPasswordEncrypted = args.data.loginPasswordEncrypted
-    return { count: 1 }
+  let findCustomerImpl: (...args: any[]) => any = async () => customer
+  let findUserImpl: (...args: any[]) => any = async () => null
+  let findLinkedUserImpl: (...args: any[]) => any = async () => null
+  let createdUser: any
+
+  mockMethod(prisma.customers, 'findUnique', (args: any) => findCustomerImpl(args))
+  mockMethod(prisma.user, 'findUnique', (args: any) => findUserImpl(args))
+  mockMethod(prisma.user, 'findFirst', (args: any) => findLinkedUserImpl(args))
+  mockMethod(prisma.role, 'findUnique', async () => ({
+    id: 3,
+    name: 'customer',
+    createdAt: null,
+  }))
+  const createUser = mockMethod(prisma.user, 'create', async (args: any) => {
+    createdUser = args.data
+    return { ...args.data, id: 99, createdAt: null, updatedAt: null }
   })
 
   const provision = response()
@@ -69,85 +74,50 @@ test('customer login provisioning and authentication', async (t) => {
   assert.match(credentials.password, /^[A-Za-z0-9]{6}$/)
   assert.match(credentials.password, /[A-Za-z]/)
   assert.match(credentials.password, /[0-9]/)
-  assert.notEqual(customer.password, credentials.password)
-  assert.ok(await bcrypt.compare(credentials.password, customer.password!))
-  assert.equal(decryptCustomerPassword(customer.loginPasswordEncrypted), credentials.password)
-  assert.notEqual(customer.loginPasswordEncrypted, credentials.password)
+  assert.equal('password' in customer, false)
+  assert.equal('loginPasswordEncrypted' in customer, false)
+  assert.notEqual(createdUser.password, credentials.password)
+  assert.ok(await bcrypt.compare(credentials.password, createdUser.password))
+  assert.equal(createdUser.customerId, 123n)
   assert.equal(provision.headers['Cache-Control'], 'no-store')
+  assert.equal(createUser.mock.callCount(), 1)
 
+  findUserImpl = async () => ({
+    ...createdUser,
+    id: 99,
+    role: { id: 3, name: 'customer', createdAt: null },
+    customer,
+  })
+  mockMethod(prisma.user, 'findUnique', (args: any) => findUserImpl(args))
   const authenticated = response()
   await login({ body: credentials } as any, authenticated as any)
   assert.equal(authenticated.code, 200)
   assert.equal(authenticated.body.user.username, customer.CardCode)
   assert.equal(authenticated.body.user.role.name, 'customer')
-  assert.ok(!('password' in authenticated.body.user.customer))
+  assert.equal('password' in authenticated.body.user, false)
   const claims = JSON.parse(
     Buffer.from(authenticated.body.token.split('.')[1], 'base64url').toString(),
   )
-  assert.ok(!('password' in claims.customer))
-  assert.ok(!('loginPasswordEncrypted' in claims.customer))
+  assert.equal('password' in claims, false)
 
   mockMethod(prisma.customers, 'count', async () => 1)
-  mockMethod(prisma.customers, 'findMany', async () => [customer])
-  mockMethod(prisma, '$transaction', async (queries: any[]) => Promise.all(queries))
-  for (const role of ['admin', 'customer', 'sales_admin']) {
-    const listed = response()
-    await getCustomers({ query: {}, user: { role: { name: role } } } as any, listed as any)
-    const row = listed.body.data[0]
-    assert.equal(row.hasLogin, true)
-    assert.equal(row.loginPassword, role === 'admin' ? credentials.password : undefined)
-    assert.ok(!('password' in row))
-    assert.ok(!('loginPasswordEncrypted' in row))
-    assert.equal(listed.headers['Cache-Control'], 'no-store')
-  }
+  mockMethod(prisma.customers, 'findMany', async () => [
+    { ...customer, user: { isActive: true } },
+  ])
+  const listed = response()
+  await getCustomers({ query: {}, user: { role: { name: 'customer' } } } as any, listed as any)
+  const row = listed.body.data[0]
+  assert.equal(row.hasLogin, true)
+  assert.equal('loginPassword' in row, false)
+  assert.equal('password' in row, false)
+  assert.equal(listed.headers['Cache-Control'], 'no-store')
 
-  const duplicate = response()
-  await enableCustomerLogin({ params: { id: '123' } } as any, duplicate as any)
-  assert.equal(duplicate.code, 409)
-  assert.equal(update.mock.callCount(), 1)
-
-  customer.password = null
-  customer.NonActive = 'Y'
-  const inactive = response()
-  await enableCustomerLogin({ params: { id: '123' } } as any, inactive as any)
-  assert.equal(inactive.code, 400)
-  customer.NonActive = 'N'
-  mockMethod(prisma.user, 'findUnique', async () => ({ id: 1 }))
-  const collision = response()
-  await enableCustomerLogin({ params: { id: '123' } } as any, collision as any)
-  assert.equal(collision.code, 409)
-  assert.equal(update.mock.callCount(), 1)
-
-  const invalid = response()
-  await enableCustomerLogin({ params: { id: 'invalid' } } as any, invalid as any)
-  assert.equal(invalid.code, 400)
-
-  mockMethod(prisma.user, 'findUnique', async () => null)
+  const updateMany = mockMethod(prisma.user, 'updateMany', async () => ({ count: 1 }))
   const disabled = response()
   await disableCustomerLogin({ params: { id: '123' } } as any, disabled as any)
   assert.equal(disabled.code, 200)
-  assert.equal(customer.password, null)
-  assert.equal(customer.loginPasswordEncrypted, null)
-  const denied = response()
-  await login({ body: credentials } as any, denied as any)
-  assert.equal(denied.code, 403)
-  const reenabled = response()
-  await enableCustomerLogin({ params: { id: '123' } } as any, reenabled as any)
-  assert.equal(reenabled.code, 200)
-  assert.equal(
-    decryptCustomerPassword(customer.loginPasswordEncrypted),
-    reenabled.body.data.password,
-  )
-})
-
-test('encrypted passwords reject tampering and support legacy missing values', () => {
-  assert.equal(decryptCustomerPassword(null), null)
-  assert.equal(decryptCustomerPassword('invalid'), null)
-  const encrypted = encryptCustomerPassword('Abc123')
-  const [iv, tag, data] = encrypted.split('.')
-  const altered = Buffer.from(data, 'base64url')
-  altered[0] ^= 1
-  assert.equal(decryptCustomerPassword(`${iv}.${tag}.${altered.toString('base64url')}`), null)
+  assert.equal(disabled.body.data.hasLogin, false)
+  assert.equal(updateMany.mock.callCount(), 1)
 })
 
 test('only admin can provision login', () => {
