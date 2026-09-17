@@ -8,7 +8,7 @@ import SuggestedItems from '@/app/components/products/SuggestedItems'
 import { useMemo } from 'react'
 
 const CatalogPage = () => {
-  const { user: currentUser } = useAuth()
+  const { isAdmin, user: currentUser } = useAuth()
   const navigate = useNavigate()
   const { cart } = useCart()
 
@@ -247,11 +247,12 @@ const CatalogPage = () => {
                   )
                 })}
 
-              <button
-                type="button"
-                key={'sugested'}
-                onClick={() => setSelectedCategory('SUGGESTED')}
-                className={`
+              {!isAdmin && (
+                <button
+                  type="button"
+                  key={'suggested'}
+                  onClick={() => setSelectedCategory('SUGGESTED')}
+                  className={`
                   flex flex-col
                   items-center
                   gap-1.5
@@ -262,28 +263,29 @@ const CatalogPage = () => {
                   transition-all
                   active:scale-95                     
                 `}
-              >
-                <span
-                  className={`
+                >
+                  <span className="text-2xl">
+                    <CategoryIcon
+                      name={'mdi:creation-outline'}
+                      size={24}
+                      className={
+                        selectedCategory === 'SUGGESTED' ? 'text-accent' : 'text-emerald-600'
+                      }
+                    />
+                  </span>
+                  <span
+                    className={`
                     text-[10px]
                     font-semibold
                     text-center
                     leading-tight
                     ${selectedCategory === 'SUGGESTED' ? 'text-accent' : 'text-foreground'}
                   `}
-                >
-                  Produk Disarankan
-                </span>
-                <span className="text-2xl">
-                  <CategoryIcon
-                    name={'mdi:chevron-double-right'}
-                    size={24}
-                    className={
-                      selectedCategory === 'SUGGESTED' ? 'text-accent' : 'text-emerald-600'
-                    }
-                  />
-                </span>
-              </button>
+                  >
+                    DISARANKAN
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </section>
