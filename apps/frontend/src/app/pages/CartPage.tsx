@@ -38,13 +38,15 @@ const CartPage = () => {
           <CheckCircle size={17} /> Order berhasil dikirim!
         </div>
       ) : (
-        <button
-          onClick={handlePlaceOrder}
-          disabled={submitting}
-          className="w-full bg-accent text-white py-3.5 rounded-xl font-bold text-sm hover:bg-accent/90 active:scale-[0.98] transition-all"
-        >
-          Kirim Order — {cart.length} produk ({cartQty} qty)
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={handlePlaceOrder}
+            disabled={submitting}
+            className="bg-accent text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-accent/90 active:scale-[0.98] transition-all"
+          >
+            Kirim Order ({cartQty})
+          </button>
+        </div>
       )
     ) : undefined
 

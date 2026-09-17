@@ -21,6 +21,7 @@ export const ProductRow = ({ product }: ProductRowProps) => {
           <p className="text-sm font-semibold text-foreground leading-tight">{product.itemName}</p>
 
           <p className="text-xs text-muted-foreground mt-0.5">{product.salesPackUnit}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{product.productCategory}</p>
         </div>
       </div>
 
