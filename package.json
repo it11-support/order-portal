@@ -19,19 +19,19 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.8",
     "prisma": "^7.10.0",
-    "turbo": "^2.10.12",
+    "turbo": "^2.10.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@iconify-react/lucide-lab": "^1.0.2",
     "@prisma/client": "^7.10.0",
     "axios": "^1.20.0",
-    "react-router-dom": "^7.18.3",
+    "react-router-dom": "^7.18.4",
     "swr": "^2.5.1"
   }
 }
