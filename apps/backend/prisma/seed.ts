@@ -19,17 +19,25 @@ async function main() {
     console.log(`✅ Role checked/created: ${roleName}`)
   }
 
-  // 2. ENKRIPSI PASSWORD UNTUK USER ADMIN
+  // 2. ENKRIPSI PASSWORD
   // Ubah string password di bawah ini sesuai standar keamanan perusahaan Anda
   const saltRounds = 10
   const adminPassword = await bcrypt.hash('AdminPortal2026!', saltRounds)
   const customerPassword = await bcrypt.hash('Customer2026!', saltRounds)
+  const salesPassword = await bcrypt.hash('SalesPortal2026!', saltRounds)
 
   // 3. INSERT USER: SUPER ADMIN
   // Kolom customerId diisi null karena admin tidak punya data di tabel Customers
   await prisma.user.upsert({
-    where: { email: 'admin@portal.com' },
-    update: {},
+    where: { username: 'admin' },
+    update: {
+      email: 'admin@portal.com',
+      password: adminPassword,
+      name: 'Super Admin Portal',
+      roleId: roleMap['admin'],
+      isActive: true,
+      customerId: null,
+    },
     create: {
       username: 'admin',
       email: 'admin@portal.com',
@@ -42,6 +50,46 @@ async function main() {
   })
   console.log('👤 User Created: admin@portal.com')
 
+  // 4. INSERT USER SALES ADMIN UNTUK SETIAP SALESPERSON YANG AKTIF
+  // Hanya sales person active='Y' dan locked='N' yang mendapat akun. Locked
+  // menandai baris sistem (mis. "-No Sales Employee-") yang bukan orang, dan
+  // active='N' berarti sudah tidak dipakai, jadi keduanya tidak boleh bisa login.
+  // Username mengikuti kode sales supaya jelas territory mana yang dipegang.
+  const salesPersons = await prisma.salesPerson.findMany({
+    where: { active: 'Y', locked: 'N' },
+    orderBy: { slpCode: 'asc' },
+    select: { slpCode: true, slpName: true, groupCode: true },
+  })
+
+  for (const person of salesPersons) {
+    const username = `sales${person.slpCode}`
+    const name = person.slpName?.trim() || `Sales ${person.slpCode}`
+    await prisma.user.upsert({
+      where: { username },
+      update: {
+        email: `${username}@portal.com`,
+        password: salesPassword,
+        name,
+        roleId: roleMap['sales_admin'],
+        isActive: true,
+        customerId: null,
+        slpCode: person.slpCode,
+      },
+      create: {
+        username,
+        email: `${username}@portal.com`,
+        password: salesPassword,
+        name,
+        roleId: roleMap['sales_admin'],
+        isActive: true,
+        customerId: null,
+        slpCode: person.slpCode,
+      },
+    })
+    console.log(`👤 User checked/created: ${username}@portal.com (${name})`)
+  }
+  console.log(`👥 Total akun sales: ${salesPersons.length}`)
+
   // 5. INSERT DEMO CUSTOMERS
   const demoCustomers = [
     {
@@ -53,6 +101,7 @@ async function main() {
       address: 'Jl. Merdeka No. 1',
       city: 'Jakarta',
       paymentTerm: 'NET 30',
+      slpCode: 26,
     },
     {
       cardCode: 'C002',
@@ -88,6 +137,7 @@ async function main() {
         City: dc.city,
         PaymentTerm: dc.paymentTerm,
         NonActive: 'N',
+        SlpCode: dc.slpCode ?? null,
       },
       create: {
         CardCode: dc.cardCode,
@@ -99,6 +149,7 @@ async function main() {
         City: dc.city,
         NonActive: 'N',
         PaymentTerm: dc.paymentTerm,
+        SlpCode: dc.slpCode ?? null,
       },
     })
     await prisma.user.upsert({

@@ -1,10 +1,15 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { api } from '@lib'
-import { Product } from '@repo/shared'
-import { useAuth } from './AuthContext'
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import useSWRInfinite from 'swr/infinite'
+import { swrFetcher } from '@lib'
+import { Product, ApiResponse } from '@repo/shared'
+import { useAuth } from './authHook'
 
 export type ProductSortField =
-  'itemCode' | 'itemName' | 'productCategory' | 'salesUnit' | 'launchDate'
+  | 'itemCode'
+  | 'itemName'
+  | 'productCategory'
+  | 'salesUnit'
+  | 'launchDate'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -14,12 +19,14 @@ export type ProductFilters = {
   isActive: boolean | null
 }
 
+const DEFAULT_PAGE_SIZE = 40
+
 type ProductsContextType = {
   products: Product[]
-
   loading: boolean
+  isFetching: boolean
+  isReachingEnd: boolean
 
-  page: number
   pageSize: number
   total: number
   totalPages: number
@@ -29,7 +36,7 @@ type ProductsContextType = {
   sortBy: ProductSortField
   sortDirection: SortDirection
 
-  setPage: (page: number) => void
+  loadMore: () => void
   setPageSize: (pageSize: number) => void
 
   setSearch: (search: string) => void
@@ -38,30 +45,17 @@ type ProductsContextType = {
 
   setSortBy: (sortBy: ProductSortField) => void
   setSortDirection: (direction: SortDirection) => void
-
-  fetchProducts: () => Promise<void>
-  refresh: () => Promise<void>
 }
 
 const ProductsContext = createContext<ProductsContextType | null>(null)
 
-const DEFAULT_PAGE = 1
-const DEFAULT_PAGE_SIZE = 20
-
-export function ProductsProvider({ children }: { children: React.ReactNode }) {
+export const ProductsProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
+
   const staff = user?.role.name === 'admin' || user?.role.name === 'sales_admin'
-  const [products, setProducts] = useState<Product[]>([])
+  const identity = user ? `${user.role.name}:${user.id}` : ''
 
-  const [loading, setLoading] = useState(false)
-
-  const [page, setPage] = useState(DEFAULT_PAGE)
-
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-
-  const [total, setTotal] = useState(0)
-
-  const [totalPages, setTotalPages] = useState(0)
+  const [pageSize, setPageSizeState] = useState(DEFAULT_PAGE_SIZE)
 
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
@@ -70,140 +64,122 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   })
 
   const [sortBy, setSortBy] = useState<ProductSortField>('itemName')
-
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   /**
-   * Fetch products
+   * SWR infinite key. Each page fetches `pageSize` products from `/products`.
+   * Returns null (no fetch) until an authenticated staff user is present,
+   * and stops requesting once a previous page was empty.
    */
-  const fetchProducts = useCallback(async () => {
-    if (!staff) {
-      setProducts([])
-      setTotal(0)
-      setTotalPages(0)
-      return
-    }
-    try {
-      setLoading(true)
+  const getKey = useCallback(
+    (pageIndex: number, previousPageData: ApiResponse<Product>) => {
+      if (previousPageData && previousPageData.data.length === 0) return null
+      if (!identity || !staff) return null
 
       const params = new URLSearchParams()
-
-      params.set('page', String(page))
+      params.set('page', String(pageIndex + 1))
       params.set('pageSize', String(pageSize))
 
-      if (filters.search.trim()) {
-        params.set('search', filters.search.trim())
-      }
-
-      if (filters.category) {
-        params.set('category', filters.category)
-      }
-
-      if (filters.isActive !== null) {
-        params.set('isActive', String(filters.isActive))
-      }
+      if (filters.search.trim()) params.set('search', filters.search.trim())
+      if (filters.category.trim()) params.set('category', filters.category.trim())
+      if (filters.isActive !== null) params.set('isActive', String(filters.isActive))
 
       params.set('sortBy', sortBy)
       params.set('sortDirection', sortDirection)
 
-      const res = await api.get(`/products?${params.toString()}`)
+      return `/products?${params.toString()}`
+    },
+    [pageSize, filters, sortBy, sortDirection, identity, staff],
+  )
 
-      const data = res.data.data
+  const {
+    data: pages,
+    size,
+    setSize,
+    isValidating,
+    isLoading,
+  } = useSWRInfinite<ApiResponse<Product>>(getKey, swrFetcher, {
+    revalidateFirstPage: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  })
 
-      setProducts(data?.items ?? [])
-      setTotal(data?.total ?? 0)
-      setTotalPages(data?.totalPages ?? 0)
-    } catch (error) {
-      console.error('Failed to fetch products:', error)
+  const products = useMemo(
+    () => (pages ? pages.reduce<Product[]>((acc, page) => acc.concat(page.data), []) : []),
+    [pages],
+  )
 
-      setProducts([])
-      setTotal(0)
-      setTotalPages(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, pageSize, filters, sortBy, sortDirection, staff])
+  const lastPage = pages?.[pages.length - 1]
+  const total = pages?.[0]?.meta?.total_records ?? 0
+  const totalPages = pages?.[0]?.meta?.total_pages ?? 0
 
-  /**
-   * Fetch otomatis ketika:
-   *
-   * - page berubah
-   * - pageSize berubah
-   * - search berubah
-   * - category berubah
-   * - status berubah
-   * - sorting berubah
-   */
-  useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
+  const isReachingEnd =
+    !lastPage ||
+    lastPage.data.length === 0 ||
+    lastPage.data.length < pageSize ||
+    (total > 0 && products.length >= total)
 
-  /**
-   * Search
-   */
-  const handleSetSearch = useCallback((search: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      search,
-    }))
+  const loading = !pages && isLoading
 
-    setPage(1)
-  }, [])
+  const loadMore = useCallback(() => {
+    if (!isReachingEnd) setSize(size + 1)
+  }, [isReachingEnd, setSize, size])
 
-  /**
-   * Category
-   */
-  const handleSetCategory = useCallback((category: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      category,
-    }))
+  const handleSetSearch = useCallback(
+    (search: string) => {
+      setFilters((prev) => ({ ...prev, search }))
+      setSize(1)
+    },
+    [setSize],
+  )
 
-    setPage(1)
-  }, [])
+  const handleSetCategory = useCallback(
+    (category: string) => {
+      setFilters((prev) => ({ ...prev, category }))
+      setSize(1)
+    },
+    [setSize],
+  )
 
-  /**
-   * Active status
-   */
-  const handleSetIsActive = useCallback((isActive: boolean | null) => {
-    setFilters((prev) => ({
-      ...prev,
-      isActive,
-    }))
+  const handleSetIsActive = useCallback(
+    (isActive: boolean | null) => {
+      setFilters((prev) => ({ ...prev, isActive }))
+      setSize(1)
+    },
+    [setSize],
+  )
 
-    setPage(1)
-  }, [])
+  const handleSetPageSize = useCallback(
+    (value: number) => {
+      setPageSizeState(value)
+      setSize(1)
+    },
+    [setSize],
+  )
 
-  /**
-   * Page size
-   */
-  const handleSetPageSize = useCallback((value: number) => {
-    setPageSize(value)
-    setPage(1)
-  }, [])
+  const handleSetSortBy = useCallback(
+    (value: ProductSortField) => {
+      setSortBy(value)
+      setSize(1)
+    },
+    [setSize],
+  )
 
-  /**
-   * Sorting
-   */
-  const handleSetSortBy = useCallback((value: ProductSortField) => {
-    setSortBy(value)
-    setPage(1)
-  }, [])
-
-  /**
-   * Refresh
-   */
-  const refresh = useCallback(async () => {
-    await fetchProducts()
-  }, [fetchProducts])
+  const handleSetSortDirection = useCallback(
+    (value: SortDirection) => {
+      setSortDirection(value)
+      setSize(1)
+    },
+    [setSize],
+  )
 
   const value = useMemo(
     () => ({
       products,
-
       loading,
+      isFetching: isValidating,
+      isReachingEnd,
 
-      page,
       pageSize,
       total,
       totalPages,
@@ -213,7 +189,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       sortBy,
       sortDirection,
 
-      setPage,
+      loadMore,
 
       setPageSize: handleSetPageSize,
 
@@ -225,38 +201,33 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
       setSortBy: handleSetSortBy,
 
-      setSortDirection,
-
-      fetchProducts,
-
-      refresh,
+      setSortDirection: handleSetSortDirection,
     }),
     [
       products,
       loading,
-      page,
+      isValidating,
+      isReachingEnd,
       pageSize,
       total,
       totalPages,
       filters,
       sortBy,
       sortDirection,
-
+      loadMore,
+      handleSetPageSize,
       handleSetSearch,
       handleSetCategory,
       handleSetIsActive,
-      handleSetPageSize,
       handleSetSortBy,
-
-      fetchProducts,
-      refresh,
+      handleSetSortDirection,
     ],
   )
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>
 }
 
-export function useProducts() {
+export const useProducts = () => {
   const context = useContext(ProductsContext)
 
   if (!context) {

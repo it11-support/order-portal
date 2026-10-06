@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from './AuthContext'
+import { useAuth } from './authHook'
 import type { RoleType } from '@repo/shared'
 
 const ProtectedRoute = ({

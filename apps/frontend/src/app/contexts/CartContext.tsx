@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useState, Dispatch, SetStateAction } from 'react'
 import type { CartItem, Product } from '@repo/shared'
-import { useAuth } from './AuthContext'
+import { useAuth } from './authHook'
 
 type CartContextType = {
   cart: CartItem[]
   setCart: Dispatch<SetStateAction<CartItem[]>>
+  /** Inquiry this basket was started from, so the order can be linked to it. */
+  inquiryId: string | null
+  setInquiryId: Dispatch<SetStateAction<string | null>>
   getQty: (pid: number) => number
   setQty: (product: Product, qty: number) => void
   increase: (product: Product) => void
@@ -17,16 +20,18 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | null>(null)
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, isCustomer } = useAuth()
   const identity = user ? `${user.role.name}:${user.id}` : ''
   const [items, setItems] = useState<CartItem[]>([])
   const [owner, setOwner] = useState(identity)
+  const [inquiryId, setInquiryId] = useState<string | null>(null)
   const cart = isCustomer && owner === identity ? items : []
 
   useEffect(() => {
     setItems([])
     setOwner(identity)
+    setInquiryId(null)
   }, [identity])
 
   const setCart: Dispatch<SetStateAction<CartItem[]>> = (next) => {
@@ -34,30 +39,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(next)
   }
 
-  function getQty(pid: number) {
+  const getQty = (pid: number) => {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
 
-  function onQtyChange(product: Product, qty: number) {
+  const onQtyChange = (product: Product, qty: number) => {
     setQty(product, qty)
   }
 
-  function setQty(product: Product, qty: number) {
+  const setQty = (product: Product, qty: number) => {
+    // The price the customer saw when the item entered the cart is what the
+    // order is placed against. The server compares it against the live price
+    // and holds the order if the item got more expensive in the meantime.
+    const acceptedPrice = product.price ?? null
     if (qty <= 0) setCart((c) => c.filter((i) => i.product.id !== product.id))
     else
       setCart((c) => {
         const ex = c.find((i) => i.product.id === product.id)
         if (ex) return c.map((i) => (i.product.id === product.id ? { ...i, qty } : i))
-        return [...c, { product, qty }]
+        return [...c, { product, qty, acceptedPrice }]
       })
   }
 
-  function increase(product: Product) {
+  const increase = (product: Product) => {
     const q = getQty(product.id)
     setQty(product, q === 0 ? 1 : q + 1)
   }
 
-  function decrease(product: Product) {
+  const decrease = (product: Product) => {
     const q = getQty(product.id)
     if (q <= 1) setQty(product, 0)
     else setQty(product, q - 1)
@@ -75,6 +84,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       value={{
         cart,
         setCart,
+        inquiryId,
+        setInquiryId,
         getQty,
         setQty,
         increase,

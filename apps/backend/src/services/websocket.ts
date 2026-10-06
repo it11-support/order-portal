@@ -173,19 +173,86 @@ class WebSocketService {
     this.emitToCustomer(customerId, 'notification', payload)
   }
 
-  emitFollowUpAdded(
+emitFollowUpAdded(
     orderId: string,
     customerId: string,
     followUpNote: string,
     kind: 'order' | 'quote',
   ) {
     const payload: WSEventPayload = {
-      type: 'order.followup_added',
+      type: kind === 'quote' ? 'quote.followup_added' : 'order.followup_added',
       data: { orderId, customerId, followUpNote, kind },
       timestamp: new Date().toISOString(),
     }
     this.emitToAdmins('notification', payload)
     this.emitToCustomer(customerId, 'notification', payload)
+  }
+
+  /**
+   * The SAP document behind a portal order moved. The status may have changed,
+   * but the event is sent even when only the document reference was filled in,
+   * so the UI never has to guess whether its copy is current.
+   */
+  emitOrderSapSynced(
+    orderId: string,
+    customerId: string,
+    sap: { [key: string]: unknown },
+  ) {
+    const payload: WSEventPayload = {
+      type: 'order.sap_synced',
+      data: { orderId, customerId, sap },
+      timestamp: new Date().toISOString(),
+    }
+    this.emitToAdmins('notification', payload)
+    this.emitToCustomer(customerId, 'notification', payload)
+  }
+
+  /**
+   * Scoped to the customer's own sales person. Falls back to every staff
+   * member only when the customer has no SlpCode, matching the read scope used
+   * by the requests controller.
+   */
+  private async emitToCustomerSales(
+    customerId: string,
+    event: string,
+    payload: WSEventPayload,
+  ) {
+    if (!this.io) return
+    const customer = await prisma.customers.findUnique({
+      where: { id: BigInt(customerId) },
+      select: { SlpCode: true },
+    })
+    const sales = await prisma.user.findMany({
+      where: {
+        role: { name: { in: ['admin', 'sales_admin'] } },
+        isActive: true,
+        ...(customer?.SlpCode != null ? { slpCode: customer.SlpCode } : {}),
+      },
+      select: { id: true },
+    })
+    for (const user of sales) {
+      this.emitToUser(user.id, event, payload)
+    }
+  }
+
+  emitPriceIncreased(
+    customerId: string,
+    changes: Array<{
+      itemCode: string
+      itemName: string
+      oldPrice: number
+      newPrice: number
+      changePct: number
+    }>,
+  ) {
+    if (!changes.length) return
+    const payload: WSEventPayload = {
+      type: 'price.increased',
+      data: { customerId, changes },
+      timestamp: new Date().toISOString(),
+    }
+    this.emitToCustomer(customerId, 'notification', payload)
+    this.emitToCustomerSales(customerId, 'notification', payload)
   }
 
   emitNotificationCreated(notification: {

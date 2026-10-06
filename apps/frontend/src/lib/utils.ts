@@ -1,4 +1,4 @@
-export function fmtDate(value: Date | string) {
+export const fmtDate = (value: Date | string) => {
   const d = typeof value === 'string' ? new Date(value) : value
   return (
     d.toLocaleDateString('id-ID', {

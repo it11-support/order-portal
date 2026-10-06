@@ -13,7 +13,9 @@ export interface User {
   role: Role
   customerId?: number | bigint | null
   customer?: Customer | null
+  slpCode?: number | null
   password?: string | null
+  encryptedPassword?: string | null
 }
 
 export interface Role {

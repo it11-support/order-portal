@@ -3,7 +3,7 @@ import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import { ScrollToTopButton } from '@components'
 
-export default function AppLayout() {
+const AppLayout = () => {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -15,3 +15,5 @@ export default function AppLayout() {
     </div>
   )
 }
+
+export default AppLayout

@@ -10,6 +10,7 @@ const serialize = (row: any) => ({
   message: row.message,
   type: row.type,
   relatedId: row.relatedId,
+  kind: row.kind ?? null,
   read: row.read,
   dismissed: row.dismissed,
   createdAt: row.createdAt,
@@ -30,7 +31,7 @@ const getNotificationUserId = async (req: AuthenticatedRequest): Promise<number>
   return customerUser?.id ?? 0
 }
 
-export async function listNotifications(req: AuthenticatedRequest, res: Response) {
+export const listNotifications = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Tidak terautentikasi.' })
   const userId = await getNotificationUserId(req)
   const rows = await prisma.notification.findMany({
@@ -41,7 +42,7 @@ export async function listNotifications(req: AuthenticatedRequest, res: Response
   return res.json({ data: rows.map(serialize) })
 }
 
-export async function listAllNotifications(req: AuthenticatedRequest, res: Response) {
+export const listAllNotifications = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Tidak terautentikasi.' })
   const userId = await getNotificationUserId(req)
   const rows = await prisma.notification.findMany({
@@ -52,7 +53,7 @@ export async function listAllNotifications(req: AuthenticatedRequest, res: Respo
   return res.json({ data: rows.map(serialize) })
 }
 
-export async function markNotificationRead(req: AuthenticatedRequest, res: Response) {
+export const markNotificationRead = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Tidak terautentikasi.' })
   const userId = await getNotificationUserId(req)
   const row = await prisma.notification.findFirst({
@@ -68,7 +69,7 @@ export async function markNotificationRead(req: AuthenticatedRequest, res: Respo
   return res.json({ data: serialize(updated) })
 }
 
-export async function dismissNotification(req: AuthenticatedRequest, res: Response) {
+export const dismissNotification = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Tidak terautentikasi.' })
   const userId = await getNotificationUserId(req)
   const row = await prisma.notification.findFirst({
@@ -83,7 +84,7 @@ export async function dismissNotification(req: AuthenticatedRequest, res: Respon
   return res.json({ data: serialize(updated) })
 }
 
-export async function unreadCount(req: AuthenticatedRequest, res: Response) {
+export const unreadCount = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ message: 'Tidak terautentikasi.' })
   const userId = await getNotificationUserId(req)
   const count = await prisma.notification.count({

@@ -4,9 +4,10 @@ import ProductRow from './ProductRow'
 type ProductListProps = {
   products: Product[]
   cart: CartItem[]
+  onContactSales?: (product: Product) => void
 }
 
-export const ProductList = ({ products, cart }: ProductListProps) => {
+export const ProductList = ({ products, cart, onContactSales }: ProductListProps) => {
   const getQty = (pid: number) => {
     return cart.find((i) => i.product.id === pid)?.qty ?? 0
   }
@@ -22,7 +23,7 @@ export const ProductList = ({ products, cart }: ProductListProps) => {
           return (
             <div key={p.id} className={selected ? 'bg-accent/5' : ''}>
               <div className="px-4">
-                <ProductRow product={p} />
+                <ProductRow product={p} onContactSales={onContactSales} />
               </div>
             </div>
           )
@@ -49,7 +50,7 @@ export const ProductList = ({ products, cart }: ProductListProps) => {
                 }
               `}
             >
-              <ProductRow product={p} />
+              <ProductRow product={p} onContactSales={onContactSales} />
             </div>
           )
         })}

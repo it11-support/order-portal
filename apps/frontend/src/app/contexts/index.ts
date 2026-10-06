@@ -1,5 +1,5 @@
 export { default } from './AuthContext'
-export * from './AuthContext'
+export { useAuth } from './authHook'
 export { default as ProtectedRoute } from './ProtectedRoute'
 export * from './CartContext'
 export * from './OrderContext'
@@ -9,3 +9,4 @@ export { default as NotificationsProvider, useNotifications } from './Notificati
 export * from './NotificationsContext'
 export { default as WebSocketProvider, useWebSocket, useWSEvent } from './WebSocketContext'
 export * from './WebSocketContext'
+export { ContactSalesProvider, useContactSales } from './ContactSalesContext'

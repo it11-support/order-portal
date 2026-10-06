@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
-import { useAuth } from './AuthContext'
+import { useAuth } from './authHook'
 import { api } from '@lib'
 
 export type WSEvent = {
@@ -25,7 +25,7 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null)
 const WS_URL =
   import.meta.env.VITE_WS_URL || new URL(api.defaults.baseURL!, window.location.origin).origin
 
-export function WebSocketProvider({ children }: { children: React.ReactNode }) {
+export const WebSocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, accessToken, loading: authLoading } = useAuth()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [connected, setConnected] = useState(false)
@@ -126,13 +126,13 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useWebSocket() {
+export const useWebSocket = () => {
   const ctx = useContext(WebSocketContext)
   if (!ctx) throw new Error('useWebSocket must be used within WebSocketProvider')
   return ctx
 }
 
-export function useWSEvent(type: string, handler: (event: WSEvent) => void) {
+export const useWSEvent = (type: string, handler: (event: WSEvent) => void) => {
   const { onEvent } = useWebSocket()
   const handlerRef = useRef(handler)
   useEffect(() => {

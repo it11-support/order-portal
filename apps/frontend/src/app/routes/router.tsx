@@ -7,15 +7,19 @@ import {
   CategoryPage,
   CartPage,
   OrdersPage,
+  InquiriesPage,
   OrderDetailPage,
   AdminOrdersPage,
+  AdminInquiriesPage,
   AdminOrderDetailPage,
   CustomersPage,
   AdminCategoriesPage,
   AdminProductListPage,
   UsersPage,
   CustomerDashboardPage,
+  DashboardPage,
   NotificationsPage,
+  SalesOrderEntryPage,
 } from '@pages'
 
 import { AppLayout } from '@layouts'
@@ -39,6 +43,14 @@ export const router = createBrowserRouter([
         element: <CatalogPage />,
       },
       {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <DashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'search',
         element: <SearchPage />,
       },
@@ -56,17 +68,33 @@ export const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: <OrdersPage />,
+        element: <OrdersPage kind="order" />,
+      },
+      {
+        path: 'inquiries',
+        element: <InquiriesPage />,
       },
       {
         path: 'orders/:orderId',
-        element: <OrderDetailPage />,
+        element: <OrderDetailPage kind="order" />,
+      },
+      {
+        path: 'inquiries/:orderId',
+        element: <OrderDetailPage kind="quote" />,
       },
       {
         path: 'admin/orders',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
-            <AdminOrdersPage />
+            <AdminOrdersPage kind="order" />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/inquiries',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminInquiriesPage />
           </ProtectedRoute>
         ),
       },
@@ -74,7 +102,23 @@ export const router = createBrowserRouter([
         path: 'admin/orders/:orderId',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
-            <AdminOrderDetailPage />
+            <AdminOrderDetailPage kind="order" />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/inquiries/:orderId',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <AdminOrderDetailPage kind="quote" />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/sales-order',
+        element: (
+          <ProtectedRoute allowedRoles={['admin', 'sales_admin']}>
+            <SalesOrderEntryPage />
           </ProtectedRoute>
         ),
       },

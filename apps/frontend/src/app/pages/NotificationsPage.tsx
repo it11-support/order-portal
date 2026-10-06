@@ -1,7 +1,8 @@
 import { Bell, CheckCheck, X, ExternalLink } from 'lucide-react'
 import { Shell } from '@layouts'
-import { useNotifications } from '@contexts'
+import { useNotifications, useAuth } from '@contexts'
 import { useNavigate } from 'react-router-dom'
+import { notificationTarget } from '@repo/shared'
 
 const fmtDate = (value: string) => {
   const date = new Date(value)
@@ -17,6 +18,7 @@ const fmtDate = (value: string) => {
 const NotificationsPage = () => {
   const navigate = useNavigate()
   const { notifications, loading, markRead, dismiss, markAllRead } = useNotifications()
+  const { isCustomer } = useAuth()
 
   return (
     <Shell title="Notifikasi" showBack>
@@ -80,22 +82,26 @@ const NotificationsPage = () => {
                     </button>
                   </div>
                 </div>
-                {notification.relatedId && (
-                  <button
-                    onClick={() => {
-                      if (notification.type === 'new_order' || notification.type === 'new_quote') {
-                        navigate(`/admin/orders/${notification.relatedId}`)
-                      } else if (notification.type === 'status_update') {
-                        navigate(`/orders/${notification.relatedId}`)
-                      } else {
-                        navigate(`/admin/orders/${notification.relatedId}`)
-                      }
-                    }}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
-                  >
-                    Lihat detail <ExternalLink size={12} />
-                  </button>
-                )}
+{(() => {
+                  const target = notificationTarget(
+                    notification.type,
+                    notification.relatedId,
+                    notification.kind,
+                    isCustomer,
+                  )
+                  if (!target) return null
+                  return (
+                    <button
+                      onClick={() => {
+                        void markRead(notification.id)
+                        navigate(target)
+                      }}
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+                    >
+                      Lihat detail <ExternalLink size={12} />
+                    </button>
+                  )
+                })()}
               </div>
             ))}
           </div>

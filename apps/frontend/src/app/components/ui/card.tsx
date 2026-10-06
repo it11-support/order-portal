@@ -2,7 +2,7 @@ import * as React from 'react'
 
 import { cn } from './utils'
 
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
+const Card = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
       data-slot="card"
@@ -15,7 +15,7 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
+const CardHeader = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
       data-slot="card-header"
@@ -28,17 +28,17 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+const CardTitle = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return <h4 data-slot="card-title" className={cn('leading-none', className)} {...props} />
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
+const CardDescription = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <p data-slot="card-description" className={cn('text-muted-foreground', className)} {...props} />
   )
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
+const CardAction = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
       data-slot="card-action"
@@ -48,17 +48,11 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn('px-6 [&:last-child]:pb-6', className)}
-      {...props}
-    />
-  )
+const CardContent = ({ className, ...props }: React.ComponentProps<'div'>) => {
+  return <div data-slot="card-content" className={cn('px-6 last:pb-6', className)} {...props} />
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
+const CardFooter = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
       data-slot="card-footer"

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { api } from '@lib'
-import { Category } from '@repo/shared'
-import { Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
+import { api, swrFetcher } from '@lib'
+import { ApiResponse, Category } from '@repo/shared'
+import { Plus, Pencil, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { Switch } from '@/app/components/ui/switch'
 import IconPicker from './IconPicker'
 import CategoryIcon from './CategoryIcon'
 import { toast } from 'sonner'
+import useSWR from 'swr'
 
 const EMPTY_FORM = {
   code: '',
@@ -27,8 +28,6 @@ const EMPTY_FORM = {
 }
 
 const CategoryList: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Category | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -38,22 +37,13 @@ const CategoryList: React.FC = () => {
   const [targetIndex, setTargetIndex] = useState<number | null>(null)
   const tableRef = useRef<HTMLTableElement>(null)
 
-  const fetchCategories = async () => {
-    setLoading(true)
-    try {
-      const res = await api.get('/categories')
-      setCategories(res.data.data)
-      setOrderChanged(false)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    mutate: mutateCategories,
+  } = useSWR<ApiResponse<Category>>('/categories', swrFetcher)
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
+  const categories = useMemo(() => categoriesData?.data || [], [categoriesData])
 
   const openCreate = () => {
     setEditing(null)
@@ -83,7 +73,7 @@ const CategoryList: React.FC = () => {
         await api.post('/categories', form)
       }
       setDialogOpen(false)
-      fetchCategories()
+      await mutateCategories()
     } catch (e) {
       console.error(e)
     } finally {
@@ -99,10 +89,35 @@ const CategoryList: React.FC = () => {
         success: 'Kategori berhasil dihapus',
         error: 'Gagal menghapus kategori',
       })
-      fetchCategories()
+      await mutateCategories(
+        (current) =>
+          current && {
+            ...current,
+            data: current.data.filter((cat) => cat.id !== id),
+          },
+        false,
+      )
     } catch (e) {
       console.error(e)
     }
+  }
+
+  const moveCategory = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= categories.length) return
+
+    const updated = [...categories]
+    const [moved] = updated.splice(index, 1)
+    updated.splice(newIndex, 0, moved)
+
+    const reordered = updated.map((c, i) => ({ ...c, sortOrder: i + 1 }))
+
+    mutateCategories((current) => (current ? { ...current, data: reordered } : current), {
+      revalidate: false,
+    })
+
+    await saveOrder(reordered)
+    await mutateCategories()
   }
 
   const displayCategories = useMemo(() => {
@@ -151,7 +166,6 @@ const CategoryList: React.FC = () => {
         sortOrder: i + 1,
       }))
 
-      setCategories(reordered)
       setOrderChanged(true)
 
       await saveOrder(reordered)
@@ -186,6 +200,7 @@ const CategoryList: React.FC = () => {
       await api.put('/categories/reorder/batch', { orders })
 
       setOrderChanged(false)
+      await mutateCategories()
     } catch (e) {
       console.error(e)
     } finally {
@@ -208,7 +223,89 @@ const CategoryList: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="md:hidden space-y-3">
+        {categoriesLoading && categories.length === 0 ? (
+          <p className="text-center py-12 text-sm text-muted-foreground">Memuat...</p>
+        ) : (
+          <>
+            {categories.map((cat, index) => (
+              <div
+                key={cat.id}
+                className="bg-white rounded-xl border border-gray-200 p-4 space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                      {cat.code}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1 min-w-0">
+                      {cat.icon && (
+                        <CategoryIcon
+                          name={cat.icon}
+                          size={20}
+                          className="text-emerald-600 shrink-0"
+                        />
+                      )}
+                      <p className="font-medium text-sm truncate">{cat.name}</p>
+                    </div>
+                  </div>
+                  {cat.isActive ? (
+                    <span className="inline-flex text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100 shrink-0">
+                      Aktif
+                    </span>
+                  ) : (
+                    <span className="inline-flex text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold border border-red-100 shrink-0">
+                      Non-Aktif
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-200">
+                  <button
+                    onClick={() => moveCategory(index, 'up')}
+                    disabled={index === 0 || saving}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Naik"
+                  >
+                    <ArrowUp size={18} />
+                  </button>
+                  <button
+                    onClick={() => moveCategory(index, 'down')}
+                    disabled={index === categories.length - 1 || saving}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Turun"
+                  >
+                    <ArrowDown size={18} />
+                  </button>
+                  <button
+                    onClick={() => openEdit(cat)}
+                    className="p-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    aria-label="Edit"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cat.id)}
+                    className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    aria-label="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {!categoriesLoading && categories.length === 0 && (
+              <p className="text-center py-12 text-sm text-muted-foreground">
+                Tidak ada data kategori.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* TABLE VIEW — desktop only */}
+      <div className="hidden md:block w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table ref={tableRef} className="w-full text-left border-collapse">
             <thead>
@@ -293,14 +390,14 @@ const CategoryList: React.FC = () => {
                 </tr>
               ))}
 
-              {!loading && categories.length === 0 && (
+              {!categoriesLoading && categories.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
                     Tidak ada data kategori.
                   </td>
                 </tr>
               )}
-              {loading && (
+              {categoriesLoading && (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
                     Memuat...

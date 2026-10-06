@@ -10,7 +10,7 @@ type DialogContextType = {
 
 const DialogContext = React.createContext<DialogContextType | null>(null)
 
-function useDialog() {
+const useDialog = () => {
   const context = React.useContext(DialogContext)
   if (!context) {
     throw new Error('Dialog components must be used within a Dialog')
@@ -24,7 +24,7 @@ type DialogProps = {
   children: React.ReactNode
 }
 
-function Dialog({ open: controlledOpen, onOpenChange, children }: DialogProps) {
+const Dialog = ({ open: controlledOpen, onOpenChange, children }: DialogProps) => {
   const [internalOpen, setInternalOpen] = React.useState(false)
   const open = controlledOpen ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
@@ -32,7 +32,7 @@ function Dialog({ open: controlledOpen, onOpenChange, children }: DialogProps) {
   return <DialogContext.Provider value={{ open, setOpen }}>{children}</DialogContext.Provider>
 }
 
-function DialogTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+const DialogTrigger = ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const { setOpen } = useDialog()
   return (
     <button
@@ -49,13 +49,13 @@ function DialogTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
   )
 }
 
-function DialogPortal({ children }: { children: React.ReactNode }) {
+const DialogPortal = ({ children }: { children: React.ReactNode }) => {
   const { open } = useDialog()
   if (!open) return null
   return <>{children}</>
 }
 
-function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+const DialogOverlay = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const { open } = useDialog()
   if (!open) return null
   return (
@@ -67,7 +67,7 @@ function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTMLDivElem
   )
 }
 
-function DialogContent({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+const DialogContent = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const { open, setOpen } = useDialog()
   if (!open) return null
   return (
@@ -92,7 +92,7 @@ function DialogContent({ className, children, ...props }: React.HTMLAttributes<H
   )
 }
 
-function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
     <div
       data-slot="dialog-header"
@@ -102,7 +102,7 @@ function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   )
 }
 
-function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   return (
     <div
       data-slot="dialog-footer"
@@ -112,13 +112,13 @@ function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   )
 }
 
-function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+const DialogTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => {
   return (
     <h2 data-slot="dialog-title" className={cn('text-lg font-semibold', className)} {...props} />
   )
 }
 
-function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+const DialogDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => {
   return (
     <p
       data-slot="dialog-description"
@@ -128,7 +128,7 @@ function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLPar
   )
 }
 
-function DialogClose({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+const DialogClose = ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const { setOpen } = useDialog()
   return (
     <button

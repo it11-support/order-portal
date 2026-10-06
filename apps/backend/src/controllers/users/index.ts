@@ -90,13 +90,37 @@ export interface CreateUserRequest {
   email?: string
   roleId: number
   isActive?: boolean
+  slpCode?: number | null
+}
+
+/**
+ * A sales_admin without an SLP code has no territory, so it can neither see a
+ * customer nor receive their inquiries. Refusing the account is better than
+ * creating one that silently sees nothing.
+ */
+const resolveSlpCode = async (
+  roleName: string,
+  slpCode: number | null | undefined,
+): Promise<{ slpCode?: number | null; error?: string }> => {
+  if (roleName !== 'sales_admin') {
+    return slpCode === undefined ? {} : { slpCode: null }
+  }
+  if (slpCode === null || slpCode === undefined || !Number.isInteger(slpCode)) {
+    return { error: 'Role sales wajib memilih SLP Code' }
+  }
+  const salesPerson = await prisma.salesPerson.findUnique({
+    where: { slpCode },
+    select: { slpCode: true },
+  })
+  if (!salesPerson) return { error: 'SLP Code tidak ditemukan' }
+  return { slpCode }
 }
 
 export const createUser = async (
   req: Request<{}, {}, CreateUserRequest>,
   res: Response,
 ): Promise<void> => {
-  const { username, password, name, email, roleId, isActive = true } = req.body
+  const { username, password, name, email, roleId, isActive = true, slpCode } = req.body
 
   if (!username || !password || !name || !roleId) {
     res.status(400).json({
@@ -122,6 +146,12 @@ export const createUser = async (
     res
       .status(400)
       .json({ message: 'Tidak dapat membuat user dengan role customer melalui modul ini' })
+    return
+  }
+
+  const slp = await resolveSlpCode(role.name, slpCode)
+  if (slp.error) {
+    res.status(400).json({ message: slp.error })
     return
   }
 
@@ -156,6 +186,7 @@ export const createUser = async (
       email: email || null,
       roleId,
       isActive,
+      ...(slp.slpCode !== undefined ? { slpCode: slp.slpCode } : {}),
     },
     include: { role: true, customer: true },
   })
@@ -170,6 +201,7 @@ export interface UpdateUserRequest {
   email?: string | null
   roleId?: number
   isActive?: boolean
+  slpCode?: number | null
 }
 
 export const updateUser = async (
@@ -177,7 +209,7 @@ export const updateUser = async (
   res: Response,
 ): Promise<void> => {
   const { id } = req.params
-  const { username, password, name, email, roleId, isActive } = req.body
+  const { username, password, name, email, roleId, isActive, slpCode } = req.body
 
   const existing = await prisma.user.findUnique({
     where: { id: parseInt(id) },
@@ -189,6 +221,25 @@ export const updateUser = async (
   }
 
   const updateData: any = {}
+  if (slpCode !== undefined || (roleId && roleId !== existing.roleId)) {
+    // The role decides whether the territory is mandatory, so it is resolved
+    // from the role the account ends up with, not the one it has today.
+    let targetRoleName = existing.role.name
+    if (roleId && roleId !== existing.roleId) {
+      const role = await prisma.role.findUnique({ where: { id: roleId } })
+      if (!role) {
+        res.status(400).json({ message: 'Role tidak valid' })
+        return
+      }
+      targetRoleName = role.name
+    }
+    const slp = await resolveSlpCode(targetRoleName, slpCode ?? undefined)
+    if (slp.error) {
+      res.status(400).json({ message: slp.error })
+      return
+    }
+    if (slp.slpCode !== undefined) updateData.slpCode = slp.slpCode
+  }
   if (username) updateData.username = username
   if (password) {
     updateData.password = await bcrypt.hash(password, 10)
@@ -229,4 +280,21 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
   })
 
   res.status(200).json({ data: roles })
+}
+
+/**
+ * Sales persons available for assignment.
+ *
+ * A sales_admin can only see and act on customers with a matching SlpCode, so
+ * assigning one is a prerequisite for the account to work at all. The list is
+ * offered on the user form so the territory is chosen deliberately rather than
+ * left empty and discovered later.
+ */
+export const getSalesPersons = async (req: Request, res: Response): Promise<void> => {
+  const salesPersons = await prisma.salesPerson.findMany({
+    orderBy: { slpName: 'asc' },
+    select: { slpCode: true, slpName: true },
+  })
+
+  res.status(200).json({ data: salesPersons })
 }

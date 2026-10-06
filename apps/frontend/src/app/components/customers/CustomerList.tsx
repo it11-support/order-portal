@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react'
 import useSWRInfinite from 'swr/infinite'
 import { api, swrFetcher } from '@lib'
-import { useAuth } from '@/app/contexts/AuthContext'
+import { useAuth } from '@/app/contexts/authHook'
 import { useIntersectionObserver } from '@hooks'
 import { InfiniteScrollWatcher } from '@/app/components/common/InfiniteScrollWatcher'
+import { Switch } from '@/app/components/ui/switch'
 import { Customer, ApiResponse, DEFAULT_LIMIT } from '@repo/shared'
 import { Check, Copy, Eye, EyeOff, Search, X } from 'lucide-react'
 
@@ -240,7 +241,7 @@ const CustomerList: React.FC = () => {
             className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 focus:ring-2 cursor-pointer transition-colors"
           />
           <span className="text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
-            Tampilkan pelanggan tidak aktif
+            Tampilkan pelanggan non-aktif
           </span>
         </label>
         <div className="w-full md:w-80 relative flex items-center">
@@ -269,7 +270,113 @@ const CustomerList: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* CARD VIEW — mobile only */}
+      <div className="md:hidden space-y-3">
+        {isLoading && customers.length === 0 ? (
+          <p className="text-center py-12 text-sm text-muted-foreground">Memuat...</p>
+        ) : (
+          <>
+            {customers.map((customer) => (
+              <div
+                key={customer.id}
+                className={`bg-white rounded-xl border border-border p-4 space-y-2 ${
+                  customer.NonActive === 'Y' ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{customer.CardName}</p>
+                    <p className="text-xs text-muted-foreground font-mono">{customer.CardCode}</p>
+                  </div>
+                  {customer.NonActive === 'Y' ? (
+                    <span className="inline-flex text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-bold border border-red-100 shrink-0">
+                      Non-Aktif
+                    </span>
+                  ) : (
+                    <span className="inline-flex text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-bold border border-green-100 shrink-0">
+                      Aktif
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {customer.GroupName && (
+                    <span className="text-xs bg-secondary text-foreground px-2 py-0.5 rounded-md font-medium">
+                      {customer.GroupName}
+                    </span>
+                  )}
+                  {customer.Subgroup?.IndName && (
+                    <span className="text-xs bg-secondary text-foreground px-2 py-0.5 rounded-md font-medium">
+                      {customer.Subgroup.IndName}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">{customer.City || '-'}</span>
+                </div>
+
+                {customer.Address && (
+                  <p className="text-xs text-muted-foreground line-clamp-1">{customer.Address}</p>
+                )}
+
+                {isAdmin && (
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-medium">
+                      <Switch
+                        checked={Boolean(customer.hasLogin)}
+                        disabled={
+                          busyId !== null ||
+                          customer.id == null ||
+                          (!customer.hasLogin && (customer.NonActive === 'Y' || !customer.CardCode))
+                        }
+                        onCheckedChange={(checked) => setLoginEnabled(customer, checked)}
+                      />
+                      {busyId === String(customer.id) ? 'Memproses...' : 'Login aktif'}
+                    </div>
+                    {customer.hasLogin && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleReset(customer)}
+                          disabled={busyId !== null}
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline disabled:opacity-50"
+                        >
+                          Reset password
+                        </button>
+                      </div>
+                    )}
+                    {customer.hasLogin && (
+                      <div className="mt-1 text-xs text-left w-full">
+                        <CustomerCredentials
+                          key={`${customer.CardCode}:${customer.loginPassword ?? ''}`}
+                          username={customer.loginUsername ?? customer.CardCode ?? ''}
+                          password={customer.loginPassword ?? null}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isEmpty && !isFetching && (
+              <p className="text-center py-12 text-sm text-muted-foreground">
+                Tidak ada data yang ditemukan.
+              </p>
+            )}
+
+            <div ref={observerTargetRef}>
+              <InfiniteScrollWatcher
+                isLoading={isLoading}
+                isValidating={isValidating}
+                isReachingEnd={isReachingEnd}
+                isEmpty={isEmpty}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* TABLE VIEW — desktop only */}
+      <div className="hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -283,7 +390,6 @@ const CustomerList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-              {/* Jika data pelanggan ada, render baris demi baris */}
               {customers.length > 0 &&
                 customers.map((customer) => (
                   <tr
@@ -309,7 +415,7 @@ const CustomerList: React.FC = () => {
                     <td className="p-4">
                       {customer.Subgroup?.IndName && (
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-medium">
-                          {customer.Subgroup?.IndName || null}
+                          {customer.Subgroup.IndName || null}
                         </span>
                       )}
                     </td>
@@ -327,9 +433,8 @@ const CustomerList: React.FC = () => {
                     </td>
                     {isAdmin && (
                       <td className="p-4">
-                        <label className="flex items-center gap-2 text-xs font-medium">
-                          <input
-                            type="checkbox"
+                        <div className="flex items-center gap-2 text-xs font-medium">
+                          <Switch
                             checked={Boolean(customer.hasLogin)}
                             aria-label={`Aktifkan login ${customer.CardCode ?? customer.CardName}`}
                             disabled={
@@ -338,11 +443,10 @@ const CustomerList: React.FC = () => {
                               (!customer.hasLogin &&
                                 (customer.NonActive === 'Y' || !customer.CardCode))
                             }
-                            onChange={(event) => setLoginEnabled(customer, event.target.checked)}
-                            className="h-4 w-4 rounded accent-blue-600 disabled:opacity-40"
+                            onCheckedChange={(checked) => setLoginEnabled(customer, checked)}
                           />
                           {busyId === String(customer.id) ? 'Memproses...' : 'Login aktif'}
-                        </label>
+                        </div>
                         {customer.hasLogin && (
                           <button
                             type="button"
@@ -367,8 +471,7 @@ const CustomerList: React.FC = () => {
                   </tr>
                 ))}
 
-              {/* JIKA DATA MEMANG KOSONG */}
-              {isEmpty && !isLoading && (
+              {isEmpty && !isFetching && (
                 <tr>
                   <td colSpan={isAdmin ? 6 : 5} className="p-12 text-center text-sm text-gray-400">
                     Tidak ada data yang ditemukan.

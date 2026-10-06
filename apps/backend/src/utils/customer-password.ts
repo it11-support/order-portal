@@ -1,13 +1,13 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'node:crypto'
 import * as bcrypt from 'bcrypt'
 
-function key() {
+const key = () => {
   const secret = process.env.CUSTOMER_PASSWORD_SECRET || process.env.JWT_SECRET
   if (!secret) throw new Error('Customer password encryption secret is missing')
   return createHash('sha256').update(`customer-password:v1:${secret}`).digest()
 }
 
-export function generateCustomerPassword(): string {
+export const generateCustomerPassword = (): string => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let password: string
   do {
@@ -16,18 +16,18 @@ export function generateCustomerPassword(): string {
   return password
 }
 
-export async function hashCustomerPassword(password: string): Promise<string> {
+export const hashCustomerPassword = async (password: string): Promise<string> => {
   return bcrypt.hash(password, 10)
 }
 
-export function encryptCustomerPassword(password: string): string {
+export const encryptCustomerPassword = (password: string): string => {
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', key(), iv)
   const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
   return [iv, cipher.getAuthTag(), encrypted].map((value) => value.toString('base64url')).join('.')
 }
 
-export function decryptCustomerPassword(value: string | null): string | null {
+export const decryptCustomerPassword = (value: string | null): string | null => {
   if (!value) return null
   try {
     const [iv, tag, encrypted] = value.split('.').map((part) => Buffer.from(part, 'base64url'))

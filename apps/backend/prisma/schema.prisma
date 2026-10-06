@@ -17,58 +17,285 @@ model Role {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  username   String   @unique
+  id                Int      @id @default(autoincrement())
+  username          String   @unique
   email             String?  @unique
   password          String   @map("password")
   encryptedPassword String?  @map("encrypted_password") @db.Text
   name              String
-  roleId     Int      @map("role_id")
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  role       Role     @relation(fields: [roleId], references: [id])
-  customerId BigInt?  @unique @map("customer_id")
+  roleId            Int      @map("role_id")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  role              Role     @relation(fields: [roleId], references: [id])
+  customerId        BigInt?  @unique @map("customer_id")
 
-  customer Customers? @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  notifications Notification[]
+  customer        Customers?      @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  notifications   Notification[]
+  followUpNotes   FollowUpNote[]
+  salesPerson     SalesPerson?    @relation(fields: [slpCode], references: [slpCode])
+  slpCode         Int?            @map("slp_code") @db.SmallInt
+  requestsCreated PortalRequest[] @relation("PortalRequestCreator")
 
   @@index([username])
   @@index([email])
   @@index([roleId])
+  @@index([slpCode])
   @@map("users")
 }
 
 model Customers {
-  id          BigInt    @id @default(autoincrement()) @db.BigInt
-  CardCode    String?   @unique(map: "customers_cardcode_unique") @map("card_code") @db.VarChar(15)
-  CardName    String?   @map("card_name") @db.VarChar(100)
-  GroupName   String?   @map("group_name") @db.VarChar(20)
-  CntctPrsn   String?   @map("cntct_prsn") @db.VarChar(90)
-  Phone1      String?   @map("phone1") @db.VarChar(20)
-  Cellular    String?   @map("cellular") @db.VarChar(50)
-  SlpCode     Int?      @map("slp_code") @db.SmallInt
-  SalesName   String?   @map("sales_name") @db.VarChar(155)
-  Address     String?   @map("address") @db.VarChar(100)
-  Block       String?   @map("block") @db.VarChar(100)
-  City        String?   @map("city") @db.VarChar(100)
-  ZipCode     String?   @map("zip_code") @db.VarChar(20)
-  Country     String?   @map("country") @db.VarChar(3)
-  PaymentTerm String?   @map("payment_term") @db.VarChar(100)
-  PriceList   String?   @map("price_list") @db.VarChar(32)
-  JoinDate    DateTime? @map("join_date") @db.Timestamp(0)
-  IndustryC   Int?      @map("industry_c")
-  NonActive   String?   @map("non_active") @db.Char(1)
+  id           BigInt  @id @default(autoincrement()) @db.BigInt
+  CardCode     String? @unique(map: "customers_cardcode_unique") @map("card_code") @db.VarChar(15)
+  CardName     String? @map("card_name") @db.VarChar(100)
+  GroupName    String? @map("group_name") @db.VarChar(20)
+  CntctPrsn    String? @map("cntct_prsn") @db.VarChar(90)
+  Phone1       String? @map("phone1") @db.VarChar(20)
+  Cellular     String? @map("cellular") @db.VarChar(50)
+  SlpCode      Int?    @map("slp_code") @db.SmallInt
+  SalesName    String? @map("sales_name") @db.VarChar(155)
+  Address      String? @map("address") @db.VarChar(100)
+  Block        String? @map("block") @db.VarChar(100)
+  City         String? @map("city") @db.VarChar(100)
+  ZipCode      String? @map("zip_code") @db.VarChar(20)
+  Country      String? @map("country") @db.VarChar(3)
+  PaymentTerm  String? @map("payment_term") @db.VarChar(100)
+  PriceList    String? @map("price_list") @db.VarChar(32)
+  priceListNum Int?    @map("price_list_num")
+
+  // SAP OCRD.Discount — overall customer discount in percent
+  discountLevel Decimal?  @map("discount_level") @db.Decimal(9, 4)
+  JoinDate      DateTime? @map("join_date") @db.Timestamp(0)
+  IndustryC     Int?      @map("industry_c")
+  NonActive     String?   @map("non_active") @db.Char(1)
+
+  // SAP OCRD credit exposure and ordering block.
+  creditLimit Decimal?  @default(0) @map("credit_limit") @db.Decimal(19, 6)
+  balance     Decimal?  @default(0) @map("balance") @db.Decimal(19, 6)
+  frozenFor   String?   @default("N") @map("frozen_for") @db.Char(1)
+  frozenFrom  DateTime? @map("frozen_from")
+  frozenTo    DateTime? @map("frozen_to")
 
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
 
   Subgroup Subgroups? @relation(fields: [IndustryC], references: [IndCode])
 
-  user User?
-  requests PortalRequest[]
+  salesPerson SalesPerson? @relation(fields: [SlpCode], references: [slpCode])
 
+  user         User?
+  requests     PortalRequest[]
+  itemPrices   CustomerItemPrice[]
+  priceChanges PriceChangeLog[]
+
+  @@index([SlpCode])
+  @@index([priceListNum])
   @@map("customers")
+}
+
+model PriceList {
+  id        BigInt @id @default(autoincrement())
+  companyId String @map("company_id") @db.VarChar(255)
+
+  // SAP OPLN.ListNum
+  listNum Int @map("list_num")
+
+  // SAP OPLN.ListName
+  listName String @map("list_name") @db.VarChar(100)
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([companyId, listNum])
+  @@index([companyId])
+  @@map("price_lists")
+}
+
+model ItemPrice {
+  id        BigInt @id @default(autoincrement())
+  companyId String @map("company_id") @db.VarChar(255)
+
+  listNum  Int    @map("list_num")
+  itemCode String @map("item_code") @db.VarChar(255)
+
+  price    Decimal? @db.Decimal(19, 6)
+  currency String?  @db.VarChar(10)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@unique([companyId, listNum, itemCode])
+  @@index([companyId, itemCode])
+  @@index([companyId, listNum])
+  @@map("item_prices")
+}
+
+// The price this customer actually pays for one item.
+//
+// A repeat order is priced from the last invoice line for that customer and
+// item, which already contains any negotiated discount, so this row is the
+// "harga aktual". Items the customer has never bought have no row here; those
+// are quoted from the price list until a deal makes them real.
+model CustomerItemPrice {
+  customerId BigInt @map("customer_id")
+  itemCode   String @map("item_code") @db.VarChar(255)
+
+  price    Decimal @db.Decimal(19, 6)
+  currency String? @db.VarChar(10)
+
+  // Discount percentage taken from Customers.discountLevel when resolved.
+  discountApplied Decimal @default(0) @map("discount_applied") @db.Decimal(9, 4)
+
+  // invoice = derived from a synced sales invoice line.
+  source    String  @default("invoice") @db.VarChar(10)
+  sourceDoc String? @map("source_doc") @db.VarChar(60)
+
+  lastChangedAt   DateTime? @map("last_changed_at")
+  lastPurchasedAt DateTime? @map("last_purchased_at") @db.Timestamp(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @map("updated_at") @db.Timestamp(0)
+
+  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  item    Product   @relation(fields: [itemCode], references: [itemCode], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([customerId, itemCode])
+  @@index([itemCode])
+  @@map("customer_item_prices")
+}
+
+// One row per observed price movement. Rows are the audit trail behind the
+// customer-facing "harga naik" notification and the order confirmation gate.
+model PriceChangeLog {
+  id         String @id @default(cuid())
+  customerId BigInt @map("customer_id")
+  itemCode   String @map("item_code") @db.VarChar(255)
+
+  oldPrice Decimal? @map("old_price") @db.Decimal(19, 6)
+  newPrice Decimal  @map("new_price") @db.Decimal(19, 6)
+
+  changePct Decimal @map("change_pct") @db.Decimal(9, 4)
+
+  // up = price increased, down = price decreased. VarChar, not Char: Postgres
+  // blank-pads a fixed-length char and the padded value breaks comparisons.
+  direction String @db.VarChar(4)
+
+  // Set once the customer-facing notification has been delivered.
+  notifiedAt DateTime? @map("notified_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([direction, notifiedAt])
+  @@map("price_change_logs")
+}
+
+model SalesOrder {
+  id        BigInt @id @default(autoincrement())
+  companyId String @map("company_id") @db.VarChar(255)
+
+  // SAP ORDR
+  docEntry Int @map("doc_entry")
+  docNum   Int @map("doc_num")
+
+  docDate    DateTime  @map("doc_date") @db.Timestamp(0)
+  docDueDate DateTime? @map("doc_due_date") @db.Timestamp(0)
+
+  cardCode String  @map("card_code") @db.VarChar(255)
+  cardName String? @map("card_name") @db.VarChar(255)
+
+  // O = Open, C = Closed
+  docStatus String @map("doc_status") @db.Char(1)
+
+  // SAP CANCELED
+  canceled String @default("N") @db.Char(1)
+
+  docTotal Decimal? @map("doc_total") @db.Decimal(19, 6)
+  currency String?  @db.VarChar(10)
+
+  slpCode Int? @map("slp_code")
+
+  // Timestamp perubahan terakhir dari SAP
+  sapUpdatedAt DateTime? @map("sap_updated_at") @db.Timestamp(0)
+
+  // Portal request id carried on the SAP document (Remarks/UDF), when the sync
+  // copies it. It is what lets an ORDR find the portal order it came from
+  // without anyone typing a document number twice.
+  portalRef String? @map("portal_ref") @db.VarChar(64)
+
+  // Remarks as they stand in SAP. The portal reference travels inside this text,
+  // so keeping it is what lets the round trip be checked instead of assumed.
+  remarks String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines SalesOrderLine[]
+
+  @@unique([companyId, docEntry])
+  @@unique([portalRef])
+  @@index([companyId, docStatus])
+  @@index([companyId, cardCode])
+  @@index([cardCode, docDate])
+  @@index([docNum])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id BigInt @id @default(autoincrement())
+
+  salesOrderId BigInt @map("sales_order_id")
+
+  // SAP RDR1.LineNum
+  lineNum Int @map("line_num")
+
+  itemCode    String? @map("item_code") @db.VarChar(255)
+  description String  @db.Text
+
+  quantity Decimal @db.Decimal(19, 6)
+
+  // RDR1.OpenQty
+  openQty Decimal @map("open_qty") @db.Decimal(19, 6)
+
+  price     Decimal? @db.Decimal(19, 6)
+  lineTotal Decimal? @map("line_total") @db.Decimal(19, 6)
+
+  // O / C
+  lineStatus String? @map("line_status") @db.Char(1)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([salesOrderId, lineNum])
+  @@index([itemCode])
+  @@map("sales_order_lines")
+}
+
+model SalesPerson {
+  id         BigInt    @id @default(autoincrement()) @db.BigInt
+  slpCode    Int       @unique @map("slp_code") @db.SmallInt
+  slpName    String?   @map("slp_name") @db.VarChar(155)
+  memo       String?   @db.VarChar(50)
+  commission Decimal?  @db.Decimal(19, 6)
+  groupCode  Int?      @map("group_code") @db.SmallInt
+  locked     String?   @db.Char(1)
+  dataSource String?   @map("data_source") @db.Char(1)
+  userSign   Int?      @map("user_sign") @db.SmallInt
+  empId      Int?      @map("emp_id")
+  active     String?   @db.Char(1)
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
+
+  customers Customers[]
+  users     User[]
+
+  @@map("sales_persons")
 }
 
 model Subgroups {
@@ -95,27 +322,32 @@ model Category {
 }
 
 model Product {
-  id               BigInt    @id @default(autoincrement())
-  itemCode         String    @unique @map("item_code")
-  itemName         String    @map("item_name")
-  foreignName      String?   @map("foreign_name")
+  id          BigInt  @id @default(autoincrement())
+  itemCode    String  @unique @map("item_code")
+  itemName    String  @map("item_name")
+  foreignName String? @map("foreign_name")
 
-  productGroupCode Int?      @map("product_group_code")
-  productGroupName String?   @map("product_group_name")
-  productCategory  String    @default("OTHER") @map("product_category")
+  productGroupCode Int?    @map("product_group_code")
+  productGroupName String? @map("product_group_name")
+  productCategory  String  @default("OTHER") @map("product_category")
 
-  isDistributor    Boolean   @default(false) @map("is_distributor")
+  isDistributor Boolean @default(false) @map("is_distributor")
 
-  salesUnit        String?   @map("sales_unit")
-  salesPackSize    Decimal?  @map("sales_pack_size") @db.Decimal(19, 6)
-  salesPackUnit    String?   @map("sales_pack_unit")
+  salesUnit     String?  @map("sales_unit")
+  salesPackSize Decimal? @map("sales_pack_size") @db.Decimal(19, 6)
+  salesPackUnit String?  @map("sales_pack_unit")
 
-  launchDate       DateTime? @map("launch_date") @db.Date
-  isActive         Boolean   @default(true) @map("is_active")
+  launchDate DateTime? @map("launch_date") @db.Date
+  isActive   Boolean   @default(true) @map("is_active")
 
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  vatGroup String?  @map("vat_group") @db.VarChar(50)
+  vatRate  Decimal? @map("vat_rate") @db.Decimal(19, 6)
 
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  customerPrices CustomerItemPrice[]
+  
   @@index([productGroupCode])
   @@index([productCategory])
   @@index([isActive])
@@ -123,51 +355,107 @@ model Product {
 }
 
 model PortalRequest {
-  id String @id
+  id         String @id
   customerId BigInt @map("customer_id")
-  kind String
-  status String @default("pending")
-  items Json
-  notes String @default("")
+  kind       String
+  status     String @default("pending")
+  items      Json
+  notes      String @default("")
   salesNotes String @default("") @map("sales_notes")
+
+  // customer = raised by the customer, sales = raised by the customer's
+  // sales_admin on their behalf.
+  source String @default("customer") @db.VarChar(10)
+
+  createdById Int?  @map("created_by_id")
+  createdBy   User? @relation("PortalRequestCreator", fields: [createdById], references: [id])
+
+  // Whether the snapshotted lines were priced from this customer's actual
+  // invoice price or from the price list.
+  priceBasis String? @map("price_basis") @db.VarChar(10)
+
+  // Set when an inquiry turns into an order.
+  inquiryId        String? @map("inquiry_id") @db.VarChar(64)
+  convertedOrderId String? @map("converted_order_id") @db.VarChar(64)
+
+  // SAP ORDR this request became. The synced sales_orders row is the truth for
+  // delivery progress, so the portal keeps the document reference and mirrors
+  // the SAP status instead of guessing it.
+  sapCompanyId String?   @map("sap_company_id") @db.VarChar(255)
+  sapDocEntry  Int?      @map("sap_doc_entry")
+  sapDocNum    Int?      @map("sap_doc_num")
+  sapDocStatus String?   @map("sap_doc_status") @db.Char(1)
+  sapCanceled  String?   @map("sap_canceled") @db.Char(1)
+  sapSyncedAt  DateTime? @map("sap_synced_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  customer Customers @relation(fields: [customerId], references: [id])
 
-  @@index([customerId, createdAt])
+  customer      Customers      @relation(fields: [customerId], references: [id])
+  followUpNotes FollowUpNote[]
+
+  @@index([customerId, kind, status])
+  @@index([status, kind])
+  @@index([inquiryId])
+  @@index([sapDocEntry])
   @@map("portal_requests")
 }
 
-model SalesInvoice {
-  id BigInt @id @default(autoincrement())
-  companyId String @map("company_id") @db.VarChar(255)
-  docEntry Int @map("doc_entry")
-  docNum Int @map("doc_num")
-  lineNum Int @map("line_num")
-  docDate DateTime @map("doc_date") @db.Timestamp(0)
-  cardCode String @map("card_code") @db.VarChar(255)
-  cardName String? @map("card_name") @db.VarChar(255)
-  itemCode String? @map("item_code") @db.VarChar(255)
-  description String @map("description")
-  quantity Decimal @db.Decimal(19, 6)
-  inventoryQuantity Decimal @map("inventory_quantity") @db.Decimal(19, 6)
-  qtyKg Decimal? @map("qty_kg") @db.Decimal(19, 6)
-  unitMsr String? @map("unit_msr") @db.VarChar(255)
-  inventoryUom String? @map("inventory_uom") @db.VarChar(255)
-  priceBefDisc Decimal? @map("price_bef_disc") @db.Decimal(19, 6)
-  discLine Decimal? @map("disc_line") @db.Decimal(19, 6)
-  discTotal Decimal? @map("disc_total") @db.Decimal(19, 6)
-  lineTotal Decimal? @map("line_total") @db.Decimal(19, 6)
-  totalSales Decimal? @map("total_sales") @db.Decimal(19, 6)
-  currency String? @db.VarChar(10)
-  canceled String @default("N") @db.Char(1)
-  baseType Int? @map("base_type")
-  baseEntry Int? @map("base_entry")
-  baseLine Int? @map("base_line")
-  dwhCreatedAt DateTime? @map("dwh_created_at") @db.Timestamp(0)
-  dwhUpdatedAt DateTime? @map("dwh_updated_at") @db.Timestamp(0)
+model FollowUpNote {
+  id        String        @id @default(cuid())
+  requestId String        @map("request_id")
+  request   PortalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  // Null for notes the portal writes itself, such as "harga sudah diperbarui".
+  authorId   Int?   @map("author_id")
+  author     User?  @relation(fields: [authorId], references: [id])
+  authorName String @map("author_name")
+  authorRole String @map("author_role")
+
+  // user = written by a person, system = written by the portal.
+  source String @default("user") @db.VarChar(10)
+
+  // customer = both sides read it, internal = staff only.
+  visibility String @default("customer") @db.VarChar(10)
+
+  message   String   @db.VarChar(2000)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([requestId, createdAt])
+  @@index([visibility])
+  @@map("follow_up_notes")
+}
+
+model SalesInvoice {
+  id                BigInt    @id @default(autoincrement())
+  companyId         String    @map("company_id") @db.VarChar(255)
+  docEntry          Int       @map("doc_entry")
+  docNum            Int       @map("doc_num")
+  lineNum           Int       @map("line_num")
+  docDate           DateTime  @map("doc_date") @db.Timestamp(0)
+  cardCode          String    @map("card_code") @db.VarChar(255)
+  cardName          String?   @map("card_name") @db.VarChar(255)
+  itemCode          String?   @map("item_code") @db.VarChar(255)
+  description       String    @map("description")
+  quantity          Decimal   @db.Decimal(19, 6)
+  inventoryQuantity Decimal   @map("inventory_quantity") @db.Decimal(19, 6)
+  qtyKg             Decimal?  @map("qty_kg") @db.Decimal(19, 6)
+  unitMsr           String?   @map("unit_msr") @db.VarChar(255)
+  inventoryUom      String?   @map("inventory_uom") @db.VarChar(255)
+  priceBefDisc      Decimal?  @map("price_bef_disc") @db.Decimal(19, 6)
+  discLine          Decimal?  @map("disc_line") @db.Decimal(19, 6)
+  discTotal         Decimal?  @map("disc_total") @db.Decimal(19, 6)
+  lineTotal         Decimal?  @map("line_total") @db.Decimal(19, 6)
+  totalSales        Decimal?  @map("total_sales") @db.Decimal(19, 6)
+  currency          String?   @db.VarChar(10)
+  canceled          String    @default("N") @db.Char(1)
+  baseType          Int?      @map("base_type")
+  baseEntry         Int?      @map("base_entry")
+  baseLine          Int?      @map("base_line")
+  dwhCreatedAt      DateTime? @map("dwh_created_at") @db.Timestamp(0)
+  dwhUpdatedAt      DateTime? @map("dwh_updated_at") @db.Timestamp(0)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@unique([companyId, docEntry, lineNum])
   @@index([cardCode, itemCode])
@@ -178,44 +466,45 @@ model SalesInvoice {
 }
 
 model SyncCheckpoint {
-  jobName String @map("job_name")
-  companyId String @map("company_id") @db.VarChar(255)
+  jobName         String   @map("job_name")
+  companyId       String   @map("company_id") @db.VarChar(255)
   sourceWatermark DateTime @map("source_watermark") @db.Timestamp(0)
-  updatedAt DateTime @default(now()) @map("updated_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
   @@id([jobName, companyId])
   @@map("sync_checkpoints")
 }
 
 model ReturInvoice {
-  id BigInt @id @default(autoincrement())
-  companyId String @map("company_id") @db.VarChar(255)
-  docEntry Int @map("doc_entry")
-  docNum Int @map("doc_num")
-  lineNum Int @map("line_num")
-  docDate DateTime @map("doc_date") @db.Timestamp(0)
-  cardCode String @map("card_code") @db.VarChar(255)
-  cardName String? @map("card_name") @db.VarChar(255)
-  itemCode String? @map("item_code") @db.VarChar(255)
-  description String @map("description")
-  quantity Decimal @db.Decimal(19, 6)
-  inventoryQuantity Decimal @map("inventory_quantity") @db.Decimal(19, 6)
-  qtyKg Decimal? @map("qty_kg") @db.Decimal(19, 6)
-  unitMsr String? @map("unit_msr") @db.VarChar(255)
-  inventoryUom String? @map("inventory_uom") @db.VarChar(255)
-  priceBefDisc Decimal? @map("price_bef_disc") @db.Decimal(19, 6)
-  discLine Decimal? @map("disc_line") @db.Decimal(19, 6)
-  discTotal Decimal? @map("disc_total") @db.Decimal(19, 6)
-  lineTotal Decimal? @map("line_total") @db.Decimal(19, 6)
-  totalSales Decimal? @map("total_sales") @db.Decimal(19, 6)
-  currency String? @db.VarChar(10)
-  canceled String @default("N") @db.Char(1)
-  baseType Int? @map("base_type")
-  baseEntry Int? @map("base_entry")
-  baseLine Int? @map("base_line")
-  dwhCreatedAt DateTime? @map("dwh_created_at") @db.Timestamp(0)
-  dwhUpdatedAt DateTime? @map("dwh_updated_at") @db.Timestamp(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                BigInt    @id @default(autoincrement())
+  companyId         String    @map("company_id") @db.VarChar(255)
+  docEntry          Int       @map("doc_entry")
+  docNum            Int       @map("doc_num")
+  lineNum           Int       @map("line_num")
+  docDate           DateTime  @map("doc_date") @db.Timestamp(0)
+  cardCode          String    @map("card_code") @db.VarChar(255)
+  cardName          String?   @map("card_name") @db.VarChar(255)
+  itemCode          String?   @map("item_code") @db.VarChar(255)
+  description       String    @map("description")
+  quantity          Decimal   @db.Decimal(19, 6)
+  inventoryQuantity Decimal   @map("inventory_quantity") @db.Decimal(19, 6)
+  qtyKg             Decimal?  @map("qty_kg") @db.Decimal(19, 6)
+  unitMsr           String?   @map("unit_msr") @db.VarChar(255)
+  inventoryUom      String?   @map("inventory_uom") @db.VarChar(255)
+  priceBefDisc      Decimal?  @map("price_bef_disc") @db.Decimal(19, 6)
+  discLine          Decimal?  @map("disc_line") @db.Decimal(19, 6)
+  discTotal         Decimal?  @map("disc_total") @db.Decimal(19, 6)
+  lineTotal         Decimal?  @map("line_total") @db.Decimal(19, 6)
+  totalSales        Decimal?  @map("total_sales") @db.Decimal(19, 6)
+  currency          String?   @db.VarChar(10)
+  canceled          String    @default("N") @db.Char(1)
+  baseType          Int?      @map("base_type")
+  baseEntry         Int?      @map("base_entry")
+  baseLine          Int?      @map("base_line")
+  dwhCreatedAt      DateTime? @map("dwh_created_at") @db.Timestamp(0)
+  dwhUpdatedAt      DateTime? @map("dwh_updated_at") @db.Timestamp(0)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@unique([companyId, docEntry, lineNum])
   @@index([cardCode, itemCode])
@@ -226,18 +515,21 @@ model ReturInvoice {
 }
 
 model Notification {
-  id         String    @id @default(cuid())
-  userId     Int       @map("user_id")
-  title      String    @db.VarChar(255)
-  message    String    @db.Text
-  type       String    @db.VarChar(50)
-  relatedId  String?   @map("related_id") @db.VarChar(255)
-  read       Boolean   @default(false)
-  dismissed  Boolean   @default(false)
-  createdAt  DateTime  @default(now()) @map("created_at")
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    Int      @map("user_id")
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  type      String   @db.VarChar(50)
+  relatedId String?  @map("related_id") @db.VarChar(255)
+  // Which list this notification belongs to. Orders and inquiries live on
+  // separate pages, so the recipient's link cannot be derived from type alone
+  // (follow-up notes exist for both).
+  kind      String?  @db.VarChar(10)
+  read      Boolean  @default(false)
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read, dismissed, createdAt])
   @@map("notifications")
 }
-

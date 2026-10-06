@@ -14,13 +14,13 @@ interface LoadMoreGridProps {
   buttonLabel?: string
 }
 
-export function useLoadMore({
+export const useLoadMore = ({
   items,
   pageSize = 45,
 }: {
   items: any[]
   pageSize?: number
-}): LoadMoreState {
+}): LoadMoreState => {
   const [visibleCount, setVisibleCount] = useState(pageSize)
   useEffect(() => {
     setVisibleCount(pageSize)
@@ -33,12 +33,12 @@ export function useLoadMore({
   return { visibleItems, hasMore, loadMore }
 }
 
-export default function LoadMoreGrid({
+export const LoadMoreGrid = ({
   items,
   pageSize = 15,
   renderMore,
   buttonLabel = 'Lebih banyak',
-}: LoadMoreGridProps) {
+}: LoadMoreGridProps) => {
   const { visibleItems, hasMore, loadMore } = useLoadMore({ items, pageSize })
 
   return (
@@ -64,3 +64,5 @@ export default function LoadMoreGrid({
     </>
   )
 }
+
+export default LoadMoreGrid

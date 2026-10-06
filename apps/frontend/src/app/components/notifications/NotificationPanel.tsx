@@ -1,7 +1,8 @@
 import { Bell, X, CheckCheck, ExternalLink } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useNotifications } from '@contexts'
+import { useNotifications, useAuth } from '@contexts'
+import { notificationTarget } from '@repo/shared'
 import { toast } from 'sonner'
 
 const fmtDate = (value: string) => {
@@ -18,6 +19,7 @@ const fmtDate = (value: string) => {
 const NotificationPanel = () => {
   const navigate = useNavigate()
   const { notifications, unreadCount, loading, markRead, dismiss, markAllRead } = useNotifications()
+  const { isCustomer } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -116,27 +118,29 @@ const NotificationPanel = () => {
                         </button>
                       </div>
                     </div>
-                    {notification.relatedId && (
-                      <button
-                        onClick={() => {
-                          const kind = notification.type === 'new_quote' ? 'quote' : 'order'
-                          if (
-                            notification.type === 'new_order' ||
-                            notification.type === 'new_quote'
-                          ) {
-                            navigate(`/admin/orders/${notification.relatedId}`)
-                          } else if (notification.type === 'status_update') {
-                            navigate(`/orders/${notification.relatedId}`)
-                          } else {
-                            navigate(`/admin/orders/${notification.relatedId}`)
-                          }
-                          setOpen(false)
-                        }}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
-                      >
-                        Lihat detail <ExternalLink size={12} />
-                      </button>
-                    )}
+                    {(() => {
+                      const target = notificationTarget(
+                        notification.type,
+                        notification.relatedId,
+                        notification.kind,
+                        isCustomer,
+                      )
+                      if (!target) return null
+                      return (
+                        <button
+                          onClick={() => {
+                            // Opening a notification is the explicit "seen"
+                            // action; merely landing on an order page is not.
+                            void markRead(notification.id)
+                            navigate(target)
+                            setOpen(false)
+                          }}
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
+                        >
+                          Lihat detail <ExternalLink size={12} />
+                        </button>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>

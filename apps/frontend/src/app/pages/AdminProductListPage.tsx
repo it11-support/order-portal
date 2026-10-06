@@ -8,10 +8,9 @@ const AdminProductListPage = () => {
   const {
     products,
     loading,
-
-    page,
+    isFetching,
+    isReachingEnd,
     total,
-    totalPages,
 
     filters,
     setSearch,
@@ -22,7 +21,7 @@ const AdminProductListPage = () => {
     setSortBy,
     setSortDirection,
 
-    setPage,
+    loadMore,
   } = useProducts()
 
   const { categories } = useCategories()
@@ -234,209 +233,204 @@ const AdminProductListPage = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  {/* Name */}
-                  <th className="p-4">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('itemName')}
-                      className="flex items-center gap-1 hover:text-gray-800"
-                    >
-                      Nama Produk
-                      <ArrowUpDown size={12} />
-                    </button>
-                  </th>
-
-                  {/* Code */}
-                  <th className="p-4 w-32">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('itemCode')}
-                      className="flex items-center gap-1 hover:text-gray-800"
-                    >
-                      Kode
-                      <ArrowUpDown size={12} />
-                    </button>
-                  </th>
-
-                  {/* Category */}
-                  <th className="p-4 w-40">Kategori</th>
-
-                  {/* Unit */}
-                  <th className="p-4 w-28 text-center">Unit</th>
-
-                  {/* Pack */}
-                  <th className="p-4 w-32 text-center">Pack Size</th>
-
-                  {/* Status */}
-                  <th className="p-4 w-28 text-center">Status</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="p-10 text-center text-gray-400">
-                      Memuat produk...
-                    </td>
-                  </tr>
-                ) : products.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-10 text-center text-gray-400">
-                      Tidak ada produk
-                    </td>
-                  </tr>
-                ) : (
-                  products.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50/70 transition-colors">
-                      {/* Product */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                            <CategoryIcon name="mdi:package-variant" size={16} />
-                          </div>
-
-                          <div>
-                            <span className="font-medium">{product.itemName}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Code */}
-                      <td className="p-4">
-                        <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
-                          {product.itemCode}
-                        </span>
-                      </td>
-
-                      {/* Category */}
-                      <td className="p-4">
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-medium">
-                          {product.productCategory}
-                        </span>
-                      </td>
-
-                      {/* Unit */}
-                      <td className="p-4 text-center">{product.salesUnit || '-'}</td>
-
-                      {/* Pack */}
-                      <td className="p-4 text-center">
-                        {product.salesPackSize
-                          ? `${product.salesPackSize} ${
-                              product.salesPackUnit || product.salesUnit || ''
-                            }`
-                          : '-'}
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-4 text-center">
-                        <span
-                          className={`
-                            inline-flex
-                            px-2
-                            py-1
-                            rounded-md
-                            text-[10px]
-                            font-semibold
-                            ${
-                              product.isActive
-                                ? 'bg-green-50 text-green-600'
-                                : 'bg-gray-100 text-gray-500'
-                            }
-                          `}
-                        >
-                          {product.isActive ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* CARD VIEW — mobile only */}
+          <div className="md:hidden space-y-3">
+            {loading ? (
+              <p className="text-center py-12 text-sm text-muted-foreground">
+                Memuat produk...
+              </p>
+            ) : products.length === 0 ? (
+              <p className="text-center py-12 text-sm text-muted-foreground">
+                Tidak ada produk
+              </p>
+            ) : (
+              products.map((product) => (
+                <div key={product.id} className="bg-white rounded-xl border border-border p-4 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                      <CategoryIcon name="mdi:package-variant" size={16} />
+                    </div>
+                    <span className="font-medium text-sm">{product.itemName}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                      {product.itemCode}
+                    </span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-medium">
+                      {product.productCategory}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {product.salesUnit || '-'}
+                    </span>
+                  </div>
+                  <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-semibold ${product.isActive ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                    {product.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
 
-          {/* Pagination */}
-          {!loading && total > 0 && totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-              <p className="text-xs text-gray-500">{total} produk</p>
+          {/* TABLE VIEW — desktop only */}
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    {/* Name */}
+                    <th className="p-4">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('itemName')}
+                        className="flex items-center gap-1 hover:text-gray-800"
+                      >
+                        Nama Produk
+                        <ArrowUpDown size={12} />
+                      </button>
+                    </th>
 
-              <div className="flex items-center gap-1">
-                {/* Previous */}
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                  className="
-                    h-8
-                    rounded-lg
-                    border border-gray-200
-                    px-3
-                    text-xs
-                    text-gray-600
-                    transition
-                    hover:bg-gray-50
-                    disabled:cursor-not-allowed
-                    disabled:opacity-40
-                  "
-                >
-                  Sebelumnya
-                </button>
+                    {/* Code */}
+                    <th className="p-4 w-32">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('itemCode')}
+                        className="flex items-center gap-1 hover:text-gray-800"
+                      >
+                        Kode
+                        <ArrowUpDown size={12} />
+                      </button>
+                    </th>
 
-                {/* Page Numbers */}
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    onClick={() => setPage(pageNumber)}
-                    className={`
-                      h-8
-                      min-w-8
-                      rounded-lg
-                      border
-                      px-2
-                      text-xs
-                      font-medium
-                      transition
-                      ${
-                        page === pageNumber
-                          ? 'border-accent bg-accent text-white'
-                          : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                      }
-                    `}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
+                    {/* Category */}
+                    <th className="p-4 w-40">Kategori</th>
 
-                {/* Next */}
-                <button
-                  type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                  className="
-                    h-8
-                    rounded-lg
-                    border border-gray-200
-                    px-3
-                    text-xs
-                    text-gray-600
-                    transition
-                    hover:bg-gray-50
-                    disabled:cursor-not-allowed
-                    disabled:opacity-40
-                  "
-                >
-                  Berikutnya
-                </button>
-              </div>
-            </div>
-          )}
+                    {/* Unit */}
+                    <th className="p-4 w-28 text-center">Unit</th>
+
+                    {/* Pack */}
+                    <th className="p-4 w-32 text-center">Pack Size</th>
+
+                    {/* Status */}
+                    <th className="p-4 w-28 text-center">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center text-gray-400">
+                        Memuat produk...
+                      </td>
+                    </tr>
+                  ) : products.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center text-gray-400">
+                        Tidak ada produk
+                      </td>
+                    </tr>
+                  ) : (
+                    products.map((product) => (
+                      <tr key={product.id} className="hover:bg-gray-50/70 transition-colors">
+                        {/* Product */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                              <CategoryIcon name="mdi:package-variant" size={16} />
+                            </div>
+
+                            <div>
+                              <span className="font-medium">{product.itemName}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Code */}
+                        <td className="p-4">
+                          <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                            {product.itemCode}
+                          </span>
+                        </td>
+
+                        {/* Category */}
+                        <td className="p-4">
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-medium">
+                            {product.productCategory}
+                          </span>
+                        </td>
+
+                        {/* Unit */}
+                        <td className="p-4 text-center">{product.salesUnit || '-'}</td>
+
+                        {/* Pack */}
+                        <td className="p-4 text-center">
+                          {product.salesPackSize
+                            ? `${product.salesPackSize} ${
+                                product.salesPackUnit || product.salesUnit || ''
+                              }`
+                            : '-'}
+                        </td>
+
+                        {/* Status */}
+                        <td className="p-4 text-center">
+                          <span
+                            className={`
+                              inline-flex
+                              px-2
+                              py-1
+                              rounded-md
+                              text-[10px]
+                              font-semibold
+                              ${
+                                product.isActive
+                                  ? 'bg-green-50 text-green-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }
+                            `}
+                          >
+                            {product.isActive ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+            </table>
+          </div>
         </div>
+
+        {/* Load More */}
+        {!loading && products.length > 0 && !isReachingEnd && (
+          <div className="border-t border-gray-200 pt-6 mt-2 flex items-center justify-between">
+            <p className="text-xs text-gray-500">{total} produk</p>
+
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={isFetching}
+              className="
+                h-9
+                rounded-lg
+                border border-gray-200
+                px-4
+                text-xs
+                font-medium
+                text-gray-700
+                transition
+                hover:bg-gray-50
+                disabled:cursor-not-allowed
+                disabled:opacity-40
+              "
+            >
+              {isFetching ? 'Memuat...' : 'Load More'}
+            </button>
+          </div>
+        )}
+
+        {!loading && isReachingEnd && products.length > 0 && (
+          <p className="border-t border-gray-200 pt-6 mt-2 text-center text-xs text-gray-400">
+            Semua produk telah dimuat
+          </p>
+        )}
       </div>
     </Shell>
   )

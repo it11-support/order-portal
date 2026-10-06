@@ -1,5 +1,5 @@
 import { Package, User } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/authHook'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 

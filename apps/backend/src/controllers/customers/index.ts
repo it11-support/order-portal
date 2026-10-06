@@ -106,9 +106,9 @@ export const enableCustomerLogin = async (req: Request, res: Response): Promise<
         ...userData,
         ...(password && encryptedPassword
           ? {
-              password: await hashCustomerPassword(password),
-              encryptedPassword,
-            }
+            password: await hashCustomerPassword(password),
+            encryptedPassword,
+          }
           : {}),
       },
     })
@@ -179,21 +179,42 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
   )
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
   const showInactive = req.query.showInactive === 'true'
-  const isAdmin = req.user?.role.name === 'admin'
+  const role = req.user?.role.name
+  const slpCode = req.user?.slpCode
+  const isAdmin = role === 'admin'
+
+  // A sales person only ever sees their own book of business. Without an SLP
+  // assignment there is no book, so the list is refused rather than opened up
+  // to the whole customer master.
+  if (role === 'sales_admin' && slpCode == null) {
+    res.status(403).json({
+      message: 'Akun sales belum memiliki SlpCode. Hubungi admin.',
+    })
+    return
+  }
 
   const where: CustomersWhereInput = {
+    ...(role === 'sales_admin' ? { SlpCode: slpCode as number } : {}),
+    // The customer master is a staff view. A customer account reaches nothing
+    // beyond its own record: outside its own conversation there is nothing for
+    // it to browse, let alone another customer's contact details and pricing.
+    ...(role === 'customer'
+      ? req.user?.customerId != null
+        ? { id: BigInt(String(req.user.customerId)) }
+        : { id: BigInt(-1) }
+      : {}),
     ...(search
       ? {
-          OR: [
-            { CardCode: { contains: search, mode: 'insensitive' } },
-            { CardName: { contains: search, mode: 'insensitive' } },
-            { CntctPrsn: { contains: search, mode: 'insensitive' } },
-            { Phone1: { contains: search, mode: 'insensitive' } },
-            { Cellular: { contains: search, mode: 'insensitive' } },
-            { Address: { contains: search, mode: 'insensitive' } },
-            { City: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        OR: [
+          { CardCode: { contains: search, mode: 'insensitive' } },
+          { CardName: { contains: search, mode: 'insensitive' } },
+          { CntctPrsn: { contains: search, mode: 'insensitive' } },
+          { Phone1: { contains: search, mode: 'insensitive' } },
+          { Cellular: { contains: search, mode: 'insensitive' } },
+          { Address: { contains: search, mode: 'insensitive' } },
+          { City: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : {}),
     ...(showInactive ? {} : { NonActive: { not: 'Y' } }),
   }
@@ -219,9 +240,9 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
       hasLogin: Boolean(user?.isActive && user.encryptedPassword),
       ...(isAdmin
         ? {
-            loginUsername: user?.username ?? null,
-            loginPassword: user?.isActive ? decryptCustomerPassword(user.encryptedPassword) : null,
-          }
+          loginUsername: user?.username ?? null,
+          loginPassword: user?.isActive ? decryptCustomerPassword(user.encryptedPassword) : null,
+        }
         : {}),
     })),
     pagination: {
@@ -230,5 +251,59 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
       total,
       totalPages: Math.ceil(total / limit),
     },
+  })
+}
+
+export const getCustomerStats = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  const role = req.user?.role.name
+  const slpCode = req.user?.slpCode
+
+  const salesAdmin = role === 'sales_admin'
+
+  const where: CustomersWhereInput = {}
+
+  if (salesAdmin) {
+    // Sales admin tanpa SalesPerson tidak boleh melihat semua customer
+    if (slpCode == null) {
+      res.status(200).json({
+        data: {
+          total: 0,
+        },
+      })
+      return
+    }
+
+    where.SlpCode = slpCode
+  }
+
+  // A customer account counts nothing but itself, and gets no login relation:
+  // the login row carries the customer's own credential material.
+  if (role === 'customer') {
+    const ownId = req.user?.customerId
+    const own =
+      ownId != null
+        ? await prisma.customers.findUnique({ where: { id: BigInt(String(ownId)) } })
+        : null
+    res.status(200).json({ data: own ? [own] : [] })
+    return
+  }
+
+  const customers = await prisma.customers.findMany({
+    where,
+    include: {
+      user: {
+        select: {
+          id: true,
+          encryptedPassword: true,
+        },
+      },
+    },
+  })
+
+  res.status(200).json({
+    data: customers,
   })
 }

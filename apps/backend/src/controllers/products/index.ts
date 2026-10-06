@@ -14,7 +14,7 @@ export const getProducts = async (req: Request, res: Response) => {
   try {
     const page = Math.max(Number(req.query.page) || 1, 1)
 
-    const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 20, 1), 100)
+    const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 40, 1), 100)
 
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
 
@@ -61,7 +61,10 @@ export const getProducts = async (req: Request, res: Response) => {
      * Category
      */
     if (category) {
-      where.productCategory = category
+      where.productCategory = {
+        equals: String(category),
+        mode: 'insensitive',
+      }
     }
 
     if (isActiveParam === 'true' || isActiveParam === 'false') {
@@ -87,17 +90,17 @@ export const getProducts = async (req: Request, res: Response) => {
       }),
     ])
 
-    const totalPages = Math.ceil(total / pageSize)
+    const totalPages = Math.ceil(total / pageSize) || 0
+
+    res.setHeader('Cache-Control', 'no-store')
 
     return res.json({
-      success: true,
-
-      data: {
-        items: products,
-        total,
-        page,
-        pageSize,
-        totalPages,
+      data: products,
+      meta: {
+        current_page: page,
+        total_pages: totalPages,
+        total_records: total,
+        limit: pageSize,
       },
     })
   } catch (error) {

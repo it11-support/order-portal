@@ -1,13 +1,18 @@
-import { Search, X, Package, ArrowLeft } from 'lucide-react'
+import { Search, X, Package, ArrowLeft, ChevronDown } from 'lucide-react'
 import { ProductList } from '@components'
 import { BottomNav } from '@layouts'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { useAuth, useCart, useCategories } from '@contexts'
+import {
+  useAuth,
+  useCart,
+  useCategories,
+  useCatalogProducts,
+  resolveCatalogQuery,
+} from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
-import SuggestedItems from '@/app/components/products/SuggestedItems'
 
 const SearchPage = () => {
   const { cart } = useCart()
@@ -16,27 +21,38 @@ const SearchPage = () => {
 
   const {
     categories,
-    filteredProducts,
     search,
     setSearch,
     setSelectedCategory,
     selectedCategory,
-    loading,
+    loading: categoriesLoading,
   } = useCategories()
 
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const {
+    products: filteredProducts,
+    loading: productsLoading,
+    isFetching: catalogIsFetching,
+    isReachingEnd: catalogIsReachingEnd,
+    loadMore: loadMoreCatalogProducts,
+    total: catalogTotal,
+    error: catalogError,
+  } = useCatalogProducts()
 
-  useEffect(() => {
-    setSelectedCategory('')
-  }, [setSelectedCategory])
+  const loading = categoriesLoading || productsLoading
+  const error = catalogError
 
-  const getCategoryName = (code: string) => {
-    if (code === 'OTHER') return 'Produk Lain'
-    if (code === 'SUGGESTED') return 'Disarankan'
+  const query = useMemo(
+    () => resolveCatalogQuery(selectedCategory, search),
+    [selectedCategory, search],
+  )
 
-    return categories.find((category) => category.code === code)?.name || code
-  }
+  const isSearching = query.mode === 'search'
 
+  /**
+   * Search adalah satu hasil global, jadi tidak dikelompokkan lagi di bawah
+   * judul kategori. Kategori yang sebelumnya terpilih tetap hidup di state dan
+   * kembali berlaku begitu search dikosongkan.
+   */
   const handleCategoryChange = (code: string) => {
     setSearch('')
     setSelectedCategory(code)
@@ -47,26 +63,9 @@ const SearchPage = () => {
     setSelectedCategory('')
   }
 
-  const isSuggested = selectedCategory === 'SUGGESTED'
-
-  const groupedProducts = filteredProducts.reduce<Record<string, typeof filteredProducts>>(
-    (groups, product) => {
-      const categoryCode = product.productCategory || ''
-
-      if (!groups[categoryCode]) {
-        groups[categoryCode] = []
-      }
-
-      groups[categoryCode].push(product)
-
-      return groups
-    },
-    {},
-  )
-
   const categoryFilterButtons = useMemo(() => {
     const otherCat = categories.find((c) => c.code === 'OTHER')
-    const rest = categories.filter((c) => c.code !== 'OTHER' && c.code !== 'SUGGESTED')
+    const rest = categories.filter((c) => c.code !== 'OTHER')
 
     const result: Array<{ code: string; name: string; icon?: string }> = []
 
@@ -120,7 +119,6 @@ const SearchPage = () => {
           <Search size={14} className="text-muted-foreground shrink-0" />
 
           <input
-            ref={searchInputRef}
             autoFocus
             type="text"
             value={search}
@@ -147,6 +145,11 @@ const SearchPage = () => {
 
       <main className="flex-1 overflow-y-auto pb-20 lg:pb-8">
         <div className="max-w-5xl mx-auto px-4 py-4 lg:py-6 lg:px-8">
+          {error && (
+            <p role="alert" className="text-sm text-red-600 mb-4">
+              {error}
+            </p>
+          )}
           {/* Category filter */}
           {currentUser?.role.name === 'customer' && (
             <section className="mb-4">
@@ -188,23 +191,6 @@ const SearchPage = () => {
                     {cat.name}
                   </button>
                 ))}
-
-                <button
-                  type="button"
-                  onClick={() => handleCategoryChange('SUGGESTED')}
-                  className={`
-                    shrink-0 flex items-center gap-1.5
-                    rounded-full border px-3 py-1.5 text-xs font-semibold
-                    transition-colors
-                    ${
-                      selectedCategory === 'SUGGESTED'
-                        ? 'border-accent bg-accent/10 text-accent'
-                        : 'border-border bg-white hover:border-accent/40 text-foreground'
-                    }
-                  `}
-                >
-                  Disarankan
-                </button>
               </div>
             </section>
           )}
@@ -213,53 +199,66 @@ const SearchPage = () => {
             <div className="text-center py-20 text-muted-foreground">
               <p className="text-sm">Mencari produk...</p>
             </div>
-          ) : isSuggested ? (
-            <div className="space-y-8">
-              <p className="text-xs text-muted-foreground font-semibold">Produk disarankan</p>
-              <SuggestedItems />
-            </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Package size={44} className="mx-auto mb-3 opacity-20" />
 
               <p className="text-sm font-semibold">Produk tidak ditemukan</p>
 
-              {search && <p className="text-xs mt-1">Coba kata kunci lain</p>}
-            </div>
-          ) : !selectedCategory ? (
-            <div className="space-y-8">
-              <p className="text-xs text-muted-foreground font-semibold">
-                Semua produk
-              </p>
-              <ProductList products={filteredProducts} cart={cart} />
+              {isSearching ? (
+                <p className="text-xs mt-1">Coba kata kunci lain</p>
+              ) : (
+                selectedCategory && (
+                  <p className="text-xs mt-1">Tidak ada produk pada kategori ini</p>
+                )
+              )}
             </div>
           ) : (
-            <div className="space-y-8">
-              <p className="text-xs text-muted-foreground font-semibold">
-                {filteredProducts.length} produk ditemukan
-              </p>
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground font-semibold">
+                  {isSearching
+                    ? `${catalogTotal > 0 ? catalogTotal : filteredProducts.length} produk untuk "${query.search}"`
+                    : selectedCategory
+                      ? `${catalogTotal > 0 ? catalogTotal : filteredProducts.length} produk pada kategori ini`
+                      : `${catalogTotal > 0 ? catalogTotal : filteredProducts.length} produk`}
+                </p>
+              </div>
 
-              {Object.entries(groupedProducts).map(([categoryCode, products]) => (
-                <section key={categoryCode} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      {getCategoryName(categoryCode)}
-                    </h2>
+              <ProductList products={filteredProducts} cart={cart} />
 
-                    <span className="text-[10px] text-muted-foreground">
-                      {products.length} produk
-                    </span>
-                  </div>
+              {!catalogIsReachingEnd && (
+                <div className="flex items-center gap-4">
+                  <hr className="flex-1 border-border" />
 
-                  <ProductList products={products} cart={cart} />
-                </section>
-              ))}
-            </div>
-          )}
+                  <button
+                    type="button"
+                    onClick={loadMoreCatalogProducts}
+                    disabled={catalogIsFetching}
+                    className="
+                      shrink-0
+                      rounded-full
+                      border border-border
+                      bg-white
+                      px-5 py-2
+                      text-sm font-semibold
+                      text-foreground
+                      hover:border-accent/40
+                      transition-colors
+                      inline-flex
+                      items-center
+                      justify-center
+                      gap-2
+                      disabled:opacity-50
+                    "
+                  >
+                    {catalogIsFetching ? 'Memuat...' : 'Lebih banyak'}
+                    <ChevronDown size={16} />
+                  </button>
 
-          {currentUser?.role.name === 'customer' && !isSuggested && (
-            <div className="mt-10 border-t border-border pt-8">
-              <SuggestedItems key={String(currentUser?.id)} />
+                  <hr className="flex-1 border-border" />
+                </div>
+              )}
             </div>
           )}
         </div>

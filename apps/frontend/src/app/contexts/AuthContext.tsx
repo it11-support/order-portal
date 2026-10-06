@@ -1,81 +1,100 @@
 import { User } from '@repo/shared'
-import { createContext, Dispatch, SetStateAction, useContext, useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '@lib'
+import { AuthContext, type AuthContextType } from './authHook'
 
-type AuthContextType = {
-  user: User | null
-  accessToken: string | null
-  login: (username: string, password: string) => Promise<void>
-  loginError: {
-    username?: string
-    password?: string
-    general?: string
-  }
-  isAdmin: boolean
-  isCustomer: boolean
-  setLoginError: Dispatch<
-    SetStateAction<{ username?: string; password?: string; general?: string }>
-  >
-  logout: () => void
-  loading: boolean
+type MeRequest = {
+  token: string
+  promise: Promise<User>
 }
 
-const AuthContext = createContext<AuthContextType | null>(null)
+let meRequest: MeRequest | null = null
 
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+const getMe = (token: string): Promise<User> => {
+  if (!meRequest || meRequest.token !== token) {
+    const promise = api.get<User>('/me').then((response) => response.data)
+
+    meRequest = { token, promise }
+    void promise.catch(() => {
+      if (meRequest?.promise === promise) meRequest = null
+    })
+  }
+
+  return meRequest.promise
+}
+
+const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [loginError, setLoginError] = useState<{
-    username?: string
-    password?: string
-    general?: string
-  }>({})
+  const [loginError, setLoginError] = useState<AuthContextType['loginError']>({})
+  const authVersionRef = useRef(0)
+  const initPromiseRef = useRef<Promise<void> | null>(null)
+
   const isAdmin = user?.role.name === 'admin'
+  const isSalesAdmin = user?.role.name === 'sales_admin'
   const isCustomer = user?.role.name === 'customer'
   const accessToken = localStorage.getItem('token')
 
   useEffect(() => {
-    const init = async () => {
-      const token = localStorage.getItem('token')
+    if (initPromiseRef.current) return
 
-      if (!token) {
-        setLoading(false)
-        return
-      }
+    const token = localStorage.getItem('token')
+
+    if (!token) {
+      setLoading(false)
+      return
+    }
+
+    const init = async () => {
+      const version = authVersionRef.current
 
       try {
-        const res = await api.get('/me')
-        setUser(res.data)
-      } catch (error) {
-        localStorage.removeItem('token')
-        setUser(null)
+        const res = await getMe(token)
+
+        if (version === authVersionRef.current && localStorage.getItem('token') === token) {
+          setUser(res)
+        }
+      } catch {
+        if (version === authVersionRef.current) {
+          if (localStorage.getItem('token') === token) {
+            localStorage.removeItem('token')
+          }
+          setUser(null)
+          setLoading(false)
+        }
       } finally {
-        setLoading(false)
+        if (version === authVersionRef.current) {
+          setLoading(false)
+        }
       }
     }
 
-    init()
+    initPromiseRef.current = init()
   }, [])
 
-  // Login
   const login = async (username: string, password: string) => {
     try {
       setLoginError({})
 
       const res = await api.post('/auth/login', { username, password })
 
+      authVersionRef.current += 1
+      meRequest = null
       localStorage.setItem('token', res.data.token)
       setUser(res.data.user)
+      setLoading(false)
     } catch (err: any) {
       setLoginError(err.response?.data?.errors ?? {})
       throw err
     }
   }
 
-  // Logout
   const logout = () => {
+    authVersionRef.current += 1
+    meRequest = null
     localStorage.removeItem('token')
     setUser(null)
+    setLoading(false)
   }
 
   return (
@@ -89,22 +108,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loginError,
         setLoginError,
         isAdmin,
+        isSalesAdmin,
         isCustomer,
       }}
     >
       {children}
     </AuthContext.Provider>
   )
-}
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext)
-
-  if (!ctx) {
-    throw new Error('useAuth must be used within a <AuthProvider />')
-  }
-
-  return ctx
 }
 
 export default AuthProvider

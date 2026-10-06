@@ -10,8 +10,10 @@ import AuthProvider, {
   ProductsProvider,
   NotificationsProvider,
   WebSocketProvider,
+  ContactSalesProvider,
 } from '@contexts'
 import { Toaster } from '@/app/components/ui/sonner'
+import ContactSalesModal from '@/app/components/ContactSalesModal'
 
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
@@ -21,7 +23,10 @@ createRoot(document.getElementById('root')!).render(
           <OrderProvider>
             <CartProvider>
               <NotificationsProvider>
-                <RouterProvider router={router} />
+                <ContactSalesProvider>
+                  <RouterProvider router={router} />
+                  <ContactSalesModal />
+                </ContactSalesProvider>
               </NotificationsProvider>
               <Toaster />
             </CartProvider>

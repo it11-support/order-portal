@@ -20,6 +20,7 @@ const toUserPayload = (user: any): User => ({
   },
   customerId: user.customerId,
   customer: user.customer ?? null,
+  slpCode: user.slpCode ?? null,
 })
 
 export const login = async (

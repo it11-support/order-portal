@@ -51,7 +51,7 @@ const ICONS: IconItem[] = [
 
   // Packaging
   { name: 'Package', icon: 'mdi:package-variant' },
-  { name: 'Box', icon: 'mdi:package-variant-closed' },
+  { name: 'Box', icon: 'mdi:archive-outline' },
   { name: 'Bag', icon: 'mdi:shopping' },
   { name: 'Cart', icon: 'mdi:cart' },
   { name: 'Warehouse', icon: 'mdi:warehouse' },

@@ -5,6 +5,7 @@ import { prisma } from '@utils'
 import helmet from 'helmet'
 import routes from '@routes'
 import { ws } from '@/services/websocket'
+import { startSapStatusPoller } from '@/services/sap-poller'
 
 const app = express()
 app.set('trust proxy', 2)
@@ -32,6 +33,10 @@ httpServer.listen(port, () => {
   console.log(`Backend running on http://localhost:${port}`)
   console.log(`WebSocket server ready`)
 })
+
+// Reading a page already reconciles with SAP. This is the other half: telling
+// somebody when a delivery completes, without waiting for them to look.
+startSapStatusPoller()
 
 process.on('beforeExit', async () => {
   await prisma.$disconnect()

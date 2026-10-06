@@ -4,7 +4,9 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  MessageSquareQuote,
   Package,
+  PlusSquare,
   ShoppingCart,
   User,
   Users,
@@ -57,17 +59,41 @@ const Sidebar = () => {
     },
     {
       id: 'orders',
-      label: 'My Orders',
+      label: 'Order Saya',
       icon: <ClipboardList size={18} />,
       path: '/orders',
+    },
+    {
+      id: 'inquiries',
+      label: 'Penawaran Harga',
+      icon: <MessageSquareQuote size={18} />,
+      path: '/inquiries',
     },
   ]
   const adminNav: NavItem[] = [
     {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard size={18} />,
+      path: '/dashboard',
+    },
+    {
       id: 'admin-orders',
-      label: 'Semua Order',
+      label: 'Pesanan',
       icon: <ClipboardList size={18} />,
       path: '/admin/orders',
+    },
+    {
+      id: 'admin-inquiries',
+      label: 'Permintaan Penawaran',
+      icon: <MessageSquareQuote size={18} />,
+      path: '/admin/inquiries',
+    },
+    {
+      id: 'admin-sales-order',
+      label: 'Input Order',
+      icon: <PlusSquare size={18} />,
+      path: '/admin/sales-order',
     },
     {
       id: 'admin-users',

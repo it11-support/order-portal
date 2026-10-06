@@ -26,6 +26,17 @@ export interface Customer {
   JoinDate: Date | string | null
   IndustryC: number | null
   NonActive: string | null
+
+  // Credit exposure. Prisma Decimal arrives as a string over the API.
+  creditLimit: string | number | null
+  balance: string | number | null
+
+  // frozenFor is the SAP-style 'Y' / 'N' flag; Char(1) values are blank padded
+  // by Postgres, so compare on the trimmed letter.
+  frozenFor: string | null
+  frozenFrom: Date | string | null
+  frozenTo: Date | string | null
+
   hasLogin?: boolean
   loginUsername?: string | null
   loginPassword?: string | null

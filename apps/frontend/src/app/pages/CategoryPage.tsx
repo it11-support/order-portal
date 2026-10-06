@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { ProductList } from '@components'
-import { useCart, useCategories } from '@contexts'
+import { useCart, useAllProducts, useCategories } from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 const CategoryPage = () => {
@@ -10,13 +10,20 @@ const CategoryPage = () => {
 
   const { cart, increase, decrease, remove, setQty } = useCart()
 
-  const { loading, getCategory, filteredProducts, setSelectedCategory } = useCategories()
+  const { loading: categoriesLoading, getCategory, setSelectedCategory } = useCategories()
+
+  const { products: filteredProducts, loading: productsLoading } = useAllProducts()
+
+  const loading = categoriesLoading || productsLoading
 
   const category = categoryId ? getCategory(categoryId) : undefined
 
   useEffect(() => {
-    if (categoryId) setSelectedCategory(categoryId)
-  }, [categoryId, setSelectedCategory])
+    // Route param bisa berupa id numerik, sedangkan filter katalog memakai
+    // Product.productCategory (kode kategori). Set code-nya supaya request-nya
+    // benar-benar terfilter.
+    if (category) setSelectedCategory(category.code)
+  }, [category, setSelectedCategory])
 
   if (!categoryId) {
     return <Shell title="Kategori tidak ditemukan">Kategori tidak ditemukan</Shell>
