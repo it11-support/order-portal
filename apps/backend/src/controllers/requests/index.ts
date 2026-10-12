@@ -1,7 +1,11 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
-import { currentCustomer, customerProductFilter } from '@/services/customer-catalog'
+import {
+  customerPurchasedProductFilter,
+  customerSuggestedProductFilter,
+  currentCustomer,
+} from '@/services/customer-catalog'
 import {
   priceIncreaseCheck,
   priceableCustomer,
@@ -16,6 +20,7 @@ import {
   customerRecipientFor,
   staffRecipientsFor,
 } from '@/services/audience'
+import { generateRequestNumber } from '@/services/order-number'
 import { linkSapDocument, reconcileRequests } from '@/services/sap-sync'
 import { ws } from '@/services/websocket'
 
@@ -226,7 +231,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   if (!actor) return res.status(403).json({ message: deniedMessage(req) })
 
   const body = req.body ?? {}
-  const { kind, items, notes = '', requestId, priceAccepted = false, inquiryId } = body
+  const { kind, items, notes = '', priceAccepted = false, inquiryId } = body
   if (
     !['order', 'quote'].includes(kind) ||
     !Array.isArray(items) ||
@@ -235,8 +240,6 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     typeof notes !== 'string' ||
     notes.length > 5000 ||
     typeof priceAccepted !== 'boolean' ||
-    typeof requestId !== 'string' ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId) ||
     (inquiryId !== undefined && inquiryId !== null && typeof inquiryId !== 'string')
   ) {
     return res.status(400).json({ message: 'Permintaan tidak valid.' })
@@ -251,8 +254,6 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     if (!item || !/^\d+$/.test(String(item.productId))) {
       return res.status(400).json({ message: 'Produk atau jumlah tidak valid.' })
     }
-    // A quote is a request for a price, so it carries no quantity yet. An order
-    // does, whether the customer or their sales person placed it.
     if (
       kind === 'order' &&
       (!Number.isSafeInteger(item.qty) || item.qty < 1 || item.qty > 100000)
@@ -264,8 +265,6 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   if (new Set(ids.map(String)).size !== ids.length)
     return res.status(400).json({ message: 'Produk duplikat.' })
 
-  // An inquiry the customer is ordering from becomes the parent of the order, so
-  // the two conversations can be tied together afterwards.
   let parentInquiry: any = null
   if (inquiryId) {
     parentInquiry = await prisma.portalRequest.findUnique({
@@ -280,16 +279,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
       return res.status(409).json({ message: 'Inquiry sudah selesai.' })
   }
 
-  const id = `${kind === 'order' ? 'ORD' : 'RFQ'}-${requestId}`
-  const existing = await prisma.portalRequest.findUnique({
-    where: { id },
-    include: { customer: { select: customerSelect }, createdBy: { select: { name: true } } },
-  })
-  if (existing) {
-    if (String(existing.customerId) !== String(customerId))
-      return res.status(409).json({ message: 'ID permintaan sudah digunakan.' })
-    return res.json({ data: serialize(existing, undefined, actor) })
-  }
+  const id = await generateRequestNumber(kind)
 
   // A customer's own order is limited to what they already buy; their inquiry is
   // about products they have never bought. Staff pick from the whole catalog,
@@ -312,7 +302,10 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     })
     productWhere = { id: { in: productsOfInquiry.map((product) => product.id) } }
   } else if (actor.role === 'customer') {
-    productWhere = await customerProductFilter(req)
+    productWhere =
+      kind === 'order'
+        ? await customerPurchasedProductFilter(req)
+        : await customerSuggestedProductFilter(req)
   }
   const products = await prisma.product.findMany({
     where: { ...productWhere, id: { in: ids } },

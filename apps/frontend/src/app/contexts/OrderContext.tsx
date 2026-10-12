@@ -70,7 +70,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [followUps, setFollowUps] = useState<Record<string, FollowUpNote[]>>({})
   const busy = useRef(false)
-  const requestKeys = useRef(new Map<string, string>())
   const refresh = useCallback(async () => {
     if (!identity) return
     const response = await api.get('/requests')
@@ -135,13 +134,8 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       ...(inquiryId ? { inquiryId } : {}),
       ...(kind === 'order' ? { priceAccepted } : {}),
     }
-    // The retry key must stay stable across a price-confirmation round trip,
-    // otherwise the accepted retry would be rejected as a duplicate request.
-    const signature = `${identity}:${kind}:${JSON.stringify(items.map((i) => [i.product.id, i.qty]))}:${notes}`
-    const requestId = requestKeys.current.get(signature) ?? crypto.randomUUID()
-    requestKeys.current.set(signature, requestId)
     try {
-      const response = await api.post('/requests', { ...payload, requestId })
+      const response = await api.post('/requests', payload)
       const order: Order = response.data.data
       setData((previous) => ({
         owner: identity,
@@ -150,7 +144,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
           ...(previous.owner === identity ? previous.orders.filter((o) => o.id !== order.id) : []),
         ],
       }))
-      requestKeys.current.delete(signature)
     } catch (e: any) {
       if (e.response?.data?.code === 'PRICE_INCREASED') {
         // The order was never created, so the retry key must stay valid.
@@ -190,7 +183,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
           customerId: input.customerId,
           items: input.items,
           notes: input.notes,
-          requestId: crypto.randomUUID(),
         })
         const request: Order = response.data.data
         setData((previous) => ({

@@ -156,7 +156,99 @@ export const customerItemCodes = async (
  * katalog. Jangan dipakai untuk productCategory biasa seperti
  * CHEMICAL/SAUCE/TISSUE/OTHER.
  */
-export const customerProductFilter = async (
+/**
+ * Item codes yang pernah dibeli customer sendiri (repeat order).
+ *
+ * Historical purchase:
+ * - invoice tidak cancelled
+ * - quantity > 0
+ *
+ * Dicocokkan dengan UPPER(TRIM(...)) di kedua sisi karena
+ * sales_invoices.item_code sering berbeda dari products.item_code pada
+ * whitespace atau kapitalisasi.
+ */
+export const customerPurchasedItemCodes = async (
+  cardCode: string,
+): Promise<string[]> => {
+  const rows = await prisma.$queryRaw<
+    { item_code: string }[]
+  >`
+    SELECT DISTINCT TRIM(si.item_code) AS item_code
+
+    FROM sales_invoices si
+
+    WHERE
+      TRIM(si.card_code) = TRIM(${cardCode})
+
+      AND si.canceled = 'N'
+      AND si.quantity > 0
+      AND si.item_code IS NOT NULL
+      AND TRIM(si.item_code) <> ''
+  `
+
+  return rows
+    .map((row) => row.item_code?.trim())
+    .filter(
+      (code): code is string =>
+        Boolean(code),
+    )
+}
+
+/**
+ * Membuat Prisma ProductWhereInput untuk repeat order customer.
+ *
+ * Hanya produk yang pernah dibeli customer sendiri (histori pembelian
+ * actual). Filter ini mewakli histori pembelian customer, BUKAN filter
+ * kategori katalog. Jangan dipakai untuk productCategory biasa seperti
+ * CHEMICAL/SAUCE/TISSUE/OTHER.
+ */
+export const customerPurchasedProductFilter = async (
+  req: AuthenticatedRequest
+): Promise<ProductWhereInput> => {
+  const customer =
+    await currentCustomer(req)
+
+  if (!customer?.CardCode) {
+    return {
+      isActive: true,
+
+      itemCode: {
+        in: [],
+      },
+    }
+  }
+
+  const itemCodes =
+    await customerPurchasedItemCodes(
+      customer.CardCode,
+    )
+
+  // Dicocokkan per item code, bukan sebagai satu daftar, supaya beda
+  // kapitalisasi antara sales_invoices dan products tidak membuat pembelian
+  // customer tampak seperti produk yang belum pernah dibeli.
+  const filter: ProductWhereInput = {
+    isActive: true,
+
+    OR: itemCodes.map((itemCode) => ({
+      itemCode: {
+        equals: itemCode,
+        mode: 'insensitive' as const,
+      },
+    })),
+  }
+
+  return filter
+}
+
+/**
+ * Membuat Prisma ProductWhereInput untuk saran (quote) customer.
+ *
+ * Hanya produk dari customer lain dengan industry yang sama yang BELUM
+ * pernah dibeli customer ini. Filter ini mewakli histori pembelian
+ * customer, BUKAN filter kategori katalog. Jangan dipakai untuk
+ * productCategory biasa seperti CHEMICAL/SAUCE/TISSUE/OTHER.
+ */
+export const customerSuggestedProductFilter = async (
   req: AuthenticatedRequest
 ): Promise<ProductWhereInput> => {
   const customer =
@@ -193,4 +285,16 @@ export const customerProductFilter = async (
   }
 
   return filter
+}
+
+/**
+ * Membuat Prisma ProductWhereInput untuk customer.
+ *
+ * @deprecated Gunakan customerPurchasedProductFilter untuk repeat order
+ * atau customerSuggestedProductFilter untuk saran (quote).
+ */
+export const customerProductFilter = async (
+  req: AuthenticatedRequest
+): Promise<ProductWhereInput> => {
+  return customerSuggestedProductFilter(req)
 }

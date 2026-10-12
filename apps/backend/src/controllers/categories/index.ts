@@ -5,7 +5,6 @@ import { AuthenticatedRequest } from '@auth'
 import {
   currentCustomer,
   customerItemCodes,
-  customerProductFilter,
   normalizeItemCode,
 } from '@/services/customer-catalog'
 import { pricesForCatalog, round6 } from '@/services/pricing'

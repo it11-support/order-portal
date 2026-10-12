@@ -73,24 +73,41 @@ export const StatusSteps = ({ status, kind }: { status: OrderStatus; kind?: Requ
   if (currentIndex === -1) return null
 
   return (
-    <ol className="flex items-center gap-1.5">
+    <ol className="relative pl-6 space-y-3">
       {steps.map((step, index) => {
         const done = index < currentIndex
         const active = index === currentIndex
+        const isLast = index === steps.length - 1
         return (
-          <li key={step} className="flex items-center gap-1.5 flex-1 last:flex-none">
-            <div className="flex flex-col gap-1 flex-1 last:flex-none">
+          <li key={step} className="relative flex gap-3">
+            <span className="flex flex-col items-center shrink-0" style={{ width: 10 }}>
               <span
-                className={`h-1.5 rounded-full ${
-                  active ? 'bg-accent' : done ? 'bg-accent/40' : 'bg-border'
+                className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 ${
+                  active
+                    ? 'bg-accent border-accent'
+                    : done
+                      ? 'bg-accent/40 border-accent/40'
+                      : 'bg-white border-border'
                 }`}
               />
+              {!isLast && (
+                <span
+                  className={`w-0.5 flex-1 rounded-full min-h-[1.5rem] ${
+                    done ? 'bg-accent/40' : 'bg-border'
+                  }`}
+                />
+              )}
+            </span>
+            <div className="flex flex-col pt-0.5">
               <span
-                className={`text-[10px] leading-tight ${
-                  active ? 'font-bold text-foreground' : 'text-muted-foreground'
+                className={`text-[11px] leading-tight font-bold ${
+                  active ? 'text-foreground' : done ? 'text-foreground/70' : 'text-muted-foreground'
                 }`}
               >
                 {kind === 'quote' ? QUOTE_STATUS_LABELS[step] : ORDER_STATUS_LABELS[step]}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {active ? 'Sekarang' : done ? 'Selesai' : 'Menunggu'}
               </span>
             </div>
           </li>
