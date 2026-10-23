@@ -1,5 +1,6 @@
 export { InfiniteScrollWatcher } from './common/InfiniteScrollWatcher'
 export { default as LoadMoreGrid, useLoadMore } from './common/LoadMoreGrid'
+export { default as Loader } from './common/Loader'
 export { default as CustomerList } from './customers/CustomerList'
 export { default as CategoryList } from './categories/CategoryList'
 export { default as CategoryIcon } from './categories/CategoryIcon'

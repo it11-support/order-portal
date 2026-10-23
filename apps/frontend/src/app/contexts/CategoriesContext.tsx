@@ -6,6 +6,7 @@ import { useAuth } from './authHook'
 import { useWSEvent } from './WebSocketContext'
 import { swrFetcher } from '@lib'
 import { ApiResponse, Product } from '@repo/shared'
+import { useDebounce } from '../hooks/useDebounce'
 
 export type Category = {
   id: number
@@ -68,7 +69,6 @@ export const CategoriesProvider = ({ children }: { children: React.ReactNode }) 
   const { user } = useAuth()
   const { mutate } = useSWRConfig()
 
-
   const identity = user ? `${user.role.name}:${user.id}` : ''
 
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -106,7 +106,6 @@ export const CategoriesProvider = ({ children }: { children: React.ReactNode }) 
 
     swrFetcher,
   )
-
 
   const categories = categoriesData?.data ?? []
 
@@ -170,6 +169,7 @@ export const CategoriesProvider = ({ children }: { children: React.ReactNode }) 
 export const useAllProducts = (page = 1, pageSize = CATALOG_PAGE_SIZE) => {
   const { selectedCategory, search } = useCategories()
   const { user } = useAuth()
+  const debouncedSearch = useDebounce(search.trim(), 500)
 
   const identity = user ? `${user.role.name}:${user.id}` : ''
 
@@ -178,7 +178,7 @@ export const useAllProducts = (page = 1, pageSize = CATALOG_PAGE_SIZE) => {
       return null
     }
 
-    const query = resolveCatalogQuery(selectedCategory, search)
+    const query = resolveCatalogQuery(selectedCategory, debouncedSearch)
 
     const params = new URLSearchParams()
 
@@ -195,7 +195,7 @@ export const useAllProducts = (page = 1, pageSize = CATALOG_PAGE_SIZE) => {
     }
 
     return `/categories/products?${params.toString()}`
-  }, [identity, selectedCategory, search, page, pageSize])
+  }, [identity, selectedCategory, debouncedSearch, page, pageSize])
 
   const { data, isLoading, error } = useSWR<ApiResponse<Product>>(key, swrFetcher)
 
@@ -210,36 +210,16 @@ export const useAllProducts = (page = 1, pageSize = CATALOG_PAGE_SIZE) => {
   }
 }
 
-// ============================================================
-// CATALOG PRODUCTS
-//
-// Hook utama katalog dengan infinite pagination.
-//
-// mode `all`
-//
-// mode `category`
-//   -> backend filter Product.productCategory
-//
-//
-// mode `search`
-//   -> global search, kategori diabaikan
-// ============================================================
-
-export const useCatalogProducts = () => {
+export const useCatalogProducts = (priceSource?: 'actual' | 'pricelist') => {
   const { selectedCategory, search } = useCategories()
-
   const { user } = useAuth()
-
+  const debouncedSearch = useDebounce(search.trim(), 500)
   const identity = user ? `${user.role.name}:${user.id}` : ''
 
   const query = useMemo(
-    () => resolveCatalogQuery(selectedCategory, search),
-    [selectedCategory, search],
+    () => resolveCatalogQuery(selectedCategory, debouncedSearch),
+    [selectedCategory, debouncedSearch],
   )
-
-  // ==========================================================
-  // BASE QUERY
-  // ==========================================================
 
   const baseQuery = useMemo(() => {
     const params = new URLSearchParams()
@@ -248,53 +228,50 @@ export const useCatalogProducts = () => {
       params.set('viewer', identity)
     }
 
-    // Search SELALU global: kalau ada search, category tidak dikirim sama
-    // sekali. Backend juga mengabaikan `category` yang datang bersama search.
-    if (query.search) {
-      params.set('search', query.search)
+    // Search bersifat global dan mengabaikan kategori
+    if (query.search?.trim()) {
+      params.set('search', query.search.trim())
     } else if (query.category) {
       params.set('category', query.category)
     }
 
-    return params.toString()
-  }, [identity, query])
+    // Filter sumber harga opsional
+    if (priceSource) {
+      params.set('priceSource', priceSource)
+    }
 
-  // ==========================================================
-  // SWR INFINITE KEY
-  // ==========================================================
+    return params.toString()
+  }, [identity, query.search, query.category, priceSource])
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: ApiResponse<Product> | null) => {
-      if (!identity) {
-        return null
-      }
+      if (!identity) return null
 
+      if (previousPageData) {
+        if (!previousPageData.data?.length) {
+          return null
+        }
 
-      // Stop kalau page sebelumnya kosong
-      if (previousPageData && previousPageData.data.length === 0) {
-        return null
-      }
+        const totalPages = previousPageData.meta?.total_pages
 
-      // Lebih akurat:
-      // stop kalau backend sudah mengatakan tidak ada page lagi.
-      if (previousPageData?.meta && pageIndex + 1 > previousPageData.meta.total_pages) {
-        return null
+        if (typeof totalPages === 'number' && pageIndex + 1 > totalPages) {
+          return null
+        }
+
+        if (totalPages == null && previousPageData.data.length < CATALOG_PAGE_SIZE) {
+          return null
+        }
       }
 
       const params = new URLSearchParams(baseQuery)
 
       params.set('page', String(pageIndex + 1))
-
       params.set('pageSize', String(CATALOG_PAGE_SIZE))
 
       return `/categories/products?${params.toString()}`
     },
-    [baseQuery, identity, query.mode],
+    [baseQuery, identity],
   )
-
-  // ==========================================================
-  // FETCH
-  // ==========================================================
 
   const {
     data: pages,
@@ -307,37 +284,24 @@ export const useCatalogProducts = () => {
     revalidateFirstPage: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
+    persistSize: false,
+    keepPreviousData: false,
   })
 
-  // ==========================================================
-  // MERGE PAGES
-  // ==========================================================
-
+  // Gabungkan seluruh halaman dan hilangkan duplikat
   const products = useMemo(() => {
-    if (!pages) {
-      return []
-    }
+    if (!pages?.length) return []
 
-    // Safety DISTINCT by itemCode.
-    //
-    // Backend sudah merge + distinct sebelum pagination, ini hanya jaga-jaga
-    // kalau data berubah saat user sedang infinite scroll. Identitas produk
-    // adalah itemCode (bukan itemName) dan dinormalisasi trim/uppercase supaya
-    // whitespace tidak menyalin satu produk jadi dua.
     const seen = new Set<string>()
-
     const result: Product[] = []
 
     for (const page of pages) {
-      for (const product of page.data) {
-        const code = product.itemCode.trim().toUpperCase()
+      for (const product of page.data ?? []) {
+        const code = product.itemCode?.trim().toUpperCase()
 
-        if (seen.has(code)) {
-          continue
-        }
+        if (!code || seen.has(code)) continue
 
         seen.add(code)
-
         result.push(product)
       }
     }
@@ -345,39 +309,34 @@ export const useCatalogProducts = () => {
     return result
   }, [pages])
 
-  // ==========================================================
-  // PAGINATION STATE
-  // ==========================================================
-
+  const firstPage = pages?.[0]
   const lastPage = pages?.[pages.length - 1]
 
-  const total = pages?.[0]?.meta?.total_records ?? 0
+  const total = firstPage?.meta?.total_records ?? 0
 
-  const totalPages = pages?.[0]?.meta?.total_pages ?? 0
+  const totalPages = firstPage?.meta?.total_pages ?? 0
+
+  const isLoadingMore = isValidating && !!pages && size > pages.length
 
   const isReachingEnd = Boolean(
     lastPage &&
     (lastPage.data.length === 0 ||
-      (totalPages > 0 && size >= totalPages) ||
-      (total > 0 && products.length >= total)),
+      (totalPages > 0 && pages.length >= totalPages) ||
+      (totalPages === 0 && lastPage.data.length < CATALOG_PAGE_SIZE)),
   )
 
-  // ==========================================================
-  // LOAD MORE
-  // ==========================================================
-
   const loadMore = useCallback(() => {
-    if (isReachingEnd || isValidating) {
+    if (!identity || !pages?.length || isLoading || isValidating || isReachingEnd) {
       return
     }
 
     void setSize((currentSize) => currentSize + 1)
-  }, [isReachingEnd, isValidating, setSize])
+  }, [identity, pages, isLoading, isValidating, isReachingEnd, setSize])
 
   return {
     products,
-    loading: !pages && isLoading,
-    isFetching: isValidating,
+    loading: !!identity && !pages && isLoading,
+    isFetching: isValidating || isLoadingMore,
     isReachingEnd,
     loadMore,
     total,

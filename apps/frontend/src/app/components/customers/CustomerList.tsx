@@ -3,6 +3,7 @@ import useSWRInfinite from 'swr/infinite'
 import { api, swrFetcher } from '@lib'
 import { useAuth } from '@/app/contexts/authHook'
 import { useIntersectionObserver } from '@hooks'
+import { Loader } from '@components'
 import { InfiniteScrollWatcher } from '@/app/components/common/InfiniteScrollWatcher'
 import { Switch } from '@/app/components/ui/switch'
 import { Customer, ApiResponse, DEFAULT_LIMIT } from '@repo/shared'
@@ -273,7 +274,7 @@ const CustomerList: React.FC = () => {
       {/* CARD VIEW — mobile only */}
       <div className="md:hidden space-y-3">
         {isLoading && customers.length === 0 ? (
-          <p className="text-center py-12 text-sm text-muted-foreground">Memuat...</p>
+          <Loader label="Memuat..." className="py-12" />
         ) : (
           <>
             {customers.map((customer) => (

@@ -28,6 +28,7 @@ type OrderContextType = {
   loading: boolean
   submitting: boolean
   error: string
+  refreshOrders: () => Promise<void>
   placeOrder: (
     cart: CartItem[],
     notes: string,
@@ -52,11 +53,7 @@ type OrderContextType = {
   linkSapDocument: (id: string, docEntry: number) => Promise<string | null>
   fetchOrder: (id: string) => Promise<Order | null>
   fetchFollowUps: (id: string) => Promise<FollowUpNote[]>
-  addFollowUp: (
-    id: string,
-    message: string,
-    visibility?: 'customer' | 'internal',
-  ) => Promise<void>
+  addFollowUp: (id: string, message: string, visibility?: 'customer' | 'internal') => Promise<void>
   followUps: Record<string, FollowUpNote[]>
 }
 const OrderContext = createContext<OrderContextType | null>(null)
@@ -70,11 +67,13 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [followUps, setFollowUps] = useState<Record<string, FollowUpNote[]>>({})
   const busy = useRef(false)
+
   const refresh = useCallback(async () => {
     if (!identity) return
     const response = await api.get('/requests')
     setData({ owner: identity, orders: response.data.data })
   }, [identity])
+
   useEffect(() => {
     let disposed = false
     setError('')
@@ -189,7 +188,9 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
           owner: identity,
           orders: [
             request,
-            ...(previous.owner === identity ? previous.orders.filter((o) => o.id !== request.id) : []),
+            ...(previous.owner === identity
+              ? previous.orders.filter((o) => o.id !== request.id)
+              : []),
           ],
         }))
         return request
@@ -267,17 +268,14 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     },
     [refresh],
   )
-  const fetchOrder = useCallback(
-    async (id: string): Promise<Order | null> => {
-      try {
-        const response = await api.get(`/requests/${id}`)
-        return response.data.data
-      } catch {
-        return null
-      }
-    },
-    [],
-  )
+  const fetchOrder = useCallback(async (id: string): Promise<Order | null> => {
+    try {
+      const response = await api.get(`/requests/${id}`)
+      return response.data.data
+    } catch {
+      return null
+    }
+  }, [])
   return (
     <OrderContext.Provider
       value={{
@@ -285,18 +283,19 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         submitting,
         error,
+        refreshOrders: refresh,
         placeOrder,
         sendQuote: (items, notes) => send('quote', items, notes),
         orderPlaced,
         setOrderPlaced,
         submitForCustomer,
-         updateStatus,
-         fetchOrder,
-         linkSapDocument,
-         fetchFollowUps,
-         addFollowUp,
-         followUps,
-       }}
+        updateStatus,
+        fetchOrder,
+        linkSapDocument,
+        fetchFollowUps,
+        addFollowUp,
+        followUps,
+      }}
     >
       {children}
     </OrderContext.Provider>

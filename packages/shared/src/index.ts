@@ -10,6 +10,7 @@ export interface Category {
 }
 
 export type OrderStatus =
+  | 'draft'
   | 'pending'
   | 'confirmed'
   | 'processing'
@@ -30,6 +31,7 @@ export type OrderStatus =
  * offered always match what the API will accept.
  */
 export const ORDER_FLOW: Record<OrderStatus, OrderStatus[]> = {
+  draft: ['pending', 'cancelled'],
   pending: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled'],
   processing: ['delivered', 'cancelled'],
@@ -40,6 +42,7 @@ export const ORDER_FLOW: Record<OrderStatus, OrderStatus[]> = {
 }
 
 export const QUOTE_FLOW: Record<OrderStatus, OrderStatus[]> = {
+  draft: [],
   pending: ['processing', 'cancelled'],
   processing: ['cancelled'],
   ready: ['cancelled'],
@@ -167,6 +170,7 @@ export interface Order {
   convertedOrderId?: string | null
   sap?: SapLink | null
   createdAt: Date | string
+  updatedAt: Date | string
   notes: string
 }
 

@@ -1,6 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
-import { StatusBadge, StatusSteps, SapStatusBadge, ConversationThread, ChatComposer } from '@components'
+import {
+  Loader,
+  StatusBadge,
+  StatusSteps,
+  SapStatusBadge,
+  ConversationThread,
+  ChatComposer,
+} from '@components'
 import { useOrders, useCategories, useCart, useAuth } from '@contexts'
 import { fmtDate } from '@lib'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
@@ -8,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 import { toast } from 'sonner'
 import { ShoppingCart, ChevronDown, ChevronRight } from 'lucide-react'
+import { formatRupiah } from '@/lib/formatCurrency'
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/orders', quote: '/inquiries' }
 
@@ -39,7 +47,7 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     )
   }
 
-// Notifications are not cleared on visit. Opening a page is not an explicit
+  // Notifications are not cleared on visit. Opening a page is not an explicit
   // "I have seen this", so the badge keeps counting until the user opens the
   // notification itself or dismisses it.
 
@@ -60,7 +68,12 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     loadOrder()
   }, [orderId, orders, fetchOrder, fetchFollowUps])
 
-  if (loading || orderLoading) return <Shell title="Memuat permintaan">Memuat...</Shell>
+  if (loading || orderLoading)
+    return (
+      <Shell title="Memuat permintaan">
+        <Loader />
+      </Shell>
+    )
 
   if (!order) {
     return <Shell title="Pesanan tidak ditemukan">Pesanan tidak ditemukan</Shell>
@@ -72,7 +85,11 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   if ((order.kind ?? 'order') !== kind) {
     const actual = order.kind ?? 'order'
     return (
-      <Shell title={actual === 'quote' ? 'Permintaan penawaran' : 'Pesanan'} showBack backTo={LIST_PATH[actual]}>
+      <Shell
+        title={actual === 'quote' ? 'Permintaan penawaran' : 'Pesanan'}
+        showBack
+        backTo={LIST_PATH[actual]}
+      >
         <div className="text-center py-12 text-muted-foreground space-y-3">
           <p className="text-sm">
             {order.id} adalah {actual === 'quote' ? 'permintaan penawaran' : 'pesanan'}, bukan{' '}
@@ -128,13 +145,6 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     navigate('/cart')
   }
 
-  const formatIDR = (value: number, currency: string | null) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: currency || 'IDR',
-      maximumFractionDigits: 2,
-    }).format(value)
-
   return (
     <Shell title={order.id} showBack backTo={LIST_PATH[kind]}>
       <div className="max-w-2xl space-y-4">
@@ -143,9 +153,7 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
             {error}
           </p>
         )}
-        <h2 className="font-bold">
-          {isQuote ? 'Permintaan Penawaran Harga' : 'Pesanan'}
-        </h2>
+        <h2 className="font-bold">{isQuote ? 'Permintaan Penawaran Harga' : 'Pesanan'}</h2>
 
         {/* Status & details */}
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
@@ -199,7 +207,7 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
                   <p className="text-xs text-muted-foreground">{item.product.salesUnit}</p>
                   {typeof item.price === 'number' && (
                     <p className="text-xs font-semibold mt-0.5">
-                      {formatIDR(item.price, item.currency ?? null)}
+                      {formatRupiah(item.price)}
                       <span className="ml-1 font-normal text-muted-foreground">
                         {item.priceSource === 'actual' ? 'harga aktual' : 'harga price list'}
                       </span>

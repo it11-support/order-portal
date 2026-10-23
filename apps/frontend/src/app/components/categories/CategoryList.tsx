@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { api, swrFetcher } from '@lib'
 import { ApiResponse, Category } from '@repo/shared'
 import { Plus, Pencil, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { Loader } from '@components'
 import {
   Dialog,
   DialogContent,
@@ -225,7 +226,7 @@ const CategoryList: React.FC = () => {
 
       <div className="md:hidden space-y-3">
         {categoriesLoading && categories.length === 0 ? (
-          <p className="text-center py-12 text-sm text-muted-foreground">Memuat...</p>
+          <Loader label="Memuat..." className="py-12" />
         ) : (
           <>
             {categories.map((cat, index) => (
@@ -399,8 +400,8 @@ const CategoryList: React.FC = () => {
               )}
               {categoriesLoading && (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
-                    Memuat...
+                  <td colSpan={7} className="p-12 text-center">
+                    <Loader label="Memuat..." />
                   </td>
                 </tr>
               )}

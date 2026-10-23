@@ -4,6 +4,7 @@ import { User, Role, ApiResponse, SalesPersonOption } from '@repo/shared'
 import { Plus, Pencil, Trash2, Search, Check, X, Copy, Eye, EyeOff } from 'lucide-react'
 import useSWR from 'swr'
 
+import { Loader } from '@components'
 import {
   Dialog,
   DialogContent,
@@ -229,7 +230,7 @@ const UserList: React.FC = () => {
       {/* CARD VIEW — mobile only */}
       <div className="md:hidden space-y-3">
         {userLoading ? (
-          <p className="text-center py-12 text-sm text-muted-foreground">Memuat...</p>
+          <Loader label="Memuat..." className="py-12" />
         ) : !userLoading && users.length === 0 ? (
           <p className="text-center py-12 text-sm text-muted-foreground">
             Tidak ada user ditemukan.
@@ -397,8 +398,8 @@ const UserList: React.FC = () => {
               )}
               {userLoading && (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
-                    Memuat...
+                  <td colSpan={7} className="p-12 text-center">
+                    <Loader label="Memuat..." />
                   </td>
                 </tr>
               )}

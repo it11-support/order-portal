@@ -5,6 +5,7 @@ import { AuthenticatedRequest } from '@auth'
 import {
   currentCustomer,
   customerItemCodes,
+  customerPurchasedItemCodes,
   normalizeItemCode,
 } from '@/services/customer-catalog'
 import { pricesForCatalog, round6 } from '@/services/pricing'
@@ -113,42 +114,48 @@ export const reorderCategories = async (req: Request, res: Response): Promise<vo
   res.status(200).json({ data: categories })
 }
 
+
 export const getProductsByCategory = async (
   req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
-  // ============================================================
   // SEARCH
-  // ============================================================
-
   const search =
     typeof req.query.search === 'string'
       ? req.query.search.trim()
       : ''
 
-  // ============================================================
-  // SEARCH SELALU GLOBAL
-  //
-  // Category hanya digunakan untuk browsing.
-  //
-  // Jika search aktif, category sengaja diabaikan agar pencarian
-  // dilakukan terhadap seluruh katalog.
-  // ============================================================
+  // Search selalu global, tanpa filter category
+  const category = search
+    ? ''
+    : typeof req.query.category === 'string'
+      ? req.query.category.trim()
+      : ''
 
-  const category =
-    search
-      ? ''
-      : typeof req.query.category === 'string'
-        ? req.query.category.trim()
-        : ''
+  // PRICE SOURCE
+  const priceSource =
+    typeof req.query.priceSource === 'string'
+      ? req.query.priceSource.trim().toLowerCase()
+      : ''
 
-  const isCustomer =
-    req.user?.role.name === 'customer'
+  if (
+    priceSource &&
+    priceSource !== 'actual' &&
+    priceSource !== 'pricelist'
+  ) {
+    res.status(400).json({
+      message: 'Invalid priceSource. Use actual or pricelist.',
+    })
+    return
+  }
 
-  // ============================================================
-  // PAGINATION
-  // ============================================================
+  const isCustomer = req.user?.role.name === 'customer'
 
+  const hasCustomerId =
+    typeof req.query.customerId === 'string' &&
+    /^\d+$/.test(req.query.customerId)
+
+  // PAGINATION PARAMS
   const pageParam =
     typeof req.query.page === 'string'
       ? req.query.page
@@ -163,368 +170,307 @@ export const getProductsByCategory = async (
     pageParam || pageSizeParam,
   )
 
-  const page = Math.max(
-    Number(pageParam) || 1,
-    1,
-  )
+  const page = Math.max(Number(pageParam) || 1, 1)
 
   const pageSize = Math.min(
-    Math.max(
-      Number(pageSizeParam) || 40,
-      1,
-    ),
+    Math.max(Number(pageSizeParam) || 40, 1),
     100,
   )
 
-  // ============================================================
   // SEARCH FILTER
-  // ============================================================
-
-  const searchFilter: ProductWhereInput =
-    search
-      ? {
-        OR: [
-          {
-            itemName: {
-              contains: search,
-              mode: 'insensitive' as const,
-            },
+  const searchFilter: ProductWhereInput = search
+    ? {
+      OR: [
+        {
+          itemName: {
+            contains: search,
+            mode: 'insensitive' as const,
           },
-          {
-            itemCode: {
-              contains: search,
-              mode: 'insensitive' as const,
-            },
+        },
+        {
+          itemCode: {
+            contains: search,
+            mode: 'insensitive' as const,
           },
-        ],
-      }
-      : {}
-
-  // ============================================================
-  // PRODUCT IDENTITY
-  //
-  // Digunakan hanya untuk deduplication.
-  // ============================================================
+        },
+      ],
+    }
+    : {}
 
   const identityCode = normalizeItemCode
 
   let products: any[] = []
   let total = 0
 
-  // ============================================================
   // CUSTOMER CATALOG
-  // ============================================================
-
   if (isCustomer) {
-    // ==========================================================
-    // CATEGORY TERTENTU
-    //
-    // Jika customer memilih category, langsung ambil semua
-    // produk aktif di category tersebut.
-    //
-    // Tidak bergantung pada histori pembelian.
-    // ==========================================================
-
     if (category) {
-      products =
-        await prisma.product.findMany({
-          where: {
-            isActive: true,
-
-            productCategory: category,
-
-            ...searchFilter,
-          },
-
-          orderBy: {
-            itemName: 'asc',
-          },
-        })
+      products = await prisma.product.findMany({
+        where: {
+          isActive: true,
+          productCategory: category,
+          ...searchFilter,
+        },
+        orderBy: {
+          itemName: 'asc',
+        },
+      })
 
       total = products.length
-    }
-
-    // ==========================================================
-    // ALL PRODUCTS / GLOBAL SEARCH
-    //
-    // PRIORITAS:
-    //
-    // 1. PURCHASED
-    // 2. OTHER ACTIVE
-    //
-    // Search juga masuk ke branch ini karena ketika search aktif,
-    // category sudah dipaksa menjadi '' di atas.
-    // ==========================================================
-
-    else {
-      const customer =
-        await currentCustomer(req)
+    } else {
+      const customer = await currentCustomer(req)
 
       if (!customer?.CardCode) {
         products = []
         total = 0
       } else {
-        // ======================================================
-        // PURCHASED ITEM CODES
-        // ======================================================
-
-        const purchasedCodesRaw =
-          await customerItemCodes(
-            customer.CardCode,
-            customer.IndustryC ?? null,
-          )
-
-        // ======================================================
-        // PURCHASED PRODUCTS
-        // ======================================================
+        const purchasedCodesRaw = await customerItemCodes(
+          customer.CardCode,
+          customer.IndustryC ?? null,
+        )
 
         const purchasedProducts =
           purchasedCodesRaw.length > 0
             ? await prisma.product.findMany({
               where: {
                 isActive: true,
-
                 itemCode: {
                   in: purchasedCodesRaw,
                 },
-
                 ...searchFilter,
               },
-
               orderBy: {
                 itemName: 'asc',
               },
             })
             : []
 
-        // ======================================================
-        // OTHER PRODUCTS
-        //
-        // Produk yang sudah masuk purchased tidak diambil lagi.
-        // ======================================================
+        const claimedCodes = purchasedProducts.map(
+          (product) => product.itemCode,
+        )
 
-        const claimedCodes =
-          purchasedProducts.map(
-            (product) =>
-              product.itemCode,
-          )
+        const otherProducts = await prisma.product.findMany({
+          where: {
+            isActive: true,
+            ...(claimedCodes.length > 0
+              ? {
+                itemCode: {
+                  notIn: claimedCodes,
+                },
+              }
+              : {}),
+            ...searchFilter,
+          },
+          orderBy: {
+            itemName: 'asc',
+          },
+        })
 
-        const otherProducts =
-          await prisma.product.findMany({
-            where: {
-              isActive: true,
-
-              ...(claimedCodes.length > 0
-                ? {
-                  itemCode: {
-                    notIn: claimedCodes,
-                  },
-                }
-                : {}),
-
-              ...searchFilter,
-            },
-
-            orderBy: {
-              itemName: 'asc',
-            },
-          })
-
-        // ======================================================
         // MERGE + DISTINCT
-        // ======================================================
-
-        const seen =
-          new Set<string>()
-
-        const mergedProducts:
-          typeof otherProducts = []
+        const seen = new Set<string>()
+        const mergedProducts: typeof otherProducts = []
 
         const appendDistinct = (
           items: typeof otherProducts,
         ) => {
           for (const product of items) {
-            const code =
-              identityCode(
-                product.itemCode,
-              )
+            const code = identityCode(product.itemCode)
 
-            if (seen.has(code)) {
-              continue
-            }
+            if (seen.has(code)) continue
 
             seen.add(code)
-
-            mergedProducts.push(
-              product,
-            )
+            mergedProducts.push(product)
           }
         }
 
-        // Purchased selalu di depan.
-        appendDistinct(
-          purchasedProducts,
-        )
-
-        appendDistinct(
-          otherProducts,
-        )
+        appendDistinct(purchasedProducts)
+        appendDistinct(otherProducts)
 
         products = mergedProducts
         total = mergedProducts.length
       }
     }
-  }
+  } else {
+    // ADMIN / SALES
+    if (hasCustomerId) {
+      const target = await prisma.customers.findUnique({
+        where: {
+          id: BigInt(req.query.customerId as string),
+        },
+        select: {
+          CardCode: true,
+          IndustryC: true,
+          SlpCode: true,
+          NonActive: true,
+        },
+      })
 
-  // ============================================================
-  // NON-CUSTOMER
-  //
-  // Admin / sales tetap dapat mengambil katalog.
-  //
-  // Category digunakan jika ada.
-  // Search tetap global karena category otomatis kosong ketika
-  // search aktif.
-  // ============================================================
+      const allowed =
+        target &&
+        target.CardCode &&
+        target.NonActive !== 'Y' &&
+        (
+          req.user?.role.name === 'admin' ||
+          (
+            req.user?.slpCode != null &&
+            String(target.SlpCode) ===
+            String(req.user.slpCode)
+          )
+        )
 
-  else {
-    products =
-      await prisma.product.findMany({
+      if (!allowed || !target?.CardCode) {
+        res.status(403).json({
+          message: 'Customer not found or access denied.',
+        })
+        return
+      }
+
+      const purchasedCodesRaw = await customerPurchasedItemCodes(
+        target.CardCode,
+      )
+
+      const purchasedCodes = [
+        ...new Set(purchasedCodesRaw),
+      ]
+
+      const purchasedProducts =
+        purchasedCodes.length > 0
+          ? await prisma.product.findMany({
+            where: {
+              isActive: true,
+              itemCode: {
+                in: purchasedCodes,
+              },
+              ...(category
+                ? { productCategory: category }
+                : {}),
+              ...searchFilter,
+            },
+            orderBy: {
+              itemName: 'asc',
+            },
+          })
+          : []
+
+      const claimedCodes = purchasedProducts.map(
+        (product) => product.itemCode,
+      )
+
+      const otherProducts = await prisma.product.findMany({
         where: {
           isActive: true,
-
-          ...(category
+          ...(claimedCodes.length > 0
             ? {
-              productCategory:
-                category,
+              itemCode: {
+                notIn: claimedCodes,
+              },
             }
             : {}),
-
+          ...(category
+            ? { productCategory: category }
+            : {}),
           ...searchFilter,
         },
-
         orderBy: {
           itemName: 'asc',
         },
       })
 
+      const seen = new Set<string>()
+      const mergedProducts: typeof otherProducts = []
+
+      const appendDistinct = (
+        items: typeof otherProducts,
+      ) => {
+        for (const product of items) {
+          const code = normalizeItemCode(product.itemCode)
+
+          if (seen.has(code)) continue
+
+          seen.add(code)
+          mergedProducts.push(product)
+        }
+      }
+
+      appendDistinct(purchasedProducts)
+      appendDistinct(otherProducts)
+
+      products = mergedProducts
+    } else {
+      // Tanpa customerId: katalog normal
+      products = await prisma.product.findMany({
+        where: {
+          isActive: true,
+          ...(category
+            ? { productCategory: category }
+            : {}),
+          ...searchFilter,
+        },
+        orderBy: {
+          itemName: 'asc',
+        },
+      })
+    }
+
     total = products.length
   }
 
-  // ============================================================
   // CUSTOMER PRICE TARGET
-  // ============================================================
-
   let prices = new Map()
-  let priceCustomerId:
-    string | null = null
-
-  // ============================================================
-  // CUSTOMER LOGIN
-  // ============================================================
+  let priceCustomerId: string | null = null
 
   if (isCustomer) {
-    if (
-      req.user?.customerId != null
-    ) {
-      priceCustomerId =
-        String(
-          req.user.customerId,
-        )
+    if (req.user?.customerId != null) {
+      priceCustomerId = String(req.user.customerId)
     }
-  }
-
-  // ============================================================
-  // ADMIN / SALES VIEWING CUSTOMER
-  // ============================================================
-
-  else if (
-    typeof req.query.customerId ===
-    'string' &&
-    /^\d+$/.test(
-      req.query.customerId,
-    )
+  } else if (
+    typeof req.query.customerId === 'string' &&
+    /^\d+$/.test(req.query.customerId)
   ) {
-    const target =
-      await prisma.customers.findUnique({
-        where: {
-          id: BigInt(
-            req.query.customerId,
-          ),
-        },
-
-        select: {
-          id: true,
-          SlpCode: true,
-          NonActive: true,
-          CardCode: true,
-        },
-      })
+    const target = await prisma.customers.findUnique({
+      where: {
+        id: BigInt(req.query.customerId),
+      },
+      select: {
+        id: true,
+        SlpCode: true,
+        NonActive: true,
+        CardCode: true,
+      },
+    })
 
     const allowed =
       target &&
       target.CardCode &&
       target.NonActive !== 'Y' &&
       (
-        req.user?.role.name ===
-        'admin' ||
+        req.user?.role.name === 'admin' ||
         (
           req.user?.slpCode != null &&
-          String(
-            target.SlpCode,
-          ) ===
-          String(
-            req.user.slpCode,
-          )
+          String(target.SlpCode) ===
+          String(req.user.slpCode)
         )
       )
 
     if (allowed) {
-      priceCustomerId =
-        String(target.id)
+      priceCustomerId = String(target.id)
     }
   }
 
-  // ============================================================
   // RESOLVE PRICES
-  // ============================================================
-
-  if (
-    priceCustomerId &&
-    products.length > 0
-  ) {
-    prices =
-      await pricesForCatalog(
-        BigInt(
-          priceCustomerId,
-        ),
-
-        products.map(
-          (product) =>
-            product.itemCode,
-        ),
-      )
+  if (priceCustomerId && products.length > 0) {
+    prices = await pricesForCatalog(
+      BigInt(priceCustomerId),
+      products.map((product) => product.itemCode),
+    )
   }
 
-  // ============================================================
-  // FILTER PRODUCTS WITHOUT PRICE
-  //
-  // Jika ada customer price context, hanya produk yang benar-benar
-  // memiliki harga yang boleh tampil.
-  //
-  // Penting:
-  // jangan cek `prices.size > 0` di sini.
-  //
-  // Kalau map harga kosong, hasil katalog memang harus menjadi
-  // kosong, bukan malah menampilkan semua produk tanpa harga.
-  // ============================================================
-
+  // FILTER PRODUCTS WITHOUT VALID PRICE
   if (priceCustomerId) {
     products = products.filter((product) => {
       const resolvedPrice = prices.get(product.itemCode)
 
-      if (!resolvedPrice) {
-        return false
-      }
+      if (!resolvedPrice) return false
 
       if (
         resolvedPrice.price === null ||
@@ -535,115 +481,65 @@ export const getProductsByCategory = async (
 
       const numericPrice = Number(resolvedPrice.price)
 
-      if (
-        !Number.isFinite(numericPrice) ||
-        numericPrice <= 0
-      ) {
-        return false
-      }
-
-      return true
+      return (
+        Number.isFinite(numericPrice) &&
+        numericPrice > 0
+      )
     })
 
     total = products.length
   }
 
-  //  Ini lebih kuat daripada kode sekarang ya
-  // ============================================================
-  // PAGINATION
-  //
-  // Pagination dilakukan SETELAH:
-  //
-  // - category filter
-  // - search
-  // - dedup
-  // - price filter
-  //
-  // Dengan begitu metadata pagination sesuai dengan produk yang
-  // benar-benar dapat ditampilkan.
-  // ============================================================
+  // FILTER PRICE SOURCE
+  // Dijalankan sebelum pagination agar setiap source
+  // memiliki total_records dan total_pages sendiri.
+  if (priceSource) {
+    products = products.filter((product) => {
+      const resolvedPrice = prices.get(product.itemCode)
 
-  if (shouldPaginate) {
-    const start =
-      (page - 1) * pageSize
+      return resolvedPrice?.source === priceSource
+    })
 
-    const end =
-      start + pageSize
-
-    products =
-      products.slice(
-        start,
-        end,
-      )
+    total = products.length
   }
 
-  // ============================================================
+  // PAGINATION
+  if (shouldPaginate) {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+
+    products = products.slice(start, end)
+  }
+
   // RESPONSE DATA + PRICE
-  // ============================================================
+  const data = products.map((product) => {
+    const price = prices.get(product.itemCode)
 
-  const data =
-    products.map(
-      (product) => {
-        const price =
-          prices.get(
-            product.itemCode,
-          )
+    return {
+      ...product,
+      price: price
+        ? round6(price.price)
+        : null,
+      currency: price?.currency ?? null,
+      priceSource: price?.source ?? null,
+    }
+  })
 
-        return {
-          ...product,
-
-          price:
-            price
-              ? round6(
-                price.price,
-              )
-              : null,
-
-          currency:
-            price?.currency ??
-            null,
-
-          priceSource:
-            price?.source ??
-            null,
-        }
-      },
-    )
-
-  // ============================================================
-  // RESPONSE
-  // ============================================================
-
-  res.setHeader(
-    'Cache-Control',
-    'no-store',
-  )
+  res.setHeader('Cache-Control', 'no-store')
 
   res.status(200).json({
     data,
-
     meta: {
       current_page: page,
-
-      total_pages:
-        shouldPaginate
-          ? (
-            Math.ceil(
-              total /
-              pageSize,
-            ) || 0
-          )
-          : total > 0
-            ? 1
-            : 0,
-
-      total_records:
-        total,
-
-      limit:
-        shouldPaginate
-          ? pageSize
-          : products.length,
+      total_pages: shouldPaginate
+        ? Math.ceil(total / pageSize) || 0
+        : total > 0
+          ? 1
+          : 0,
+      total_records: total,
+      limit: shouldPaginate
+        ? pageSize
+        : products.length,
     },
   })
 }

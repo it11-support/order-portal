@@ -96,6 +96,7 @@ const serialize = (row: any, views?: Map<string, any>, viewer?: Actor | null) =>
     convertedOrderId: row.convertedOrderId ?? null,
     sap: sapView(row, views),
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     notes: row.notes,
     ...(forCustomer ? {} : { salesNotes: row.salesNotes ?? null }),
   }
@@ -139,6 +140,23 @@ export const listRequests = async (req: AuthenticatedRequest, res: Response) => 
     whereClause = { customer: { SlpCode: actor.slpCode } }
   }
 
+  const statusFilter = req.query.status
+  if (statusFilter !== undefined) {
+    if (typeof statusFilter !== 'string' || !['draft', 'pending', 'confirmed', 'processing', 'delivered', 'cancelled'].includes(statusFilter))
+      return res.status(400).json({ message: 'Filter status tidak valid.' })
+    whereClause = { ...whereClause, status: statusFilter }
+  }
+  const customerFilter = req.query.customerId
+  if (customerFilter !== undefined) {
+    if (typeof customerFilter !== 'string' || !/^\d+$/.test(customerFilter))
+      return res.status(400).json({ message: 'Customer ID tidak valid.' })
+    if (actor.role === 'customer') {
+      if (String(whereClause.customerId) !== customerFilter)
+        return res.status(403).json({ message: 'Akses ditolak.' })
+    } else {
+      whereClause = { ...whereClause, customerId: BigInt(customerFilter) }
+    }
+  }
   const rows = await prisma.portalRequest.findMany({
     where: whereClause,
     include: { customer: { select: customerSelect }, createdBy: { select: { name: true } } },
@@ -231,7 +249,15 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   if (!actor) return res.status(403).json({ message: deniedMessage(req) })
 
   const body = req.body ?? {}
-  const { kind, items, notes = '', priceAccepted = false, inquiryId } = body
+  const { kind, items, notes = '', priceAccepted = false, inquiryId, status: bodyStatus } = body
+  const requestedStatus = bodyStatus === 'draft' ? 'draft' : 'pending'
+
+  if (requestedStatus === 'draft' && kind !== 'order') {
+    return res.status(400).json({
+      message: 'Draft hanya tersedia untuk order.',
+    })
+  }
+
   if (
     !['order', 'quote'].includes(kind) ||
     !Array.isArray(items) ||
@@ -240,6 +266,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     typeof notes !== 'string' ||
     notes.length > 5000 ||
     typeof priceAccepted !== 'boolean' ||
+    (bodyStatus !== undefined && bodyStatus !== 'draft' && bodyStatus !== 'pending') ||
     (inquiryId !== undefined && inquiryId !== null && typeof inquiryId !== 'string')
   ) {
     return res.status(400).json({ message: 'Permintaan tidak valid.' })
@@ -321,6 +348,64 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
           : 'Produk tidak valid atau tidak aktif.',
     })
 
+  // Save draft with server-resolved prices as the original price reference.
+  // Draft creation does not trigger order notifications or SAP processing.
+  if (requestedStatus === 'draft') {
+    const customerForPrices = await priceableCustomer(customerId)
+
+    if (customerForPrices) {
+      await refreshCustomerPrices(
+        customerForPrices,
+        [...new Set(products.map((p) => p.itemCode))],
+      )
+    }
+
+    const linePrices = await pricesForItems(customerId, items)
+
+    const snapshot = items.map((item: any) => {
+      const product = products.find(
+        (p) => String(p.id) === String(item.productId),
+      )!
+
+      const price = linePrices.get(product.itemCode)
+
+      return {
+        product,
+        qty: item.qty,
+        ...(price
+          ? {
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: round6(item.qty * price.price),
+          }
+          : {}),
+      }
+    })
+
+    const row = await prisma.portalRequest.create({
+      data: {
+        id,
+        customerId,
+        kind: 'order',
+        notes,
+        items: JSON.parse(JSON.stringify(snapshot)),
+        status: 'draft',
+        source: actor.role === 'customer' ? 'customer' : 'sales',
+        createdById: Number(req.user!.id),
+        inquiryId: parentInquiry ? parentInquiry.id : null,
+      },
+      include: {
+        customer: { select: customerSelect },
+        createdBy: { select: { name: true } },
+      },
+    })
+
+    return res.status(201).json({
+      data: serialize(row, undefined, actor),
+    })
+  }
+
   // Price gate for orders.
   //
   // An order may be placed at the price the customer was last shown. If any
@@ -380,7 +465,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
       kind,
       notes,
       items: JSON.parse(JSON.stringify(snapshot)),
-      status: 'pending',
+      status: body?.status === 'draft' ? 'draft' : 'pending',
       source: actor.role === 'customer' ? 'customer' : 'sales',
       createdById: Number(req.user!.id),
       priceBasis,
@@ -647,6 +732,7 @@ const FLOW: Record<
   Record<string, { next: Record<string, Array<'admin' | 'sales' | 'customer' | 'system'>> }>
 > = {
   order: {
+    draft: { next: { pending: ['sales', 'admin', 'customer'], cancelled: ['sales', 'admin', 'customer'] } },
     pending: { next: { confirmed: ['admin'], cancelled: ['admin'] } },
     confirmed: { next: { processing: ['admin'], cancelled: ['admin'] } },
     processing: { next: { delivered: ['admin'], cancelled: ['admin'] } },
@@ -668,48 +754,195 @@ const actorRoleName = (actor: Actor) =>
   actor.role === 'admin' ? 'admin' : actor.role === 'sales_admin' ? 'sales' : 'customer'
 
 export const updateRequest = async (req: AuthenticatedRequest, res: Response) => {
-  const { status, salesNotes } = req.body ?? {}
+  const { status, salesNotes, items, notes, updatedAt, priceAccepted = false } = req.body ?? {}
   const actor = actorOf(req)
   if (!actor) return res.status(403).json({ message: deniedMessage(req) })
-  if (actor.role === 'customer') return res.status(403).json({ message: 'Akses ditolak. Khusus staf.' })
+  if (actor.role === 'customer' && !(await currentCustomer(req))) return res.status(403).json({ message: 'Akun pelanggan tidak aktif.' })
 
   const row = await prisma.portalRequest.findUnique({
     where: { id: String(req.params.id) },
     include: { customer: { select: customerSelect } },
   })
   if (!row) return res.status(404).json({ message: 'Permintaan tidak ditemukan.' })
+  if (actor.role === 'customer' && String(row.customerId) !== String(req.user!.customerId))
+    return res.status(403).json({ message: 'Akses ditolak.' })
   if (actor.role === 'sales_admin' && String(row.customer.SlpCode) !== String(actor.slpCode))
     return res
       .status(403)
       .json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
-  // Sales negotiates inquiries; admin runs orders. A sales person cannot move an
-  // order along, and admin-only steps stay admin-only.
-  if (row.kind === 'order' && actor.role !== 'admin')
+  // Sales negotiates inquiries; admin runs orders. A draft is the sales person's
+  // own work-in-progress, so they may edit and submit their own drafts.
+  if (row.kind === 'order' && actor.role !== 'admin' && row.status !== 'draft')
     return res.status(403).json({ message: 'Hanya admin yang dapat memperbarui pesanan.' })
 
-  if (
-    typeof status !== 'string' ||
-    typeof salesNotes !== 'string' ||
-    salesNotes.length > 5000 ||
-    !FLOW[row.kind]?.[row.status]
-  ) {
-    return res.status(400).json({ message: 'Status atau catatan sales tidak valid.' })
+  if (salesNotes !== undefined && (typeof salesNotes !== 'string' || salesNotes.length > 5000)) {
+    return res.status(400).json({ message: 'Catatan sales tidak valid.' })
+  }
+  if (notes !== undefined && (typeof notes !== 'string' || notes.length > 5000)) return res.status(400).json({ message: 'Catatan tidak valid.' })
+  if (updatedAt !== undefined && (typeof updatedAt !== 'string' || Number.isNaN(Date.parse(updatedAt)))) return res.status(400).json({ message: 'Versi draft tidak valid.' })
+  if (typeof priceAccepted !== 'boolean') return res.status(400).json({ message: 'Konfirmasi harga tidak valid.' })
+  if (status !== undefined && typeof status !== 'string') {
+    return res.status(400).json({ message: 'Status tidak valid.' })
+  }
+  if (items !== undefined && (!Array.isArray(items) || items.length === 0 || items.length > 200)) {
+    return res.status(400).json({ message: 'Item pesanan tidak valid.' })
+  }
+  if (items) {
+    for (const item of items) {
+      if (!item || !/^\d+$/.test(String(item.productId))) {
+        return res.status(400).json({ message: 'Produk tidak valid.' })
+      }
+      if (!Number.isSafeInteger(item.qty) || item.qty < 1 || item.qty > 100000) {
+        return res.status(400).json({ message: 'Jumlah tidak valid.' })
+      }
+    }
+    const ids = new Set(items.map((i: any) => String(i.productId)))
+    if (ids.size !== items.length) return res.status(400).json({ message: 'Produk duplikat.' })
   }
 
-  const sameStatus = status === row.status
-  const allowedRoles = sameStatus ? [] : (FLOW[row.kind][row.status].next[status] ?? [])
+  if ((items !== undefined || notes !== undefined) && row.status !== 'draft')
+    return res.status(409).json({ message: 'Hanya draft yang dapat diedit.' })
+  if (actor.role === 'customer' && row.status !== 'draft')
+    return res.status(403).json({ message: 'Customer hanya dapat mengubah draft.' })
+  const effectiveStatus = status ?? row.status
+  if (!FLOW[row.kind]?.[row.status]) {
+    return res.status(400).json({ message: 'Status saat ini tidak valid.' })
+  }
+
+  const sameStatus = effectiveStatus === row.status
+
+  const allowedRoles = sameStatus ? [] : (FLOW[row.kind][row.status].next[effectiveStatus] ?? [])
   if (!sameStatus && !allowedRoles.includes(actorRoleName(actor) as any)) {
     return res.status(400).json({
-      message: `Status ${row.status} tidak dapat diubah menjadi ${status} oleh peran Anda.`,
+      message: `Status ${row.status} tidak dapat diubah menjadi ${effectiveStatus} oleh peran Anda.`,
     })
   }
 
+  const data: any = {}
+  if (salesNotes !== undefined && actor.role !== 'customer') data.salesNotes = salesNotes
+  if (notes !== undefined) data.notes = notes
+  if (!sameStatus) data.status = effectiveStatus
+  // Never persist untrusted {productId, qty} directly: keep full server product snapshots.
+  let nextItems: any[] | null = null
+
+  if (items !== undefined) {
+    const ids = items.map((i: any) => BigInt(String(i.productId)))
+
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: ids },
+        isActive: true,
+      },
+    })
+
+    if (products.length !== ids.length) {
+      return res.status(400).json({
+        message: 'Produk tidak ditemukan atau tidak aktif.',
+      })
+    }
+
+    const oldItems = Array.isArray(row.items)
+      ? (row.items as any[])
+      : []
+
+    const oldById = new Map(
+      oldItems.map((item) => [
+        String(item.product?.id ?? item.productId),
+        item,
+      ]),
+    )
+
+    const customerForPrices = await priceableCustomer(row.customerId)
+
+    if (customerForPrices) {
+      await refreshCustomerPrices(
+        customerForPrices,
+        [...new Set(products.map((p) => p.itemCode))],
+      )
+    }
+
+    const currentPrices = await pricesForItems(row.customerId, items)
+
+    nextItems = items.map((item: any) => {
+      const product = products.find(
+        (p) => String(p.id) === String(item.productId),
+      )!
+
+      const previous = oldById.get(String(product.id))
+      const current = currentPrices.get(product.itemCode)
+
+      // Existing items retain their original reference price.
+      // New items receive a server-resolved reference price.
+      const price = previous?.price ?? current?.price ?? null
+      const currency = previous?.currency ?? current?.currency ?? null
+      const priceSource =
+        previous?.priceSource ?? current?.source ?? null
+
+      return {
+        product,
+        qty: item.qty,
+        ...(price !== null
+          ? {
+            price,
+            currency,
+            priceSource,
+            lineTotal: round6(item.qty * price),
+          }
+          : {}),
+      }
+    })
+
+    data.items = JSON.parse(JSON.stringify(nextItems))
+  }
+  if (row.status === 'draft' && effectiveStatus === 'pending') {
+    const raw = nextItems ?? (Array.isArray(row.items) ? row.items as any[] : [])
+    const normalized = raw.map((i: any) => ({
+      productId: String(i.product?.id ?? i.productId ?? ''),
+      qty: i.qty,
+      price: i.price ?? i.acceptedPrice ?? null,
+    }))
+    if (!normalized.length || normalized.some((i) => !/^\d+$/.test(i.productId) || !Number.isSafeInteger(i.qty) || i.qty < 1 || i.qty > 100000))
+      return res.status(400).json({ message: 'Item draft tidak valid.' })
+    const ids = normalized.map((i) => BigInt(i.productId))
+    if (new Set(ids.map(String)).size !== ids.length)
+      return res.status(400).json({ message: 'Produk duplikat.' })
+    const products = await prisma.product.findMany({ where: { id: { in: ids }, isActive: true } })
+    if (products.length !== ids.length)
+      return res.status(400).json({ message: 'Produk tidak aktif.' })
+    if (actor.role === 'customer') {
+      const allowed = await customerPurchasedProductFilter(req)
+      const allowedProducts = await prisma.product.findMany({ where: { ...allowed, id: { in: ids } }, select: { id: true } })
+      if (allowedProducts.length !== ids.length)
+        return res.status(403).json({ message: 'Draft berisi produk yang tidak dapat dipesan customer. Hubungi sales.' })
+      const changes = await priceIncreaseCheck(row.customerId, normalized)
+      if (changes.length && !priceAccepted)
+        return res.status(409).json({ code: 'PRICE_INCREASED', priceChanges: changes, message: 'Harga produk naik.' })
+    }
+    const customerForPrices = await priceableCustomer(row.customerId)
+    if (customerForPrices) await refreshCustomerPrices(customerForPrices, [...new Set(products.map((p) => p.itemCode))])
+    const prices = await pricesForItems(row.customerId, normalized)
+    const sources = new Set<string>()
+    const snapshot = normalized.map((i) => {
+      const product = products.find((p) => String(p.id) === i.productId)!
+      const price = prices.get(product.itemCode)
+      if (price) sources.add(price.source)
+      return {
+        product, qty: i.qty, ...(price ? {
+          price: price.price, currency: price.currency,
+          lineTotal: round6(i.qty * price.price), priceSource: price.source
+        } : {})
+      }
+    })
+    data.items = JSON.parse(JSON.stringify(snapshot))
+    data.priceBasis = sources.size === 1 ? [...sources][0] : sources.size > 1 ? 'mixed' : null
+  }
+
   const updated = await prisma.portalRequest.updateMany({
-    where: { id: row.id, status: row.status },
-    data: { ...(sameStatus ? {} : { status }), salesNotes },
+    where: { id: row.id, status: row.status, ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}) },
+    data,
   })
   if (updated.count !== 1)
-    return res.status(409).json({ message: 'Status berubah. Muat ulang daftar.' })
+    return res.status(409).json({ message: 'Draft telah berubah. Muat ulang sebelum menyimpan.' })
 
   if (!sameStatus) {
     const kindLabel = row.kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
@@ -719,6 +952,18 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
       ...(customerUser ? [customerUser.id] : []),
       ...staffRecipients.map((user) => user.id),
     ].filter((userId) => userId !== Number(req.user!.id))
+    const chatMessage = `${kindLabel} ${row.id} diperbarui. Status sekarang: ${effectiveStatus}.`
+    const note = await prisma.followUpNote.create({
+      data: {
+        requestId: row.id,
+        authorId: null,
+        authorName: 'Portal',
+        authorRole: 'system',
+        source: 'system',
+        visibility: 'customer',
+        message: chatMessage,
+      },
+    })
     if (targets.length) {
       const notifications = await prisma.notification.createManyAndReturn({
         data: targets.map((userId) => ({
@@ -740,6 +985,7 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
       row.kind as 'order' | 'quote',
       salesNotes,
     )
+    ws.emitFollowUpAdded(row.id, String(row.customerId), chatMessage, row.kind as 'order' | 'quote')
   }
   return res.json({ success: true })
 }

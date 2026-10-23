@@ -1,6 +1,6 @@
 import { ClipboardList, MessageSquareQuote } from 'lucide-react'
 import { Shell } from '@layouts'
-import { StatusBadge, SapStatusBadge } from '@components'
+import { Loader, StatusBadge, SapStatusBadge } from '@components'
 import { useOrders } from '@contexts'
 import { fmtDate } from '@lib'
 import { useNavigate } from 'react-router-dom'
@@ -41,7 +41,7 @@ const OrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
           {error}
         </p>
       )}
-      {loading && <p>Memuat permintaan...</p>}
+      {loading && <Loader label="Memuat permintaan..." />}
       {!loading && rows.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <EmptyIcon size={48} className="mx-auto mb-4 opacity-20" />

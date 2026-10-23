@@ -1,5 +1,5 @@
 import { ClipboardList, MessageSquareQuote } from 'lucide-react'
-import { StatusBadge } from '@components'
+import { Loader, StatusBadge } from '@components'
 import { STATUS_CONFIG } from '../components/StatusBadge'
 import { SapStatusBadge } from '@components'
 import { useOrders } from '../contexts/OrderContext'
@@ -54,7 +54,7 @@ const AdminOrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
             {error}
           </p>
         )}
-        {loading && <p>Memuat permintaan...</p>}
+        {loading && <Loader label="Memuat permintaan..." />}
 
         {/* Stats row — counts cover this list only */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

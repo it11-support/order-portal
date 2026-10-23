@@ -1,6 +1,7 @@
 import type { OrderStatus, RequestKind } from '@repo/shared'
 
 export const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
+  draft: { label: 'Draft', bg: 'bg-slate-100', text: 'text-slate-700' },
   pending: { label: 'Pending', bg: 'bg-amber-100', text: 'text-amber-700' },
   confirmed: { label: 'Confirm', bg: 'bg-blue-100', text: 'text-blue-700' },
   processing: { label: 'Processing', bg: 'bg-purple-100', text: 'text-purple-700' },
@@ -20,6 +21,7 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; tex
  * they can act on.
  */
 export const QUOTE_STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Menunggu sales',
   pending: 'Menunggu sales',
   processing: 'Menunggu harga dari sistem',
   ready: 'Harga siap — silakan pesan',
@@ -30,6 +32,7 @@ export const QUOTE_STATUS_LABELS: Record<OrderStatus, string> = {
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Draft',
   pending: 'Menunggu konfirmasi',
   processing: 'Diproses',
   confirmed: 'Dikonfirmasi',

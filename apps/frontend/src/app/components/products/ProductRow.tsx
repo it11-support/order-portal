@@ -2,18 +2,12 @@ import { Product } from '@repo/shared'
 import { QtyControl } from '../QtyControl'
 import { useCategories } from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
+import { formatRupiah } from '@/lib/formatCurrency'
 
 type ProductRowProps = {
   product: Product
   onContactSales?: (product: Product) => void
 }
-
-const formatPrice = (price: number, currency: string | null) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: currency || 'IDR',
-    maximumFractionDigits: 2,
-  }).format(price)
 
 export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
   const { getCategoryIcon } = useCategories()
@@ -33,7 +27,7 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
           {hasPrice && (
             <>
               <p className="text-xs font-bold text-foreground mt-1">
-                {formatPrice(product.price!, product.currency ?? null)}
+                {formatRupiah(product.price!)}
                 {product.salesUnit ? ` / ${product.salesUnit}` : ''}
               </p>
               {/* Repeat items are sold at the price this customer already pays;

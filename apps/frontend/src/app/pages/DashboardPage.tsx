@@ -1,4 +1,5 @@
 import { Users, UserCheck, UserX, LockIcon } from 'lucide-react'
+import { Loader } from '@components'
 import { Shell } from '@layouts'
 import { useAuth } from '@contexts'
 import { swrFetcher } from '@lib'
@@ -92,11 +93,7 @@ const DashboardPage = () => {
           </p>
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-20 text-muted-foreground">
-            <p className="text-sm">Memuat dashboard...</p>
-          </div>
-        ) : (
+        {isLoading ? <Loader label="Memuat dashboard..." className="py-20" /> : (
           <>
             <h3 className="text-lg font-bold text-foreground mb-2">Customer</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

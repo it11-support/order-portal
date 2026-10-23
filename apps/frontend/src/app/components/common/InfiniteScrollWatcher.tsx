@@ -1,4 +1,5 @@
 import React from 'react'
+import { Loader } from './Loader'
 
 interface InfiniteScrollWatcherProps {
   isLoading: boolean
@@ -15,7 +16,7 @@ export const InfiniteScrollWatcher = React.forwardRef<HTMLDivElement, InfiniteSc
         <div ref={ref} className="h-8 w-full" />
 
         {/* INITIAL LOADING */}
-        {isLoading && <div className="py-6 text-sm text-gray-500">Memuat data...</div>}
+        {isLoading && <Loader label="Memuat data..." className="py-6" />}
 
         {/* LOAD MORE */}
         {isValidating && !isLoading && !isReachingEnd && (

@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useState, Dispatch, SetStateAction } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import type { CartItem, Product } from '@repo/shared'
 import { useAuth } from './authHook'
 
 type CartContextType = {
   cart: CartItem[]
   setCart: Dispatch<SetStateAction<CartItem[]>>
-  /** Inquiry this basket was started from, so the order can be linked to it. */
   inquiryId: string | null
   setInquiryId: Dispatch<SetStateAction<string | null>>
   getQty: (pid: number) => number
@@ -19,6 +19,19 @@ type CartContextType = {
 }
 
 const CartContext = createContext<CartContextType | null>(null)
+const productKey = (id: string | number) => String(id)
+
+// Keep the last occurrence of an item (no quantity summing), while retaining
+// the original ordering. This also cleans up carts saved by older code.
+const normalizeCart = (items: CartItem[]): CartItem[] => {
+  const byId = new Map<string, CartItem>()
+  for (const item of items) {
+    if (!item?.product?.id || !Number.isFinite(Number(item.qty)) || Number(item.qty) <= 0) continue
+    const key = productKey(item.product.id)
+    byId.set(key, { ...item, qty: Number(item.qty) })
+  }
+  return [...byId.values()]
+}
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, isCustomer } = useAuth()
@@ -36,48 +49,53 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setCart: Dispatch<SetStateAction<CartItem[]>> = (next) => {
     if (!isCustomer) return
-    setItems(next)
+    setItems((previous) => normalizeCart(typeof next === 'function' ? next(previous) : next))
   }
 
-  const getQty = (pid: number) => {
-    return cart.find((i) => i.product.id === pid)?.qty ?? 0
-  }
-
-  const onQtyChange = (product: Product, qty: number) => {
-    setQty(product, qty)
-  }
+  const getQty = (pid: number) =>
+    cart.find((item) => productKey(item.product.id) === productKey(pid))?.qty ?? 0
 
   const setQty = (product: Product, qty: number) => {
-    // The price the customer saw when the item entered the cart is what the
-    // order is placed against. The server compares it against the live price
-    // and holds the order if the item got more expensive in the meantime.
-    const acceptedPrice = product.price ?? null
-    if (qty <= 0) setCart((c) => c.filter((i) => i.product.id !== product.id))
-    else
-      setCart((c) => {
-        const ex = c.find((i) => i.product.id === product.id)
-        if (ex) return c.map((i) => (i.product.id === product.id ? { ...i, qty } : i))
-        return [...c, { product, qty, acceptedPrice }]
-      })
+    if (!Number.isFinite(qty)) return
+    const key = productKey(product.id)
+    setCart((previous) => {
+      if (qty <= 0) return previous.filter((item) => productKey(item.product.id) !== key)
+      const exists = previous.some((item) => productKey(item.product.id) === key)
+      if (exists) {
+        return previous.map((item) =>
+          productKey(item.product.id) === key ? { ...item, qty } : item,
+        )
+      }
+      return [...previous, { product, qty, acceptedPrice: product.price ?? null }]
+    })
   }
 
-  const increase = (product: Product) => {
-    const q = getQty(product.id)
-    setQty(product, q === 0 ? 1 : q + 1)
+  // Functional updates avoid stale quantities when users click +/- quickly.
+  const adjustQty = (product: Product, delta: number) => {
+    const key = productKey(product.id)
+    setCart((previous) => {
+      const existing = previous.find((item) => productKey(item.product.id) === key)
+      const nextQty = (existing?.qty ?? 0) + delta
+      if (nextQty <= 0) return previous.filter((item) => productKey(item.product.id) !== key)
+      if (existing) {
+        return previous.map((item) =>
+          productKey(item.product.id) === key ? { ...item, qty: nextQty } : item,
+        )
+      }
+      return [...previous, { product, qty: nextQty, acceptedPrice: product.price ?? null }]
+    })
   }
 
-  const decrease = (product: Product) => {
-    const q = getQty(product.id)
-    if (q <= 1) setQty(product, 0)
-    else setQty(product, q - 1)
-  }
-
-  const remove = (productId: number) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId))
-  }
+  const increase = (product: Product) => adjustQty(product, 1)
+  const decrease = (product: Product) => adjustQty(product, -1)
+  const remove = (productId: number) =>
+    setCart((previous) =>
+      previous.filter((item) => productKey(item.product.id) !== productKey(productId)),
+    )
+  const onQtyChange = (product: Product, qty: number) => setQty(product, qty)
 
   const cartCount = cart.length
-  const cartQty = cart.reduce((s, i) => s + (i.qty ?? 0), 0)
+  const cartQty = cart.reduce((sum, item) => sum + (item.qty ?? 0), 0)
 
   return (
     <CartContext.Provider
@@ -90,9 +108,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         setQty,
         increase,
         decrease,
+        remove,
         cartCount,
         cartQty,
-        remove,
         onQtyChange,
       }}
     >
@@ -102,9 +120,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 }
 
 export const useCart = () => {
-  const ctx = useContext(CartContext)
-  if (!ctx) {
-    throw new Error('useCart must be used within CartProvider')
-  }
-  return ctx
+  const context = useContext(CartContext)
+  if (!context) throw new Error('useCart must be used within CartProvider')
+  return context
 }

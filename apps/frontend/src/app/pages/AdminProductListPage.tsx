@@ -1,4 +1,5 @@
 import { Search, ArrowUpDown, X, Check, ChevronDown } from 'lucide-react'
+import { Loader } from '@components'
 import { Shell } from '@layouts'
 import { useCategories, useProducts } from '@contexts'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
@@ -236,9 +237,7 @@ const AdminProductListPage = () => {
         {/* CARD VIEW — mobile only */}
           <div className="md:hidden space-y-3">
             {loading ? (
-              <p className="text-center py-12 text-sm text-muted-foreground">
-                Memuat produk...
-              </p>
+              <Loader label="Memuat produk..." className="py-12" />
             ) : products.length === 0 ? (
               <p className="text-center py-12 text-sm text-muted-foreground">
                 Tidak ada produk
@@ -318,8 +317,8 @@ const AdminProductListPage = () => {
                 <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-gray-400">
-                        Memuat produk...
+                      <td colSpan={6} className="p-10 text-center">
+                        <Loader label="Memuat produk..." />
                       </td>
                     </tr>
                   ) : products.length === 0 ? (

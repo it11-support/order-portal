@@ -1,4 +1,5 @@
 import { Bell, CheckCheck, X, ExternalLink } from 'lucide-react'
+import { Loader } from '@components'
 import { Shell } from '@layouts'
 import { useNotifications, useAuth } from '@contexts'
 import { useNavigate } from 'react-router-dom'
@@ -39,7 +40,7 @@ const NotificationsPage = () => {
         )}
 
         {loading ? (
-          <p className="text-center text-sm text-muted-foreground py-12">Memuat notifikasi...</p>
+          <Loader label="Memuat notifikasi..." className="py-12" />
         ) : notifications.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Bell size={44} className="mx-auto mb-3 opacity-20" />

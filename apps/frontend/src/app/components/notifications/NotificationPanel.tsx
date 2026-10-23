@@ -1,4 +1,5 @@
 import { Bell, X, CheckCheck, ExternalLink } from 'lucide-react'
+import { Loader } from '@components'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications, useAuth } from '@contexts'
@@ -67,7 +68,7 @@ const NotificationPanel = () => {
 
           <div className="max-h-[420px] overflow-y-auto">
             {loading && visible.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-8">Memuat notifikasi...</p>
+              <Loader label="Memuat notifikasi..." className="py-8" />
             ) : visible.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-8">
                 Belum ada notifikasi.

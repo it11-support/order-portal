@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
 import {
+  Loader,
   StatusBadge,
   StatusSteps,
   SapStatusBadge,
@@ -102,7 +103,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     loadOrder()
   }, [orderId, orders, fetchOrder, fetchFollowUps])
 
-  if (loading || orderLoading) return <Shell title="Memuat permintaan">Memuat...</Shell>
+  if (loading || orderLoading) return <Shell title="Memuat permintaan"><Loader /></Shell>
 
   if (!order) {
     return <Shell title="Pesanan tidak ditemukan">Pesanan tidak ditemukan</Shell>
