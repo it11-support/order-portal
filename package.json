@@ -37,6 +37,7 @@
     "@iconify-react/lucide-lab": "^1.0.2",
     "@prisma/client": "^7.10.1",
     "axios": "^1.20.0",
+    "express-rate-limit": "^8.7.1",
     "react-router-dom": "^7.18.4",
     "swr": "^2.5.1"
   }

@@ -6,6 +6,7 @@ import helmet from 'helmet'
 import routes from '@routes'
 import { ws } from '@/services/websocket'
 import { startSapStatusPoller } from '@/services/sap-poller'
+import { defaultLimiter } from './utils/limiter'
 
 const app = express()
 app.set('trust proxy', 2)
@@ -17,6 +18,9 @@ app.use(
     crossOriginEmbedderPolicy: false,
   }),
 )
+
+app.use(defaultLimiter)
+
 
 const port = Number(process.env.PORT ?? 3001)
 
