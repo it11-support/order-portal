@@ -157,7 +157,12 @@ model CustomerItemPrice {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @map("updated_at") @db.Timestamp(0)
-
+  lastInvoicePrice Decimal?  @map("last_invoice_price") @db.Decimal(19, 6)
+  lastInvoiceDate  DateTime? @map("last_invoice_date") @db.Timestamp(6)
+  lastInvoiceNum   String?   @map("last_invoice_num") @db.VarChar(50)
+  discountSource        String    @default("none") @map("discount_source") @db.VarChar(10)
+  lastInvoiceDiscount   Decimal?  @map("last_invoice_discount") @db.Decimal(9, 4)
+  lastInvoiceBasePrice  Decimal?  @map("last_invoice_base_price") @db.Decimal(19, 6)
   customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   item    Product   @relation(fields: [itemCode], references: [itemCode], onDelete: Cascade, onUpdate: Cascade)
 
@@ -333,9 +338,12 @@ model Product {
 
   isDistributor Boolean @default(false) @map("is_distributor")
 
-  salesUnit     String?  @map("sales_unit")
-  salesPackSize Decimal? @map("sales_pack_size") @db.Decimal(19, 6)
-  salesPackUnit String?  @map("sales_pack_unit")
+  // SAP Inventory & Unit Conversion
+  inventoryUnit    String?  @map("inventory_unit")
+  salesUnit        String?  @map("sales_unit")
+  salesPackSize    Decimal? @map("sales_pack_size") @db.Decimal(19, 6)
+  purchaseUnit     String?  @map("purchase_unit")
+  purchasePackSize Decimal? @map("purchase_pack_size") @db.Decimal(19, 6)
 
   launchDate DateTime? @map("launch_date") @db.Date
   isActive   Boolean   @default(true) @map("is_active")
@@ -347,7 +355,7 @@ model Product {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   customerPrices CustomerItemPrice[]
-  
+
   @@index([productGroupCode])
   @@index([productCategory])
   @@index([isActive])

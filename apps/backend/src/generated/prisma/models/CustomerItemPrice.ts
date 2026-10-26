@@ -30,12 +30,18 @@ export type CustomerItemPriceAvgAggregateOutputType = {
   customerId: number | null
   price: runtime.Decimal | null
   discountApplied: runtime.Decimal | null
+  lastInvoicePrice: runtime.Decimal | null
+  lastInvoiceDiscount: runtime.Decimal | null
+  lastInvoiceBasePrice: runtime.Decimal | null
 }
 
 export type CustomerItemPriceSumAggregateOutputType = {
   customerId: bigint | null
   price: runtime.Decimal | null
   discountApplied: runtime.Decimal | null
+  lastInvoicePrice: runtime.Decimal | null
+  lastInvoiceDiscount: runtime.Decimal | null
+  lastInvoiceBasePrice: runtime.Decimal | null
 }
 
 export type CustomerItemPriceMinAggregateOutputType = {
@@ -50,6 +56,12 @@ export type CustomerItemPriceMinAggregateOutputType = {
   lastPurchasedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  lastInvoicePrice: runtime.Decimal | null
+  lastInvoiceDate: Date | null
+  lastInvoiceNum: string | null
+  discountSource: string | null
+  lastInvoiceDiscount: runtime.Decimal | null
+  lastInvoiceBasePrice: runtime.Decimal | null
 }
 
 export type CustomerItemPriceMaxAggregateOutputType = {
@@ -64,6 +76,12 @@ export type CustomerItemPriceMaxAggregateOutputType = {
   lastPurchasedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  lastInvoicePrice: runtime.Decimal | null
+  lastInvoiceDate: Date | null
+  lastInvoiceNum: string | null
+  discountSource: string | null
+  lastInvoiceDiscount: runtime.Decimal | null
+  lastInvoiceBasePrice: runtime.Decimal | null
 }
 
 export type CustomerItemPriceCountAggregateOutputType = {
@@ -78,6 +96,12 @@ export type CustomerItemPriceCountAggregateOutputType = {
   lastPurchasedAt: number
   createdAt: number
   updatedAt: number
+  lastInvoicePrice: number
+  lastInvoiceDate: number
+  lastInvoiceNum: number
+  discountSource: number
+  lastInvoiceDiscount: number
+  lastInvoiceBasePrice: number
   _all: number
 }
 
@@ -86,12 +110,18 @@ export type CustomerItemPriceAvgAggregateInputType = {
   customerId?: true
   price?: true
   discountApplied?: true
+  lastInvoicePrice?: true
+  lastInvoiceDiscount?: true
+  lastInvoiceBasePrice?: true
 }
 
 export type CustomerItemPriceSumAggregateInputType = {
   customerId?: true
   price?: true
   discountApplied?: true
+  lastInvoicePrice?: true
+  lastInvoiceDiscount?: true
+  lastInvoiceBasePrice?: true
 }
 
 export type CustomerItemPriceMinAggregateInputType = {
@@ -106,6 +136,12 @@ export type CustomerItemPriceMinAggregateInputType = {
   lastPurchasedAt?: true
   createdAt?: true
   updatedAt?: true
+  lastInvoicePrice?: true
+  lastInvoiceDate?: true
+  lastInvoiceNum?: true
+  discountSource?: true
+  lastInvoiceDiscount?: true
+  lastInvoiceBasePrice?: true
 }
 
 export type CustomerItemPriceMaxAggregateInputType = {
@@ -120,6 +156,12 @@ export type CustomerItemPriceMaxAggregateInputType = {
   lastPurchasedAt?: true
   createdAt?: true
   updatedAt?: true
+  lastInvoicePrice?: true
+  lastInvoiceDate?: true
+  lastInvoiceNum?: true
+  discountSource?: true
+  lastInvoiceDiscount?: true
+  lastInvoiceBasePrice?: true
 }
 
 export type CustomerItemPriceCountAggregateInputType = {
@@ -134,6 +176,12 @@ export type CustomerItemPriceCountAggregateInputType = {
   lastPurchasedAt?: true
   createdAt?: true
   updatedAt?: true
+  lastInvoicePrice?: true
+  lastInvoiceDate?: true
+  lastInvoiceNum?: true
+  discountSource?: true
+  lastInvoiceDiscount?: true
+  lastInvoiceBasePrice?: true
   _all?: true
 }
 
@@ -235,6 +283,12 @@ export type CustomerItemPriceGroupByOutputType = {
   lastPurchasedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  lastInvoicePrice: runtime.Decimal | null
+  lastInvoiceDate: Date | null
+  lastInvoiceNum: string | null
+  discountSource: string
+  lastInvoiceDiscount: runtime.Decimal | null
+  lastInvoiceBasePrice: runtime.Decimal | null
   _count: CustomerItemPriceCountAggregateOutputType | null
   _avg: CustomerItemPriceAvgAggregateOutputType | null
   _sum: CustomerItemPriceSumAggregateOutputType | null
@@ -272,6 +326,12 @@ export type CustomerItemPriceWhereInput = {
   lastPurchasedAt?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
+  lastInvoicePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
+  lastInvoiceNum?: Prisma.StringNullableFilter<"CustomerItemPrice"> | string | null
+  discountSource?: Prisma.StringFilter<"CustomerItemPrice"> | string
+  lastInvoiceDiscount?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer?: Prisma.XOR<Prisma.CustomersScalarRelationFilter, Prisma.CustomersWhereInput>
   item?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
 }
@@ -288,6 +348,12 @@ export type CustomerItemPriceOrderByWithRelationInput = {
   lastPurchasedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceNum?: Prisma.SortOrderInput | Prisma.SortOrder
+  discountSource?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrderInput | Prisma.SortOrder
   customer?: Prisma.CustomersOrderByWithRelationInput
   item?: Prisma.ProductOrderByWithRelationInput
 }
@@ -308,6 +374,12 @@ export type CustomerItemPriceWhereUniqueInput = Prisma.AtLeast<{
   lastPurchasedAt?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
+  lastInvoicePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
+  lastInvoiceNum?: Prisma.StringNullableFilter<"CustomerItemPrice"> | string | null
+  discountSource?: Prisma.StringFilter<"CustomerItemPrice"> | string
+  lastInvoiceDiscount?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer?: Prisma.XOR<Prisma.CustomersScalarRelationFilter, Prisma.CustomersWhereInput>
   item?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
 }, "customerId_itemCode">
@@ -324,6 +396,12 @@ export type CustomerItemPriceOrderByWithAggregationInput = {
   lastPurchasedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceNum?: Prisma.SortOrderInput | Prisma.SortOrder
+  discountSource?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CustomerItemPriceCountOrderByAggregateInput
   _avg?: Prisma.CustomerItemPriceAvgOrderByAggregateInput
   _max?: Prisma.CustomerItemPriceMaxOrderByAggregateInput
@@ -346,6 +424,12 @@ export type CustomerItemPriceScalarWhereWithAggregatesInput = {
   lastPurchasedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CustomerItemPrice"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CustomerItemPrice"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CustomerItemPrice"> | Date | string
+  lastInvoicePrice?: Prisma.DecimalNullableWithAggregatesFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.DateTimeNullableWithAggregatesFilter<"CustomerItemPrice"> | Date | string | null
+  lastInvoiceNum?: Prisma.StringNullableWithAggregatesFilter<"CustomerItemPrice"> | string | null
+  discountSource?: Prisma.StringWithAggregatesFilter<"CustomerItemPrice"> | string
+  lastInvoiceDiscount?: Prisma.DecimalNullableWithAggregatesFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.DecimalNullableWithAggregatesFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateInput = {
@@ -358,6 +442,12 @@ export type CustomerItemPriceCreateInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer: Prisma.CustomersCreateNestedOneWithoutItemPricesInput
   item: Prisma.ProductCreateNestedOneWithoutCustomerPricesInput
 }
@@ -374,6 +464,12 @@ export type CustomerItemPriceUncheckedCreateInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUpdateInput = {
@@ -386,6 +482,12 @@ export type CustomerItemPriceUpdateInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer?: Prisma.CustomersUpdateOneRequiredWithoutItemPricesNestedInput
   item?: Prisma.ProductUpdateOneRequiredWithoutCustomerPricesNestedInput
 }
@@ -402,6 +504,12 @@ export type CustomerItemPriceUncheckedUpdateInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateManyInput = {
@@ -416,6 +524,12 @@ export type CustomerItemPriceCreateManyInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUpdateManyMutationInput = {
@@ -428,6 +542,12 @@ export type CustomerItemPriceUpdateManyMutationInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUncheckedUpdateManyInput = {
@@ -442,6 +562,12 @@ export type CustomerItemPriceUncheckedUpdateManyInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceListRelationFilter = {
@@ -471,12 +597,21 @@ export type CustomerItemPriceCountOrderByAggregateInput = {
   lastPurchasedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrder
+  lastInvoiceDate?: Prisma.SortOrder
+  lastInvoiceNum?: Prisma.SortOrder
+  discountSource?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrder
 }
 
 export type CustomerItemPriceAvgOrderByAggregateInput = {
   customerId?: Prisma.SortOrder
   price?: Prisma.SortOrder
   discountApplied?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrder
 }
 
 export type CustomerItemPriceMaxOrderByAggregateInput = {
@@ -491,6 +626,12 @@ export type CustomerItemPriceMaxOrderByAggregateInput = {
   lastPurchasedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrder
+  lastInvoiceDate?: Prisma.SortOrder
+  lastInvoiceNum?: Prisma.SortOrder
+  discountSource?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrder
 }
 
 export type CustomerItemPriceMinOrderByAggregateInput = {
@@ -505,12 +646,21 @@ export type CustomerItemPriceMinOrderByAggregateInput = {
   lastPurchasedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrder
+  lastInvoiceDate?: Prisma.SortOrder
+  lastInvoiceNum?: Prisma.SortOrder
+  discountSource?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrder
 }
 
 export type CustomerItemPriceSumOrderByAggregateInput = {
   customerId?: Prisma.SortOrder
   price?: Prisma.SortOrder
   discountApplied?: Prisma.SortOrder
+  lastInvoicePrice?: Prisma.SortOrder
+  lastInvoiceDiscount?: Prisma.SortOrder
+  lastInvoiceBasePrice?: Prisma.SortOrder
 }
 
 export type CustomerItemPriceCreateNestedManyWithoutCustomerInput = {
@@ -615,6 +765,12 @@ export type CustomerItemPriceCreateWithoutCustomerInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   item: Prisma.ProductCreateNestedOneWithoutCustomerPricesInput
 }
 
@@ -629,6 +785,12 @@ export type CustomerItemPriceUncheckedCreateWithoutCustomerInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateOrConnectWithoutCustomerInput = {
@@ -672,6 +834,12 @@ export type CustomerItemPriceScalarWhereInput = {
   lastPurchasedAt?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CustomerItemPrice"> | Date | string
+  lastInvoicePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.DateTimeNullableFilter<"CustomerItemPrice"> | Date | string | null
+  lastInvoiceNum?: Prisma.StringNullableFilter<"CustomerItemPrice"> | string | null
+  discountSource?: Prisma.StringFilter<"CustomerItemPrice"> | string
+  lastInvoiceDiscount?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.DecimalNullableFilter<"CustomerItemPrice"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateWithoutItemInput = {
@@ -684,6 +852,12 @@ export type CustomerItemPriceCreateWithoutItemInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer: Prisma.CustomersCreateNestedOneWithoutItemPricesInput
 }
 
@@ -698,6 +872,12 @@ export type CustomerItemPriceUncheckedCreateWithoutItemInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateOrConnectWithoutItemInput = {
@@ -737,6 +917,12 @@ export type CustomerItemPriceCreateManyCustomerInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUpdateWithoutCustomerInput = {
@@ -749,6 +935,12 @@ export type CustomerItemPriceUpdateWithoutCustomerInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   item?: Prisma.ProductUpdateOneRequiredWithoutCustomerPricesNestedInput
 }
 
@@ -763,6 +955,12 @@ export type CustomerItemPriceUncheckedUpdateWithoutCustomerInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUncheckedUpdateManyWithoutCustomerInput = {
@@ -776,6 +974,12 @@ export type CustomerItemPriceUncheckedUpdateManyWithoutCustomerInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceCreateManyItemInput = {
@@ -789,6 +993,12 @@ export type CustomerItemPriceCreateManyItemInput = {
   lastPurchasedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt: Date | string
+  lastInvoicePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Date | string | null
+  lastInvoiceNum?: string | null
+  discountSource?: string
+  lastInvoiceDiscount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUpdateWithoutItemInput = {
@@ -801,6 +1011,12 @@ export type CustomerItemPriceUpdateWithoutItemInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   customer?: Prisma.CustomersUpdateOneRequiredWithoutItemPricesNestedInput
 }
 
@@ -815,6 +1031,12 @@ export type CustomerItemPriceUncheckedUpdateWithoutItemInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 export type CustomerItemPriceUncheckedUpdateManyWithoutItemInput = {
@@ -828,6 +1050,12 @@ export type CustomerItemPriceUncheckedUpdateManyWithoutItemInput = {
   lastPurchasedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastInvoicePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastInvoiceNum?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  discountSource?: Prisma.StringFieldUpdateOperationsInput | string
+  lastInvoiceDiscount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  lastInvoiceBasePrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
 }
 
 
@@ -844,6 +1072,12 @@ export type CustomerItemPriceSelect<ExtArgs extends runtime.Types.Extensions.Int
   lastPurchasedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  lastInvoicePrice?: boolean
+  lastInvoiceDate?: boolean
+  lastInvoiceNum?: boolean
+  discountSource?: boolean
+  lastInvoiceDiscount?: boolean
+  lastInvoiceBasePrice?: boolean
   customer?: boolean | Prisma.CustomersDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customerItemPrice"]>
@@ -860,6 +1094,12 @@ export type CustomerItemPriceSelectCreateManyAndReturn<ExtArgs extends runtime.T
   lastPurchasedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  lastInvoicePrice?: boolean
+  lastInvoiceDate?: boolean
+  lastInvoiceNum?: boolean
+  discountSource?: boolean
+  lastInvoiceDiscount?: boolean
+  lastInvoiceBasePrice?: boolean
   customer?: boolean | Prisma.CustomersDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customerItemPrice"]>
@@ -876,6 +1116,12 @@ export type CustomerItemPriceSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   lastPurchasedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  lastInvoicePrice?: boolean
+  lastInvoiceDate?: boolean
+  lastInvoiceNum?: boolean
+  discountSource?: boolean
+  lastInvoiceDiscount?: boolean
+  lastInvoiceBasePrice?: boolean
   customer?: boolean | Prisma.CustomersDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["customerItemPrice"]>
@@ -892,9 +1138,15 @@ export type CustomerItemPriceSelectScalar = {
   lastPurchasedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  lastInvoicePrice?: boolean
+  lastInvoiceDate?: boolean
+  lastInvoiceNum?: boolean
+  discountSource?: boolean
+  lastInvoiceDiscount?: boolean
+  lastInvoiceBasePrice?: boolean
 }
 
-export type CustomerItemPriceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"customerId" | "itemCode" | "price" | "currency" | "discountApplied" | "source" | "sourceDoc" | "lastChangedAt" | "lastPurchasedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["customerItemPrice"]>
+export type CustomerItemPriceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"customerId" | "itemCode" | "price" | "currency" | "discountApplied" | "source" | "sourceDoc" | "lastChangedAt" | "lastPurchasedAt" | "createdAt" | "updatedAt" | "lastInvoicePrice" | "lastInvoiceDate" | "lastInvoiceNum" | "discountSource" | "lastInvoiceDiscount" | "lastInvoiceBasePrice", ExtArgs["result"]["customerItemPrice"]>
 export type CustomerItemPriceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customer?: boolean | Prisma.CustomersDefaultArgs<ExtArgs>
   item?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
@@ -926,6 +1178,12 @@ export type $CustomerItemPricePayload<ExtArgs extends runtime.Types.Extensions.I
     lastPurchasedAt: Date | null
     createdAt: Date
     updatedAt: Date
+    lastInvoicePrice: runtime.Decimal | null
+    lastInvoiceDate: Date | null
+    lastInvoiceNum: string | null
+    discountSource: string
+    lastInvoiceDiscount: runtime.Decimal | null
+    lastInvoiceBasePrice: runtime.Decimal | null
   }, ExtArgs["result"]["customerItemPrice"]>
   composites: {}
 }
@@ -1362,6 +1620,12 @@ export interface CustomerItemPriceFieldRefs {
   readonly lastPurchasedAt: Prisma.FieldRef<"CustomerItemPrice", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"CustomerItemPrice", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CustomerItemPrice", 'DateTime'>
+  readonly lastInvoicePrice: Prisma.FieldRef<"CustomerItemPrice", 'Decimal'>
+  readonly lastInvoiceDate: Prisma.FieldRef<"CustomerItemPrice", 'DateTime'>
+  readonly lastInvoiceNum: Prisma.FieldRef<"CustomerItemPrice", 'String'>
+  readonly discountSource: Prisma.FieldRef<"CustomerItemPrice", 'String'>
+  readonly lastInvoiceDiscount: Prisma.FieldRef<"CustomerItemPrice", 'Decimal'>
+  readonly lastInvoiceBasePrice: Prisma.FieldRef<"CustomerItemPrice", 'Decimal'>
 }
     
 

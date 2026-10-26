@@ -30,6 +30,7 @@ export type ProductAvgAggregateOutputType = {
   id: number | null
   productGroupCode: number | null
   salesPackSize: runtime.Decimal | null
+  purchasePackSize: runtime.Decimal | null
   vatRate: runtime.Decimal | null
 }
 
@@ -37,6 +38,7 @@ export type ProductSumAggregateOutputType = {
   id: bigint | null
   productGroupCode: number | null
   salesPackSize: runtime.Decimal | null
+  purchasePackSize: runtime.Decimal | null
   vatRate: runtime.Decimal | null
 }
 
@@ -49,9 +51,11 @@ export type ProductMinAggregateOutputType = {
   productGroupName: string | null
   productCategory: string | null
   isDistributor: boolean | null
+  inventoryUnit: string | null
   salesUnit: string | null
   salesPackSize: runtime.Decimal | null
-  salesPackUnit: string | null
+  purchaseUnit: string | null
+  purchasePackSize: runtime.Decimal | null
   launchDate: Date | null
   isActive: boolean | null
   vatGroup: string | null
@@ -69,9 +73,11 @@ export type ProductMaxAggregateOutputType = {
   productGroupName: string | null
   productCategory: string | null
   isDistributor: boolean | null
+  inventoryUnit: string | null
   salesUnit: string | null
   salesPackSize: runtime.Decimal | null
-  salesPackUnit: string | null
+  purchaseUnit: string | null
+  purchasePackSize: runtime.Decimal | null
   launchDate: Date | null
   isActive: boolean | null
   vatGroup: string | null
@@ -89,9 +95,11 @@ export type ProductCountAggregateOutputType = {
   productGroupName: number
   productCategory: number
   isDistributor: number
+  inventoryUnit: number
   salesUnit: number
   salesPackSize: number
-  salesPackUnit: number
+  purchaseUnit: number
+  purchasePackSize: number
   launchDate: number
   isActive: number
   vatGroup: number
@@ -106,6 +114,7 @@ export type ProductAvgAggregateInputType = {
   id?: true
   productGroupCode?: true
   salesPackSize?: true
+  purchasePackSize?: true
   vatRate?: true
 }
 
@@ -113,6 +122,7 @@ export type ProductSumAggregateInputType = {
   id?: true
   productGroupCode?: true
   salesPackSize?: true
+  purchasePackSize?: true
   vatRate?: true
 }
 
@@ -125,9 +135,11 @@ export type ProductMinAggregateInputType = {
   productGroupName?: true
   productCategory?: true
   isDistributor?: true
+  inventoryUnit?: true
   salesUnit?: true
   salesPackSize?: true
-  salesPackUnit?: true
+  purchaseUnit?: true
+  purchasePackSize?: true
   launchDate?: true
   isActive?: true
   vatGroup?: true
@@ -145,9 +157,11 @@ export type ProductMaxAggregateInputType = {
   productGroupName?: true
   productCategory?: true
   isDistributor?: true
+  inventoryUnit?: true
   salesUnit?: true
   salesPackSize?: true
-  salesPackUnit?: true
+  purchaseUnit?: true
+  purchasePackSize?: true
   launchDate?: true
   isActive?: true
   vatGroup?: true
@@ -165,9 +179,11 @@ export type ProductCountAggregateInputType = {
   productGroupName?: true
   productCategory?: true
   isDistributor?: true
+  inventoryUnit?: true
   salesUnit?: true
   salesPackSize?: true
-  salesPackUnit?: true
+  purchaseUnit?: true
+  purchasePackSize?: true
   launchDate?: true
   isActive?: true
   vatGroup?: true
@@ -272,9 +288,11 @@ export type ProductGroupByOutputType = {
   productGroupName: string | null
   productCategory: string
   isDistributor: boolean
+  inventoryUnit: string | null
   salesUnit: string | null
   salesPackSize: runtime.Decimal | null
-  salesPackUnit: string | null
+  purchaseUnit: string | null
+  purchasePackSize: runtime.Decimal | null
   launchDate: Date | null
   isActive: boolean
   vatGroup: string | null
@@ -315,9 +333,11 @@ export type ProductWhereInput = {
   productGroupName?: Prisma.StringNullableFilter<"Product"> | string | null
   productCategory?: Prisma.StringFilter<"Product"> | string
   isDistributor?: Prisma.BoolFilter<"Product"> | boolean
+  inventoryUnit?: Prisma.StringNullableFilter<"Product"> | string | null
   salesUnit?: Prisma.StringNullableFilter<"Product"> | string | null
   salesPackSize?: Prisma.DecimalNullableFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.StringNullableFilter<"Product"> | string | null
+  purchaseUnit?: Prisma.StringNullableFilter<"Product"> | string | null
+  purchasePackSize?: Prisma.DecimalNullableFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
   isActive?: Prisma.BoolFilter<"Product"> | boolean
   vatGroup?: Prisma.StringNullableFilter<"Product"> | string | null
@@ -336,9 +356,11 @@ export type ProductOrderByWithRelationInput = {
   productGroupName?: Prisma.SortOrderInput | Prisma.SortOrder
   productCategory?: Prisma.SortOrder
   isDistributor?: Prisma.SortOrder
+  inventoryUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   salesUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   salesPackSize?: Prisma.SortOrderInput | Prisma.SortOrder
-  salesPackUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  purchaseUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrderInput | Prisma.SortOrder
   launchDate?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   vatGroup?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -360,9 +382,11 @@ export type ProductWhereUniqueInput = Prisma.AtLeast<{
   productGroupName?: Prisma.StringNullableFilter<"Product"> | string | null
   productCategory?: Prisma.StringFilter<"Product"> | string
   isDistributor?: Prisma.BoolFilter<"Product"> | boolean
+  inventoryUnit?: Prisma.StringNullableFilter<"Product"> | string | null
   salesUnit?: Prisma.StringNullableFilter<"Product"> | string | null
   salesPackSize?: Prisma.DecimalNullableFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.StringNullableFilter<"Product"> | string | null
+  purchaseUnit?: Prisma.StringNullableFilter<"Product"> | string | null
+  purchasePackSize?: Prisma.DecimalNullableFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.DateTimeNullableFilter<"Product"> | Date | string | null
   isActive?: Prisma.BoolFilter<"Product"> | boolean
   vatGroup?: Prisma.StringNullableFilter<"Product"> | string | null
@@ -381,9 +405,11 @@ export type ProductOrderByWithAggregationInput = {
   productGroupName?: Prisma.SortOrderInput | Prisma.SortOrder
   productCategory?: Prisma.SortOrder
   isDistributor?: Prisma.SortOrder
+  inventoryUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   salesUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   salesPackSize?: Prisma.SortOrderInput | Prisma.SortOrder
-  salesPackUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  purchaseUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrderInput | Prisma.SortOrder
   launchDate?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   vatGroup?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -409,9 +435,11 @@ export type ProductScalarWhereWithAggregatesInput = {
   productGroupName?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
   productCategory?: Prisma.StringWithAggregatesFilter<"Product"> | string
   isDistributor?: Prisma.BoolWithAggregatesFilter<"Product"> | boolean
+  inventoryUnit?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
   salesUnit?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
   salesPackSize?: Prisma.DecimalNullableWithAggregatesFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
+  purchaseUnit?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
+  purchasePackSize?: Prisma.DecimalNullableWithAggregatesFilter<"Product"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Product"> | Date | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"Product"> | boolean
   vatGroup?: Prisma.StringNullableWithAggregatesFilter<"Product"> | string | null
@@ -429,9 +457,11 @@ export type ProductCreateInput = {
   productGroupName?: string | null
   productCategory?: string
   isDistributor?: boolean
+  inventoryUnit?: string | null
   salesUnit?: string | null
   salesPackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: string | null
+  purchaseUnit?: string | null
+  purchasePackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Date | string | null
   isActive?: boolean
   vatGroup?: string | null
@@ -450,9 +480,11 @@ export type ProductUncheckedCreateInput = {
   productGroupName?: string | null
   productCategory?: string
   isDistributor?: boolean
+  inventoryUnit?: string | null
   salesUnit?: string | null
   salesPackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: string | null
+  purchaseUnit?: string | null
+  purchasePackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Date | string | null
   isActive?: boolean
   vatGroup?: string | null
@@ -471,9 +503,11 @@ export type ProductUpdateInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -492,9 +526,11 @@ export type ProductUncheckedUpdateInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -513,9 +549,11 @@ export type ProductCreateManyInput = {
   productGroupName?: string | null
   productCategory?: string
   isDistributor?: boolean
+  inventoryUnit?: string | null
   salesUnit?: string | null
   salesPackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: string | null
+  purchaseUnit?: string | null
+  purchasePackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Date | string | null
   isActive?: boolean
   vatGroup?: string | null
@@ -533,9 +571,11 @@ export type ProductUpdateManyMutationInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -553,9 +593,11 @@ export type ProductUncheckedUpdateManyInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -578,9 +620,11 @@ export type ProductCountOrderByAggregateInput = {
   productGroupName?: Prisma.SortOrder
   productCategory?: Prisma.SortOrder
   isDistributor?: Prisma.SortOrder
+  inventoryUnit?: Prisma.SortOrder
   salesUnit?: Prisma.SortOrder
   salesPackSize?: Prisma.SortOrder
-  salesPackUnit?: Prisma.SortOrder
+  purchaseUnit?: Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrder
   launchDate?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   vatGroup?: Prisma.SortOrder
@@ -593,6 +637,7 @@ export type ProductAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   productGroupCode?: Prisma.SortOrder
   salesPackSize?: Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrder
   vatRate?: Prisma.SortOrder
 }
 
@@ -605,9 +650,11 @@ export type ProductMaxOrderByAggregateInput = {
   productGroupName?: Prisma.SortOrder
   productCategory?: Prisma.SortOrder
   isDistributor?: Prisma.SortOrder
+  inventoryUnit?: Prisma.SortOrder
   salesUnit?: Prisma.SortOrder
   salesPackSize?: Prisma.SortOrder
-  salesPackUnit?: Prisma.SortOrder
+  purchaseUnit?: Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrder
   launchDate?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   vatGroup?: Prisma.SortOrder
@@ -625,9 +672,11 @@ export type ProductMinOrderByAggregateInput = {
   productGroupName?: Prisma.SortOrder
   productCategory?: Prisma.SortOrder
   isDistributor?: Prisma.SortOrder
+  inventoryUnit?: Prisma.SortOrder
   salesUnit?: Prisma.SortOrder
   salesPackSize?: Prisma.SortOrder
-  salesPackUnit?: Prisma.SortOrder
+  purchaseUnit?: Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrder
   launchDate?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   vatGroup?: Prisma.SortOrder
@@ -640,6 +689,7 @@ export type ProductSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   productGroupCode?: Prisma.SortOrder
   salesPackSize?: Prisma.SortOrder
+  purchasePackSize?: Prisma.SortOrder
   vatRate?: Prisma.SortOrder
 }
 
@@ -666,9 +716,11 @@ export type ProductCreateWithoutCustomerPricesInput = {
   productGroupName?: string | null
   productCategory?: string
   isDistributor?: boolean
+  inventoryUnit?: string | null
   salesUnit?: string | null
   salesPackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: string | null
+  purchaseUnit?: string | null
+  purchasePackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Date | string | null
   isActive?: boolean
   vatGroup?: string | null
@@ -686,9 +738,11 @@ export type ProductUncheckedCreateWithoutCustomerPricesInput = {
   productGroupName?: string | null
   productCategory?: string
   isDistributor?: boolean
+  inventoryUnit?: string | null
   salesUnit?: string | null
   salesPackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: string | null
+  purchaseUnit?: string | null
+  purchasePackSize?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Date | string | null
   isActive?: boolean
   vatGroup?: string | null
@@ -722,9 +776,11 @@ export type ProductUpdateWithoutCustomerPricesInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -742,9 +798,11 @@ export type ProductUncheckedUpdateWithoutCustomerPricesInput = {
   productGroupName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   productCategory?: Prisma.StringFieldUpdateOperationsInput | string
   isDistributor?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventoryUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
-  salesPackUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchaseUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purchasePackSize?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   launchDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   vatGroup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -793,9 +851,11 @@ export type ProductSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   productGroupName?: boolean
   productCategory?: boolean
   isDistributor?: boolean
+  inventoryUnit?: boolean
   salesUnit?: boolean
   salesPackSize?: boolean
-  salesPackUnit?: boolean
+  purchaseUnit?: boolean
+  purchasePackSize?: boolean
   launchDate?: boolean
   isActive?: boolean
   vatGroup?: boolean
@@ -815,9 +875,11 @@ export type ProductSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   productGroupName?: boolean
   productCategory?: boolean
   isDistributor?: boolean
+  inventoryUnit?: boolean
   salesUnit?: boolean
   salesPackSize?: boolean
-  salesPackUnit?: boolean
+  purchaseUnit?: boolean
+  purchasePackSize?: boolean
   launchDate?: boolean
   isActive?: boolean
   vatGroup?: boolean
@@ -835,9 +897,11 @@ export type ProductSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   productGroupName?: boolean
   productCategory?: boolean
   isDistributor?: boolean
+  inventoryUnit?: boolean
   salesUnit?: boolean
   salesPackSize?: boolean
-  salesPackUnit?: boolean
+  purchaseUnit?: boolean
+  purchasePackSize?: boolean
   launchDate?: boolean
   isActive?: boolean
   vatGroup?: boolean
@@ -855,9 +919,11 @@ export type ProductSelectScalar = {
   productGroupName?: boolean
   productCategory?: boolean
   isDistributor?: boolean
+  inventoryUnit?: boolean
   salesUnit?: boolean
   salesPackSize?: boolean
-  salesPackUnit?: boolean
+  purchaseUnit?: boolean
+  purchasePackSize?: boolean
   launchDate?: boolean
   isActive?: boolean
   vatGroup?: boolean
@@ -866,7 +932,7 @@ export type ProductSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ProductOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "itemCode" | "itemName" | "foreignName" | "productGroupCode" | "productGroupName" | "productCategory" | "isDistributor" | "salesUnit" | "salesPackSize" | "salesPackUnit" | "launchDate" | "isActive" | "vatGroup" | "vatRate" | "createdAt" | "updatedAt", ExtArgs["result"]["product"]>
+export type ProductOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "itemCode" | "itemName" | "foreignName" | "productGroupCode" | "productGroupName" | "productCategory" | "isDistributor" | "inventoryUnit" | "salesUnit" | "salesPackSize" | "purchaseUnit" | "purchasePackSize" | "launchDate" | "isActive" | "vatGroup" | "vatRate" | "createdAt" | "updatedAt", ExtArgs["result"]["product"]>
 export type ProductInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   customerPrices?: boolean | Prisma.Product$customerPricesArgs<ExtArgs>
   _count?: boolean | Prisma.ProductCountOutputTypeDefaultArgs<ExtArgs>
@@ -888,9 +954,11 @@ export type $ProductPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     productGroupName: string | null
     productCategory: string
     isDistributor: boolean
+    inventoryUnit: string | null
     salesUnit: string | null
     salesPackSize: runtime.Decimal | null
-    salesPackUnit: string | null
+    purchaseUnit: string | null
+    purchasePackSize: runtime.Decimal | null
     launchDate: Date | null
     isActive: boolean
     vatGroup: string | null
@@ -1329,9 +1397,11 @@ export interface ProductFieldRefs {
   readonly productGroupName: Prisma.FieldRef<"Product", 'String'>
   readonly productCategory: Prisma.FieldRef<"Product", 'String'>
   readonly isDistributor: Prisma.FieldRef<"Product", 'Boolean'>
+  readonly inventoryUnit: Prisma.FieldRef<"Product", 'String'>
   readonly salesUnit: Prisma.FieldRef<"Product", 'String'>
   readonly salesPackSize: Prisma.FieldRef<"Product", 'Decimal'>
-  readonly salesPackUnit: Prisma.FieldRef<"Product", 'String'>
+  readonly purchaseUnit: Prisma.FieldRef<"Product", 'String'>
+  readonly purchasePackSize: Prisma.FieldRef<"Product", 'Decimal'>
   readonly launchDate: Prisma.FieldRef<"Product", 'DateTime'>
   readonly isActive: Prisma.FieldRef<"Product", 'Boolean'>
   readonly vatGroup: Prisma.FieldRef<"Product", 'String'>

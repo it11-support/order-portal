@@ -80,12 +80,12 @@ export type PrismaVersion = {
 }
 
 /**
- * Prisma Client JS version: 7.10.0
- * Query Engine version: 0edf323efd1d98336f3f0a68684b56f689b900d3
+ * Prisma Client JS version: 7.10.1
+ * Query Engine version: d1b3f377ca835d73fd50954a5e22128b9ebdd6b8
  */
 export const prismaVersion: PrismaVersion = {
-  client: "7.10.0",
-  engine: "0edf323efd1d98336f3f0a68684b56f689b900d3"
+  client: "7.10.1",
+  engine: "d1b3f377ca835d73fd50954a5e22128b9ebdd6b8"
 }
 
 /**
@@ -1979,7 +1979,13 @@ export const CustomerItemPriceScalarFieldEnum = {
   lastChangedAt: 'lastChangedAt',
   lastPurchasedAt: 'lastPurchasedAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  lastInvoicePrice: 'lastInvoicePrice',
+  lastInvoiceDate: 'lastInvoiceDate',
+  lastInvoiceNum: 'lastInvoiceNum',
+  discountSource: 'discountSource',
+  lastInvoiceDiscount: 'lastInvoiceDiscount',
+  lastInvoiceBasePrice: 'lastInvoiceBasePrice'
 } as const
 
 export type CustomerItemPriceScalarFieldEnum = (typeof CustomerItemPriceScalarFieldEnum)[keyof typeof CustomerItemPriceScalarFieldEnum]
@@ -2093,9 +2099,11 @@ export const ProductScalarFieldEnum = {
   productGroupName: 'productGroupName',
   productCategory: 'productCategory',
   isDistributor: 'isDistributor',
+  inventoryUnit: 'inventoryUnit',
   salesUnit: 'salesUnit',
   salesPackSize: 'salesPackSize',
-  salesPackUnit: 'salesPackUnit',
+  purchaseUnit: 'purchaseUnit',
+  purchasePackSize: 'purchasePackSize',
   launchDate: 'launchDate',
   isActive: 'isActive',
   vatGroup: 'vatGroup',

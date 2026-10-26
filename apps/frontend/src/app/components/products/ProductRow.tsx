@@ -1,7 +1,5 @@
-import { Product } from '@repo/shared'
+import type { Product } from '@repo/shared'
 import { QtyControl } from '../QtyControl'
-import { useCategories } from '@contexts'
-import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { formatRupiah } from '@/lib/formatCurrency'
 
 type ProductRowProps = {
@@ -9,44 +7,60 @@ type ProductRowProps = {
   onContactSales?: (product: Product) => void
 }
 
+type ProductPriceInfo = Product & {
+  currentPrice?: number | null
+  lastInvoicePrice?: number | null
+  lastInvoiceBasePrice?: number | null
+  priceIncreasePercent?: number | null
+  priceIncreased?: boolean
+}
+
 export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
-  const { getCategoryIcon } = useCategories()
-  const iconName = getCategoryIcon(product.productCategory)
-  const hasPrice = typeof product.price === 'number' && product.price > 0
+  const priceInfo = product as ProductPriceInfo
+
+  const currentPrice = priceInfo.currentPrice ?? product.price
+  const oldPrice = priceInfo.lastInvoiceBasePrice
+
+  const hasPrice =
+    typeof currentPrice === 'number' && Number.isFinite(currentPrice) && currentPrice > 0
+
+  const increased =
+    priceInfo.priceIncreased === true &&
+    oldPrice != null &&
+    currentPrice != null &&
+    oldPrice > 0 &&
+    currentPrice > oldPrice
+
+  const increasePercent = increased ? ((currentPrice - oldPrice) / oldPrice) * 100 : null
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-start gap-3 py-3">
-        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">
-          {iconName ? <CategoryIcon name={iconName} size={20} /> : '-'}
-        </div>
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug text-foreground">{product.itemName}</p>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground leading-tight">{product.itemName}</p>
+        {hasPrice && (
+          <div className="mt-1">
+            {increased && (
+              <p className="text-xs text-muted-foreground line-through">{formatRupiah(oldPrice)}</p>
+            )}
 
-          <p className="text-xs text-muted-foreground mt-0.5">{product.salesPackUnit}</p>
-          {hasPrice && (
-            <>
-              <p className="text-xs font-bold text-foreground mt-1">
-                {formatRupiah(product.price!)}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                {formatRupiah(currentPrice)}
                 {product.salesUnit ? ` / ${product.salesUnit}` : ''}
-              </p>
-              {/* Repeat items are sold at the price this customer already pays;
-                  anything else is still on the price list. */}
-              <p className="text-[10px] text-muted-foreground">
-                {product.priceSource === 'actual'
-                  ? 'Harga aktual'
-                  : product.priceSource === 'pricelist'
-                    ? 'Harga price list'
-                    : null}
-              </p>
-            </>
-          )}
-        </div>
+              </span>
+
+              {increased && increasePercent !== null && (
+                <span className="text-xs font-medium text-destructive">
+                  +{increasePercent.toFixed(2)}%
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="mt-auto flex justify-end pb-3">
-        <QtyControl product={product} />
-      </div>
+      <QtyControl product={product} onContactSales={onContactSales} listMode />
     </div>
   )
 }

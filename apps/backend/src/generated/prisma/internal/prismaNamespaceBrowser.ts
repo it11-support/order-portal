@@ -187,7 +187,13 @@ export const CustomerItemPriceScalarFieldEnum = {
   lastChangedAt: 'lastChangedAt',
   lastPurchasedAt: 'lastPurchasedAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  lastInvoicePrice: 'lastInvoicePrice',
+  lastInvoiceDate: 'lastInvoiceDate',
+  lastInvoiceNum: 'lastInvoiceNum',
+  discountSource: 'discountSource',
+  lastInvoiceDiscount: 'lastInvoiceDiscount',
+  lastInvoiceBasePrice: 'lastInvoiceBasePrice'
 } as const
 
 export type CustomerItemPriceScalarFieldEnum = (typeof CustomerItemPriceScalarFieldEnum)[keyof typeof CustomerItemPriceScalarFieldEnum]
@@ -301,9 +307,11 @@ export const ProductScalarFieldEnum = {
   productGroupName: 'productGroupName',
   productCategory: 'productCategory',
   isDistributor: 'isDistributor',
+  inventoryUnit: 'inventoryUnit',
   salesUnit: 'salesUnit',
   salesPackSize: 'salesPackSize',
-  salesPackUnit: 'salesPackUnit',
+  purchaseUnit: 'purchaseUnit',
+  purchasePackSize: 'purchasePackSize',
   launchDate: 'launchDate',
   isActive: 'isActive',
   vatGroup: 'vatGroup',

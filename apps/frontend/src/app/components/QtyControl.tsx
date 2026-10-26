@@ -15,6 +15,7 @@ type QtyControlProps = {
   onDecrease?: (product: Product) => void
   onRemove?: (productId: number) => void
   onAdd?: (product: Product) => void
+  listMode?: boolean
   disabled?: boolean
 }
 
@@ -26,10 +27,10 @@ const QtyControlComponent = ({
   onIncrease: propsOnIncrease,
   onDecrease: propsOnDecrease,
   onRemove: propsOnRemove,
-  onAdd: propsOnAdd,
+  listMode = false,
   disabled,
 }: QtyControlProps) => {
-  const { isCustomer, user: currentUser } = useAuth()
+  const { user: currentUser } = useAuth()
   const customer = currentUser?.customer
   const creditLimit = Number(customer?.creditLimit ?? 0)
   const balance = Number(customer?.balance ?? 0)
@@ -51,7 +52,6 @@ const QtyControlComponent = ({
   const onIncrease = propsOnIncrease ?? ctxIncrease
   const onDecrease = propsOnDecrease ?? ctxDecrease
   const onRemove = propsOnRemove ?? ctxRemove
-  const onAdd = propsOnAdd ?? ctxIncrease
 
   const [localIsEditing, setLocalIsEditing] = React.useState(false)
   const editing = propsQty != null ? false : localIsEditing
@@ -59,9 +59,11 @@ const QtyControlComponent = ({
   const [inputValue, setInputValue] = React.useState(String(qty))
 
   const [showPriceConfirm, setShowPriceConfirm] = React.useState(false)
+  const [showQtyDialog, setShowQtyDialog] = React.useState(false)
+  const [dialogQty, setDialogQty] = React.useState('1')
 
   const isActualPrice = product.priceSource === 'actual'
-  const hasPrice = product.price != null
+  const hasPrice = product.price != null && Number(product.price) > 0
 
   React.useEffect(() => {
     if (!editing) {
@@ -69,7 +71,6 @@ const QtyControlComponent = ({
     }
   }, [qty, editing])
 
-  
   const creditModal = showCreditModal ? (
     <div
       className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4"
@@ -124,7 +125,8 @@ const QtyControlComponent = ({
       return
     }
     if (isActualPrice && hasPrice) {
-      onAdd(product)
+      setDialogQty('1')
+      setShowQtyDialog(true)
       return
     }
     setShowPriceConfirm(true)
@@ -139,9 +141,104 @@ const QtyControlComponent = ({
     if (!hasPrice) {
       return
     }
-    onAdd(product)
     setShowPriceConfirm(false)
+    setDialogQty('1')
+    setShowQtyDialog(true)
   }
+
+  const dialogQuantity = Number(dialogQty)
+  const validDialogQty =
+    /^\d+$/.test(dialogQty) && Number.isSafeInteger(dialogQuantity) && dialogQuantity > 0
+
+  const handleConfirmQty = () => {
+    if (!validDialogQty || disabled) return
+    if (isOverCredit) {
+      setShowQtyDialog(false)
+      setShowCreditModal(true)
+      return
+    }
+    // onQtyChange uses an absolute quantity, so combine with existing cart qty.
+    onQtyChange(product.id, qty + dialogQuantity)
+    setShowQtyDialog(false)
+    setDialogQty('1')
+  }
+
+  const qtyDialog = showQtyDialog ? (
+    <div
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4"
+      onClick={() => setShowQtyDialog(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`add-cart-${product.id}`}
+        className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h3 id={`add-cart-${product.id}`} className="font-bold text-foreground">
+            Tambah ke Keranjang
+          </h3>
+          <button type="button" aria-label="Tutup" onClick={() => setShowQtyDialog(false)}>
+            <X size={18} />
+          </button>
+        </div>
+        <p className="mt-4 text-sm font-semibold text-foreground">{product.itemName}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {formatRupiah(Number(product.price ?? 0))}
+          {product.salesUnit ? ` / ${product.salesUnit}` : ''}
+        </p>
+        {qty > 0 && <p className="mt-2 text-xs text-muted-foreground">Sudah di keranjang: {qty}</p>}
+        <label htmlFor={`qty-dialog-${product.id}`} className="mt-5 block text-sm font-medium">
+          Qty
+        </label>
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Kurangi jumlah"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
+            onClick={() =>
+              setDialogQty(String(Math.max(1, (validDialogQty ? dialogQuantity : 1) - 1)))
+            }
+          >
+            <Minus size={16} />
+          </button>
+          <input
+            id={`qty-dialog-${product.id}`}
+            type="text"
+            inputMode="numeric"
+            value={dialogQty}
+            onChange={(event) => {
+              if (/^\d*$/.test(event.target.value)) setDialogQty(event.target.value)
+            }}
+            className="h-9 w-16 shrink-0 rounded-lg border border-border bg-background px-2 text-center text-sm font-semibold tabular-nums outline-none focus:border-primary"
+          />
+          <button
+            type="button"
+            aria-label="Tambah jumlah"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
+            onClick={() => setDialogQty(String((validDialogQty ? dialogQuantity : 0) + 1))}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+        <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+          <span className="text-sm text-muted-foreground">Subtotal</span>
+          <span className="font-bold">
+            {formatRupiah(validDialogQty ? dialogQuantity * Number(product.price ?? 0) : 0)}
+          </span>
+        </div>
+        <button
+          type="button"
+          disabled={!validDialogQty || disabled}
+          onClick={handleConfirmQty}
+          className="mt-5 w-full rounded-xl bg-accent py-3 font-semibold text-accent-foreground disabled:opacity-50"
+        >
+          Tambah ke Keranjang
+        </button>
+      </div>
+    </div>
+  ) : null
 
   const handleContactSales = () => {
     setShowPriceConfirm(false)
@@ -180,17 +277,19 @@ const QtyControlComponent = ({
   const plusButton =
     'cursor-pointer w-7 h-7 flex items-center justify-center rounded-full active:scale-95 transition-transform bg-accent text-accent-foreground hover:bg-accent/80'
 
-  if (qty === 0 && !editing && !disabled) {
+  if (listMode || (qty === 0 && !editing && !disabled)) {
     return (
       <>
         {creditModal}
+        {qtyDialog}
         <button
           type="button"
           onClick={handleAdd}
-          className="flex items-center gap-1 bg-accent text-accent-foreground text-xs font-bold px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+          disabled={disabled}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-primary hover:bg-secondary disabled:opacity-50"
           title={isActualPrice ? 'Tambah ke keranjang' : 'Lihat opsi harga'}
         >
-          <ShoppingBag size={16} />
+          <Plus size={18} />
         </button>
         {showPriceConfirm && (
           <div

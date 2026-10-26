@@ -511,17 +511,114 @@ export const getProductsByCategory = async (
     products = products.slice(start, end)
   }
 
+  // PRICE CHANGE DETAILS: diskon hanya metadata, tidak dipakai menghitung harga.
+  // Harga pembanding berasal dari master customer_item_prices.price.
+  // Harga katalog dari pricesForCatalog tetap terpisah.
+  type PriceChangeRow = {
+    item_code: string
+    last_invoice_num: string | null
+    last_invoice_date: Date | null
+    last_invoice_price: unknown
+    last_invoice_base_price: unknown
+    current_price: unknown
+    discount_applied: unknown
+    discount_source: string | null
+  }
+
+  const priceChanges = new Map<string, {
+    lastInvoice: string | null
+    lastInvoiceDate: string | null
+    lastInvoicePrice: number | null
+    lastInvoiceBasePrice: number | null
+    currentPrice: number | null
+    discountApplied: number | null
+    discountSource: string | null
+    priceDifference: number | null
+    priceIncreasePercent: number | null
+    priceIncreased: boolean
+  }>()
+
+  const asFiniteNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+  }
+  const round2 = (number: number): number => Math.round(number * 100) / 100
+
+  if (priceCustomerId && products.length > 0) {
+    const itemCodes = [...new Set(products.map((product) => product.itemCode))]
+    const rows = await prisma.$queryRaw<PriceChangeRow[]>`
+      SELECT
+        cip.item_code,
+        cip.last_invoice_num,
+        cip.last_invoice_date,
+        cip.last_invoice_price,
+        cip.last_invoice_base_price,
+        cip.price AS current_price,
+        cip.discount_applied,
+        cip.discount_source
+      FROM customer_item_prices cip
+      WHERE cip.customer_id = ${BigInt(priceCustomerId)}
+        AND cip.item_code = ANY(${itemCodes}::text[])
+    `
+
+    for (const row of rows) {
+      const currentPrice = asFiniteNumber(row.current_price)
+      const lastInvoicePrice = asFiniteNumber(row.last_invoice_price)
+      const lastInvoiceBasePrice = asFiniteNumber(row.last_invoice_base_price)
+
+      const priceIncreased =
+        currentPrice !== null &&
+        lastInvoiceBasePrice !== null &&
+        lastInvoiceBasePrice > 0 &&
+        currentPrice > lastInvoiceBasePrice
+
+      const priceDifference = priceIncreased
+        ? round2(currentPrice! - lastInvoiceBasePrice!)
+        : null
+
+      const priceIncreasePercent = priceIncreased
+        ? round2((priceDifference! / lastInvoiceBasePrice!) * 100)
+        : null
+
+      priceChanges.set(normalizeItemCode(row.item_code), {
+        lastInvoice: row.last_invoice_num == null ? null : String(row.last_invoice_num),
+        lastInvoiceDate: row.last_invoice_date
+          ? new Date(row.last_invoice_date).toISOString().slice(0, 10)
+          : null,
+        lastInvoicePrice,
+        lastInvoiceBasePrice,
+        currentPrice,
+        discountApplied: asFiniteNumber(row.discount_applied),
+        discountSource: row.discount_source ?? 'none',
+        priceDifference,
+        priceIncreasePercent,
+        priceIncreased: priceDifference !== null && priceDifference > 0,
+      })
+    }
+  }
+
   // RESPONSE DATA + PRICE
   const data = products.map((product) => {
-    const price = prices.get(product.itemCode)
+    const resolved = prices.get(product.itemCode)
+    const change = priceChanges.get(normalizeItemCode(product.itemCode))
+    const catalogPrice = asFiniteNumber(resolved?.price)
 
     return {
       ...product,
-      price: price
-        ? round6(price.price)
-        : null,
-      currency: price?.currency ?? null,
-      priceSource: price?.source ?? null,
+      price: catalogPrice === null ? null : round6(catalogPrice),
+      currency: resolved?.currency ?? null,
+      priceSource: resolved?.source ?? null,
+      lastInvoice: change?.lastInvoice ?? null,
+      lastInvoiceDate: change?.lastInvoiceDate ?? null,
+      lastInvoicePrice: change?.lastInvoicePrice ?? null,
+      lastInvoiceBasePrice: change?.lastInvoiceBasePrice ?? null,
+      currentPrice: change?.currentPrice ?? null,
+      discountApplied: change?.discountApplied ?? null,
+      discountSource: change?.discountSource ?? null,
+      priceDifference: change?.priceDifference ?? null,
+      priceIncreasePercent: change?.priceIncreasePercent ?? null,
+      priceIncreased: change?.priceIncreased ?? false,
     }
   })
 

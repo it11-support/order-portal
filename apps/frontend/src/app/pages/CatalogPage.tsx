@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@lib'
 import { toast } from 'sonner'
 import { useActiveDraft } from '../hooks/useActiveDraft'
+import QuantityInput from '../components/QuantityInput'
 
 // One cart line per product. Repeated lines from draft/cart state must not
 // double the ordered quantity; keep the latest quantity for each product.
@@ -48,58 +49,6 @@ const orderItems = (lines: Array<{ product: { id: number | string }; qty?: numbe
 
 // Keep a temporary text value while editing, and commit only on blur/Enter.
 // This allows replacing a quantity without the cart forcing an immediate "1".
-const QuantityInput = ({
-  quantity,
-  name,
-  onCommit,
-}: {
-  quantity: number
-  name: string
-  onCommit: (value: number) => void
-}) => {
-  const [draft, setDraft] = useState(String(quantity))
-  const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    if (!editing) setDraft(String(quantity))
-  }, [quantity, editing])
-
-  const commit = () => {
-    const value = Number(draft.trim())
-    if (/^[0-9]+$/.test(draft.trim()) && Number.isSafeInteger(value) && value > 0) {
-      if (value !== quantity) onCommit(value)
-      setDraft(String(value))
-    } else {
-      setDraft(String(quantity))
-    }
-    setEditing(false)
-  }
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={draft}
-      aria-label={`Jumlah ${name}`}
-      onFocus={(event) => {
-        setEditing(true)
-        event.currentTarget.select()
-      }}
-      onChange={(event) => {
-        if (/^[0-9]*$/.test(event.target.value)) setDraft(event.target.value)
-      }}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') event.currentTarget.blur()
-        if (event.key === 'Escape') {
-          setDraft(String(quantity))
-          event.currentTarget.blur()
-        }
-      }}
-      className="w-10 h-8 rounded-md border border-border px-1 text-center text-xs focus:border-accent focus:outline-none"
-    />
-  )
-}
 
 const CatalogPage = () => {
   const { user: currentUser, isAdmin, isSalesAdmin, isCustomer } = useAuth()
