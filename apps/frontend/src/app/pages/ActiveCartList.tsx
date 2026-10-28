@@ -1,17 +1,18 @@
-import { memo, useEffect, useState } from 'react'
+import { memo } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useCart } from '@contexts'
 import QuantityInput from '../components/QuantityInput'
 
 const money = (n: number) => `Rp ${n.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
 
-
-
 function ActiveCartList() {
   const { cart, setCart } = useCart()
   if (!cart.length) return null
   const complete = cart.every(
-    (line) => line.product.price != null && Number.isFinite(Number(line.product.price)),
+    (line) =>
+      line.product.price != null &&
+      Number.isFinite(Number(line.product.price)) &&
+      Number(line.product.price) > 0,
   )
   const total = cart.reduce(
     (sum, line) => sum + Number(line.product.price ?? 0) * (line.qty ?? 0),
@@ -41,7 +42,11 @@ function ActiveCartList() {
           <tbody className="divide-y divide-border">
             {cart.map((line) => {
               const price = Number(line.product.price)
-              const hasPrice = line.product.price != null && Number.isFinite(price)
+              const hasPrice =
+                line.product.price != null &&
+                Number.isFinite(Number(line.product.price)) &&
+                Number(line.product.price) > 0
+
               return (
                 <tr key={line.product.id}>
                   <td className="py-3 pr-2 align-middle">

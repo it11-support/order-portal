@@ -21,13 +21,13 @@ import { ProductList, Loader } from '@components'
 
 import { useAuth, useCart, useCategories, useCatalogProducts, useOrders } from '@contexts'
 
+import ActiveCartList from './ActiveCartList'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@lib'
 import { toast } from 'sonner'
 import { useActiveDraft } from '../hooks/useActiveDraft'
-import QuantityInput from '../components/QuantityInput'
 
 // One cart line per product. Repeated lines from draft/cart state must not
 // double the ordered quantity; keep the latest quantity for each product.
@@ -521,107 +521,7 @@ const CatalogPage = () => {
           )}
         </section>
 
-        {isCustomer && catalogMode === 'history' && cart.length > 0 && (
-          <section
-            className="space-y-3 rounded-2xl border border-border bg-white p-4"
-            aria-label="Daftar Pembelian"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-bold">Daftar Pembelian</h2>
-              <span className="text-xs text-muted-foreground">
-                {cart.length} produk · {cart.reduce((n, line) => n + (line.qty ?? 0), 0)} unit
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[320px] text-xs">
-                <thead className="border-b border-border text-left text-muted-foreground">
-                  <tr>
-                    <th className="py-2 pr-2">Produk</th>
-                    <th className="px-2 text-center">Jumlah</th>
-                    <th className="px-2 text-right">Subtotal</th>
-                    <th className="w-8" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {cart.map((line) => {
-                    const price = Number(line.product.price)
-                    const hasPrice = line.product.price != null && Number.isFinite(price)
-                    return (
-                      <tr key={line.product.id}>
-                        <td className="py-3 pr-2 align-middle">
-                          <div className="font-semibold">{line.product.itemName}</div>
-                          <div className="mt-1 text-muted-foreground">
-                            {hasPrice
-                              ? `Rp ${price.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
-                              : 'Harga belum tersedia'}
-                          </div>
-                        </td>
-                        <td className="px-2 align-middle">
-                          <QuantityInput
-                            quantity={line.qty ?? 1}
-                            name={line.product.itemName}
-                            onCommit={(qty) =>
-                              setCart((previous) =>
-                                previous.map((item) =>
-                                  String(item.product.id) === String(line.product.id)
-                                    ? { ...item, qty }
-                                    : item,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="px-2 text-right align-middle whitespace-nowrap">
-                          {hasPrice
-                            ? `Rp ${(price * (line.qty ?? 0)).toLocaleString('id-ID', {
-                                maximumFractionDigits: 0,
-                              })}`
-                            : '—'}
-                        </td>
-                        <td className="align-middle text-right">
-                          <button
-                            type="button"
-                            aria-label={`Hapus ${line.product.itemName}`}
-                            onClick={() =>
-                              setCart((previous) =>
-                                previous.filter(
-                                  (item) => String(item.product.id) !== String(line.product.id),
-                                ),
-                              )
-                            }
-                            className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between border-t border-border pt-3 text-sm font-semibold">
-              <span>Perkiraan Total</span>
-              <span>
-                {cart.every(
-                  (line) =>
-                    line.product.price != null && Number.isFinite(Number(line.product.price)),
-                )
-                  ? `Rp ${cart
-                      .reduce((sum, line) => sum + Number(line.product.price) * (line.qty ?? 0), 0)
-                      .toLocaleString('id-ID', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}`
-                  : 'Ada harga belum tersedia'}
-              </span>
-            </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Perkiraan berdasarkan harga riwayat pembelian. Nilai akhir dapat berubah karena
-              diskon, pajak, dan ketentuan lainnya.
-            </p>
-          </section>
-        )}
+        {isCustomer && catalogMode === 'history' && <ActiveCartList />}
       </div>
 
       {isCustomer && catalogMode === 'inquiry' && inquiryItems.length > 0 && (
