@@ -199,6 +199,124 @@ export interface PriceMovement {
  *
  * Returns the movements detected during this call.
  */
+type InvoicePriceMap = Awaited<ReturnType<typeof resolveInvoicePrices>>
+type ResolvedInvoiceRow = InvoicePriceRow & { unitPrice: number }
+type CachedPriceRow = { itemCode: string; price: Decimal }
+
+const removeStaleCustomerPrices = async (
+  customerId: bigint,
+  existing: CachedPriceRow[],
+  invoice: InvoicePriceMap,
+): Promise<Map<string, number | null>> => {
+  const stale = existing
+    .filter((row) => !invoice.has(row.itemCode))
+    .map((row) => row.itemCode)
+
+  if (stale.length) {
+    await prisma.customerItemPrice.deleteMany({
+      where: { customerId, itemCode: { in: stale } },
+    })
+  }
+
+  return new Map(
+    existing
+      .filter((row) => invoice.has(row.itemCode))
+      .map((row) => [row.itemCode, toNumber(row.price)]),
+  )
+}
+
+const saveCustomerInvoicePrice = async (
+  customerId: bigint,
+  itemCode: string,
+  row: ResolvedInvoiceRow,
+  value: number,
+  now: Date,
+): Promise<void> => {
+  await prisma.customerItemPrice.upsert({
+    where: { customerId_itemCode: { customerId, itemCode } },
+    create: {
+      customerId,
+      itemCode,
+      price: new Decimal(value),
+      currency: row.currency ?? null,
+      discountApplied: new Decimal(0),
+      source: 'invoice',
+      sourceDoc: invoiceRef(row),
+      lastChangedAt: null,
+      lastPurchasedAt: row.doc_date ?? null,
+      updatedAt: now,
+    },
+    update: {
+      price: new Decimal(value),
+      currency: row.currency ?? null,
+      source: 'invoice',
+      sourceDoc: invoiceRef(row),
+      lastChangedAt: now,
+      lastPurchasedAt: row.doc_date ?? null,
+    },
+  })
+}
+
+const recordCustomerPriceMovement = async (
+  customerId: bigint,
+  itemCode: string,
+  row: ResolvedInvoiceRow,
+  oldPrice: number,
+  newPrice: number,
+  itemName?: string,
+): Promise<PriceMovement> => {
+  const changePct = oldPrice === 0
+    ? 0
+    : round6(((newPrice - oldPrice) / oldPrice) * 100)
+  const direction: PriceMovement['direction'] = changePct > 0 ? 'up' : 'down'
+
+  await prisma.priceChangeLog.create({
+    data: {
+      customerId,
+      itemCode,
+      oldPrice: new Decimal(oldPrice),
+      newPrice: new Decimal(newPrice),
+      changePct: new Decimal(changePct),
+      direction,
+    },
+  })
+
+  return {
+    itemCode,
+    itemName,
+    oldPrice,
+    newPrice,
+    changePct,
+    direction,
+    currency: row.currency ?? null,
+    sourceDoc: invoiceRef(row),
+  }
+}
+
+const refreshOneCustomerPrice = async (
+  customerId: bigint,
+  itemCode: string,
+  row: ResolvedInvoiceRow,
+  previous: Map<string, number | null>,
+  names: Map<string, string>,
+  now: Date,
+): Promise<PriceMovement | null> => {
+  const value = round6(row.unitPrice)
+  const oldPrice = previous.has(itemCode) ? previous.get(itemCode) ?? null : null
+
+  // Unchanged prices must not write on catalog reads.
+  if (oldPrice !== null && oldPrice === value) return null
+
+  await saveCustomerInvoicePrice(customerId, itemCode, row, value, now)
+
+  // First observation seeds the cache without generating a movement log.
+  if (oldPrice === null) return null
+
+  return recordCustomerPriceMovement(
+    customerId, itemCode, row, oldPrice, value, names.get(itemCode),
+  )
+}
+
 export const refreshCustomerPrices = async (
   customer: { id: bigint; CardCode: string | null },
   itemCodes: string[],
@@ -206,99 +324,22 @@ export const refreshCustomerPrices = async (
   if (!customer.CardCode || !itemCodes.length) return []
 
   const invoice = await resolveInvoicePrices(customer.CardCode, itemCodes)
-
   const existing = await prisma.customerItemPrice.findMany({
     where: { customerId: customer.id, itemCode: { in: itemCodes } },
     select: { itemCode: true, price: true },
   })
-
-  // The presence of a row is what "harga aktual" means, so a row whose invoice
-  // has since been cancelled, renumbered or re-synced away is a lie the catalog
-  // would repeat: the item would keep a price of its own for a customer who has
-  // never bought it, which is precisely what a suggested product is not.
-  const stale = new Set(
-    existing.filter((row) => !invoice.has(row.itemCode)).map((row) => row.itemCode),
-  )
-  if (stale.size) {
-    await prisma.customerItemPrice.deleteMany({
-      where: { customerId: customer.id, itemCode: { in: [...stale] } },
-    })
-  }
-
+  const previous = await removeStaleCustomerPrices(customer.id, existing, invoice)
   if (!invoice.size) return []
 
-  const previous = new Map(
-    existing
-      .filter((row) => !stale.has(row.itemCode))
-      .map((row) => [row.itemCode, toNumber(row.price)]),
-  )
-
   const names = await productNames([...invoice.keys()])
-  const movements: PriceMovement[] = []
   const now = new Date()
+  const movements: PriceMovement[] = []
 
   for (const [itemCode, row] of invoice) {
-    const value = round6(row.unitPrice)
-    const oldPrice = previous.has(itemCode) ? previous.get(itemCode)! : null
-
-    // An unchanged price needs no write. The catalog is read on every page
-    // view, so writing here would turn browsing into a write load.
-    if (oldPrice !== null && oldPrice === value) continue
-
-    const changePct =
-      oldPrice === null || oldPrice === 0
-        ? 0
-        : round6(((value - oldPrice) / oldPrice) * 100)
-    const direction: PriceMovement['direction'] =
-      oldPrice === null || changePct === 0 ? 'down' : changePct > 0 ? 'up' : 'down'
-
-    await prisma.customerItemPrice.upsert({
-      where: { customerId_itemCode: { customerId: customer.id, itemCode } },
-      create: {
-        customerId: customer.id,
-        itemCode,
-        price: new Decimal(value),
-        currency: row.currency ?? null,
-        discountApplied: new Decimal(0),
-        source: 'invoice',
-        sourceDoc: invoiceRef(row),
-        lastChangedAt: null,
-        lastPurchasedAt: row.doc_date ?? null,
-        updatedAt: now,
-      },
-      update: {
-        price: new Decimal(value),
-        currency: row.currency ?? null,
-        source: 'invoice',
-        sourceDoc: invoiceRef(row),
-        lastChangedAt: now,
-        lastPurchasedAt: row.doc_date ?? null,
-      },
-    })
-
-    // A first observation is a cache seed, not a price movement.
-    if (oldPrice === null) continue
-
-    await prisma.priceChangeLog.create({
-      data: {
-        customerId: customer.id,
-        itemCode,
-        oldPrice: new Decimal(oldPrice),
-        newPrice: new Decimal(value),
-        changePct: new Decimal(changePct),
-        direction,
-      },
-    })
-    movements.push({
-      itemCode,
-      itemName: names.get(itemCode),
-      oldPrice,
-      newPrice: value,
-      changePct,
-      direction,
-      currency: row.currency ?? null,
-      sourceDoc: invoiceRef(row),
-    })
+    const movement = await refreshOneCustomerPrice(
+      customer.id, itemCode, row, previous, names, now,
+    )
+    if (movement) movements.push(movement)
   }
 
   return movements
