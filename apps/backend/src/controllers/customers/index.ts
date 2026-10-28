@@ -9,6 +9,8 @@ import {
   generateCustomerPassword,
   hashCustomerPassword,
 } from '@/utils/customer-password'
+import { getCustomerAccount, getCustomerRole, getEligibleCustomer, prepareCustomerCredentials, saveCustomerLogin } from '@/services/customer-login'
+import { CustomerLoginError } from '@/services/customer-login/validation'
 
 export const disableCustomerLogin = async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id)
@@ -34,96 +36,52 @@ export const disableCustomerLogin = async (req: Request, res: Response): Promise
   res.status(200).json({ data: { hasLogin: false } })
 }
 
-export const enableCustomerLogin = async (req: Request, res: Response): Promise<void> => {
+export const enableCustomerLogin = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const id = String(req.params.id)
+
   if (!/^\d+$/.test(id)) {
-    res.status(400).json({ message: 'ID pelanggan tidak valid.' })
+    res.status(400).json({
+      message: 'ID pelanggan tidak valid.',
+    })
     return
   }
 
-  const customer = await prisma.customers.findUnique({
-    where: { id: BigInt(id) },
-    select: { id: true, CardCode: true, CardName: true, CntctPrsn: true, NonActive: true },
-  })
-  if (!customer) {
-    res.status(404).json({ message: 'Pelanggan tidak ditemukan.' })
-    return
-  }
-  if (!customer.CardCode || customer.NonActive === 'Y') {
-    res.status(400).json({ message: 'Pelanggan tidak aktif atau tidak memiliki CardCode.' })
-    return
-  }
+  try {
+    const customer = await getEligibleCustomer(BigInt(id))
+    const account = await getCustomerAccount(customer)
+    const role = await getCustomerRole()
 
-  const existingUser = await prisma.user.findUnique({
-    where: { username: customer.CardCode },
-    select: { id: true, customerId: true, isActive: true, encryptedPassword: true },
-  })
-  if (existingUser && String(existingUser.customerId) !== id) {
-    res.status(409).json({ message: 'CardCode sudah digunakan sebagai username akun lain.' })
-    return
-  }
+    const credentials = prepareCustomerCredentials(
+      account.existingUser,
+    )
 
-  if (existingUser?.isActive) {
-    res.status(409).json({ message: 'Login pelanggan sudah diaktifkan.' })
-    return
-  }
+    await saveCustomerLogin({
+      customer,
+      roleId: role.id,
+      existingUser: account.existingUser,
+      credentials,
+    })
 
-  const existingLinkedUser = await prisma.user.findFirst({
-    where: { customerId: BigInt(id) },
-    select: { id: true, encryptedPassword: true },
-  })
-  if (existingLinkedUser && (!existingUser || existingLinkedUser.id !== existingUser.id)) {
-    res.status(409).json({ message: 'Pelanggan ini sudah memiliki akun user.' })
-    return
-  }
-
-  const customerRole = await prisma.role.findUnique({ where: { name: 'customer' } })
-  if (!customerRole) {
-    res.status(500).json({ message: 'Role customer tidak ditemukan.' })
-    return
-  }
-
-  let password = existingUser ? decryptCustomerPassword(existingUser.encryptedPassword) : null
-  let encryptedPassword = existingUser?.encryptedPassword ?? null
-
-  if (!password) {
-    password = generateCustomerPassword()
-    encryptedPassword = encryptCustomerPassword(password)
-  }
-
-  const userData = {
-    username: customer.CardCode,
-    name: customer.CardName || customer.CntctPrsn || customer.CardCode,
-    roleId: customerRole.id,
-    customerId: BigInt(id),
-    isActive: true,
-  }
-
-  if (existingUser) {
-    await prisma.user.update({
-      where: { id: existingUser.id },
+    res.setHeader('Cache-Control', 'no-store')
+    res.status(200).json({
       data: {
-        ...userData,
-        ...(password && encryptedPassword
-          ? {
-            password: await hashCustomerPassword(password),
-            encryptedPassword,
-          }
-          : {}),
+        username: customer.CardCode,
+        password: credentials.password,
       },
     })
-  } else {
-    await prisma.user.create({
-      data: {
-        ...userData,
-        password: await hashCustomerPassword(password),
-        encryptedPassword,
-      },
-    })
-  }
+  } catch (error) {
+    if (error instanceof CustomerLoginError) {
+      res.status(error.statusCode).json({
+        message: error.message,
+      })
+      return
+    }
 
-  res.setHeader('Cache-Control', 'no-store')
-  res.status(200).json({ data: { username: customer.CardCode, password } })
+    throw error
+  }
 }
 
 export const resetCustomerPassword = async (
