@@ -34,7 +34,7 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
   const increasePercent = increased ? ((currentPrice - oldPrice) / oldPrice) * 100 : null
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
+    <div className="flex items-center gap-3 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold leading-snug text-foreground">{product.itemName}</p>
 
@@ -45,7 +45,7 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-semibold text-muted-foreground">
                 {formatRupiah(currentPrice)}
                 {product.salesUnit ? ` / ${product.salesUnit}` : ''}
               </span>

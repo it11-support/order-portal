@@ -115,8 +115,7 @@ export const ContactSalesModal = () => {
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate">{product.itemName}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {product.itemCode}
-                {product.salesUnit ? ` · ${product.salesUnit}` : ''}
+                {product.salesUnit ? `${product.salesUnit}` : ''}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { Product } from '@repo/shared'
-import React from 'react'
-import { Minus, Plus, Trash2, MessageCircle, X, ShoppingBag, AlertTriangle } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { Minus, Plus, Trash2, MessageCircle, X, AlertTriangle, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../contexts/authHook'
 import { useCart } from '../contexts'
 import { useContactSales } from '../contexts/ContactSalesContext'
@@ -30,13 +30,14 @@ const QtyControlComponent = ({
   listMode = false,
   disabled,
 }: QtyControlProps) => {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, isCustomer } = useAuth()
   const customer = currentUser?.customer
   const creditLimit = Number(customer?.creditLimit ?? 0)
   const balance = Number(customer?.balance ?? 0)
   const remainingCredit = creditLimit - balance
   const isOverCredit = creditLimit > 0 && remainingCredit < 0
   const [showCreditModal, setShowCreditModal] = React.useState(false)
+  const [selectedUnit, setSelectedUnit] = React.useState<string>('salesUnit')
 
   const { open: openContactSales } = useContactSales()
   const {
@@ -47,25 +48,28 @@ const QtyControlComponent = ({
     remove: ctxRemove,
   } = useCart()
 
+  const salesUnit = product.salesUnit || 'PCS'
+  const purchaseUnit = product.purchaseUnit
+  const purchasePackSize = Number(product.purchasePackSize ?? 1)
   const qty = propsQty ?? ctxGetQty(product.id)
   const onQtyChange = propsOnQtyChange ?? ((id: number, q: number) => ctxOnQtyChange(product, q))
   const onIncrease = propsOnIncrease ?? ctxIncrease
   const onDecrease = propsOnDecrease ?? ctxDecrease
   const onRemove = propsOnRemove ?? ctxRemove
 
-  const [localIsEditing, setLocalIsEditing] = React.useState(false)
+  const [localIsEditing, setLocalIsEditing] = useState(false)
   const editing = propsQty != null ? false : localIsEditing
 
-  const [inputValue, setInputValue] = React.useState(String(qty))
+  const [inputValue, setInputValue] = useState(String(qty))
 
-  const [showPriceConfirm, setShowPriceConfirm] = React.useState(false)
-  const [showQtyDialog, setShowQtyDialog] = React.useState(false)
-  const [dialogQty, setDialogQty] = React.useState('1')
+  const [showPriceConfirm, setShowPriceConfirm] = useState(false)
+  const [showQtyDialog, setShowQtyDialog] = useState(false)
+  const [dialogQty, setDialogQty] = useState('1')
 
   const isActualPrice = product.priceSource === 'actual'
   const hasPrice = product.price != null && Number(product.price) > 0
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!editing) {
       setInputValue(String(qty))
     }
@@ -126,6 +130,7 @@ const QtyControlComponent = ({
     }
     if (isActualPrice && hasPrice) {
       setDialogQty('1')
+      setSelectedUnit('salesUnit')
       setShowQtyDialog(true)
       return
     }
@@ -143,6 +148,7 @@ const QtyControlComponent = ({
     }
     setShowPriceConfirm(false)
     setDialogQty('1')
+    setSelectedUnit('salesUnit')
     setShowQtyDialog(true)
   }
 
@@ -151,17 +157,33 @@ const QtyControlComponent = ({
     /^\d+$/.test(dialogQty) && Number.isSafeInteger(dialogQuantity) && dialogQuantity > 0
 
   const handleConfirmQty = () => {
-    if (!validDialogQty || disabled) return
+    if (!validConvertedQty || disabled) return
+
     if (isOverCredit) {
       setShowQtyDialog(false)
       setShowCreditModal(true)
       return
     }
-    // onQtyChange uses an absolute quantity, so combine with existing cart qty.
-    onQtyChange(product.id, qty + dialogQuantity)
+
+    // Selalu simpan quantity dalam salesUnit
+    onQtyChange(product.id, qty + convertedQty)
+
     setShowQtyDialog(false)
     setDialogQty('1')
+    setSelectedUnit('salesUnit')
   }
+
+  const canConvert =
+    Boolean(purchaseUnit) &&
+    purchaseUnit !== salesUnit &&
+    Number.isFinite(purchasePackSize) &&
+    purchasePackSize > 0
+
+  const conversionFactor = selectedUnit === 'purchaseUnit' && canConvert ? purchasePackSize : 1
+
+  const convertedQty = validDialogQty ? dialogQuantity * conversionFactor : 0
+
+  const validConvertedQty = validDialogQty && Number.isSafeInteger(convertedQty) && convertedQty > 0
 
   const qtyDialog = showQtyDialog ? (
     <div
@@ -189,48 +211,91 @@ const QtyControlComponent = ({
           {product.salesUnit ? ` / ${product.salesUnit}` : ''}
         </p>
         {qty > 0 && <p className="mt-2 text-xs text-muted-foreground">Sudah di keranjang: {qty}</p>}
-        <label htmlFor={`qty-dialog-${product.id}`} className="mt-5 block text-sm font-medium">
-          Qty
-        </label>
-        <div className="mt-2 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Kurangi jumlah"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
-            onClick={() =>
-              setDialogQty(String(Math.max(1, (validDialogQty ? dialogQuantity : 1) - 1)))
-            }
-          >
-            <Minus size={16} />
-          </button>
-          <input
-            id={`qty-dialog-${product.id}`}
-            type="text"
-            inputMode="numeric"
-            value={dialogQty}
-            onChange={(event) => {
-              if (/^\d*$/.test(event.target.value)) setDialogQty(event.target.value)
-            }}
-            className="h-9 w-16 shrink-0 rounded-lg border border-border bg-background px-2 text-center text-sm font-semibold tabular-nums outline-none focus:border-primary"
-          />
-          <button
-            type="button"
-            aria-label="Tambah jumlah"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
-            onClick={() => setDialogQty(String((validDialogQty ? dialogQuantity : 0) + 1))}
-          >
-            <Plus size={16} />
-          </button>
+        <div className="mt-5 grid grid-cols-[1fr_1fr] gap-3">
+          <div>
+            <label htmlFor={`unit-dialog-${product.id}`} className="block text-sm font-medium">
+              Satuan
+            </label>
+
+            <select
+              id={`unit-dialog-${product.id}`}
+              value={selectedUnit}
+              onChange={(event) =>
+                setSelectedUnit(event.target.value as 'salesUnit' | 'purchaseUnit')
+              }
+              className="mt-2 h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
+            >
+              <option value="salesUnit">{salesUnit}</option>
+
+              {canConvert && (
+                <option value="purchaseUnit">
+                  {purchaseUnit} ({purchasePackSize} {salesUnit})
+                </option>
+              )}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`qty-dialog-${product.id}`} className="block text-sm font-medium">
+              Qty
+            </label>
+
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Kurangi jumlah"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
+                onClick={() =>
+                  setDialogQty(String(Math.max(1, (validDialogQty ? dialogQuantity : 1) - 1)))
+                }
+              >
+                <Minus size={16} />
+              </button>
+
+              <input
+                id={`qty-dialog-${product.id}`}
+                type="text"
+                inputMode="numeric"
+                value={dialogQty}
+                onChange={(event) => {
+                  if (/^\d*$/.test(event.target.value)) {
+                    setDialogQty(event.target.value)
+                  }
+                }}
+                className="h-9 w-full min-w-0 rounded-lg border border-border bg-background px-2 text-center text-sm font-semibold"
+              />
+
+              <button
+                type="button"
+                aria-label="Tambah jumlah"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border"
+                onClick={() => setDialogQty(String((validDialogQty ? dialogQuantity : 0) + 1))}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
         </div>
+
+        {validConvertedQty && selectedUnit === 'purchaseUnit' && (
+          <div className="mt-3 rounded-lg bg-secondary/50 p-3 text-sm">
+            <span className="text-muted-foreground">Konversi:</span>
+
+            <span className="ml-2 font-semibold">
+              {dialogQuantity} {selectedUnit === 'purchaseUnit' ? purchaseUnit : salesUnit}
+              {' = '}
+              {convertedQty} {salesUnit}
+            </span>
+          </div>
+        )}
         <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
           <span className="text-sm text-muted-foreground">Subtotal</span>
           <span className="font-bold">
-            {formatRupiah(validDialogQty ? dialogQuantity * Number(product.price ?? 0) : 0)}
+            {formatRupiah(validConvertedQty ? convertedQty * Number(product.price ?? 0) : 0)}
           </span>
         </div>
         <button
           type="button"
-          disabled={!validDialogQty || disabled}
+          disabled={!validConvertedQty || disabled}
           onClick={handleConfirmQty}
           className="mt-5 w-full rounded-xl bg-accent py-3 font-semibold text-accent-foreground disabled:opacity-50"
         >
@@ -282,15 +347,17 @@ const QtyControlComponent = ({
       <>
         {creditModal}
         {qtyDialog}
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={disabled}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-primary hover:bg-secondary disabled:opacity-50"
-          title={isActualPrice ? 'Tambah ke keranjang' : 'Lihat opsi harga'}
-        >
-          <Plus size={18} />
-        </button>
+        {isCustomer && (
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={disabled}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-background text-primary hover:bg-secondary disabled:opacity-50"
+            title={isActualPrice ? 'Tambah ke keranjang' : 'Lihat opsi harga'}
+          >
+            <ShoppingCart size={18} />
+          </button>
+        )}
         {showPriceConfirm && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"

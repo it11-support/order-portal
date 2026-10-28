@@ -8,7 +8,7 @@ import {
   Send,
   FileText,
   ChevronRight,
-  Plus,
+  ShoppingCart,
   MessageSquareText,
   Trash2,
 } from 'lucide-react'
@@ -409,7 +409,7 @@ const CatalogPage = () => {
                 aria-pressed={catalogMode === 'history'}
                 className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold ${catalogMode === 'history' ? 'border-primary bg-primary text-white' : 'border-border bg-white text-foreground'}`}
               >
-                <ShoppingBag size={17} /> Riwayat Pembelian
+                <ShoppingBag size={16} /> Riwayat Pembelian
               </button>
               <button
                 type="button"
@@ -417,7 +417,7 @@ const CatalogPage = () => {
                 aria-pressed={catalogMode === 'inquiry'}
                 className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold ${catalogMode === 'inquiry' ? 'border-primary bg-primary text-white' : 'border-border bg-white text-foreground'}`}
               >
-                <Plus size={18} /> Inquiry Produk
+                <ShoppingCart size={16} /> Inquiry Produk
               </button>
             </div>
           )}
@@ -492,9 +492,9 @@ const CatalogPage = () => {
                               : `Tambahkan inquiry ${product.itemName}`
                           }
                           aria-pressed={selected}
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${selected ? 'border-primary bg-primary text-white' : 'border-border bg-white text-primary'}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${selected ? 'border-primary bg-primary text-white' : 'border-border bg-white text-primary'}`}
                         >
-                          {selected ? <X size={18} /> : <Plus size={18} />}
+                          {selected ? <X size={18} /> : <ShoppingCart size={18} />}
                         </button>
                       </div>
                     )

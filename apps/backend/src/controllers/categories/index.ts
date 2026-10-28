@@ -503,6 +503,30 @@ export const getProductsByCategory = async (
     total = products.length
   }
 
+  // SORT: ACTUAL ALWAYS FIRST
+  // Harus dilakukan sebelum pagination.
+  products.sort((a, b) => {
+    const sourceA = prices.get(a.itemCode)?.source
+    const sourceB = prices.get(b.itemCode)?.source
+
+    const priority = (source: string | undefined) => {
+      if (source === 'actual') return 0
+      if (source === 'pricelist') return 1
+      return 2
+    }
+
+    const priorityDiff =
+      priority(sourceA) - priority(sourceB)
+
+    if (priorityDiff !== 0) {
+      return priorityDiff
+    }
+
+    return a.itemName.localeCompare(b.itemName, 'id', {
+      sensitivity: 'base',
+    })
+  })
+
   // PAGINATION
   if (shouldPaginate) {
     const start = (page - 1) * pageSize

@@ -76,6 +76,8 @@ export interface Product {
   productCategory: string
   isDistributor: boolean
   salesUnit?: string
+  purchaseUnit?: string
+  purchasePackSize?: number
   salesPackSize?: number
   salesPackUnit?: string
   launchDate?: Date | string
