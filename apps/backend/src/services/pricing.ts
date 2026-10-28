@@ -158,7 +158,7 @@ export const resolveInvoicePrices = async (
     const quantity = toNumber(row.quantity)
     if (quantity === null || quantity <= 0) continue
 
-    let total = row.line_total !== null ? toNumber(row.line_total) : null
+    const total = row.line_total !== null ? toNumber(row.line_total) : null
     if (total !== null) {
       resolved.set(row.item_code, { ...row, unitPrice: round6(total / quantity) })
       continue
