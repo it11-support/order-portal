@@ -1,21 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
-import {
-  Loader,
-  StatusBadge,
-  StatusSteps,
-  SapStatusBadge,
-  ConversationThread,
-  ChatComposer,
-} from '@components'
+import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
 import { useOrders, useCategories, useCart, useAuth } from '@contexts'
 import { fmtDate } from '@lib'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useEffect, useRef, useState } from 'react'
 import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 import { toast } from 'sonner'
-import { ShoppingCart, ChevronDown, ChevronRight } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { formatRupiah } from '@/lib/formatCurrency'
+import OrderKindMismatch from '../components/orders/OrderKindMismatch'
+import FollowUpThread from '../components/orders/FollowUpThread'
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/orders', quote: '/inquiries' }
 
@@ -79,30 +74,13 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     return <Shell title="Pesanan tidak ditemukan">Pesanan tidak ditemukan</Shell>
   }
 
-  // The id belongs to the other list. Sending someone to /orders/ORD-... with a
-  // quote, or /inquiries/RFQ-... with an order, would show the wrong chrome
-  // and the wrong actions, so hand them to the list that actually owns it.
   if ((order.kind ?? 'order') !== kind) {
-    const actual = order.kind ?? 'order'
     return (
-      <Shell
-        title={actual === 'quote' ? 'Permintaan penawaran' : 'Pesanan'}
-        showBack
-        backTo={LIST_PATH[actual]}
-      >
-        <div className="text-center py-12 text-muted-foreground space-y-3">
-          <p className="text-sm">
-            {order.id} adalah {actual === 'quote' ? 'permintaan penawaran' : 'pesanan'}, bukan{' '}
-            {kind === 'quote' ? 'permintaan penawaran' : 'pesanan'}.
-          </p>
-          <button
-            onClick={() => navigate(`${LIST_PATH[actual]}/${order.id}`)}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white"
-          >
-            Buka {actual === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'}
-          </button>
-        </div>
-      </Shell>
+      <OrderKindMismatch
+        orderId={order.id}
+        actualKind={order.kind ?? 'order'}
+        expectedKind={kind}
+      />
     )
   }
 
@@ -229,51 +207,23 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
           </div>
         </div>
 
-        {/* The thread and the reply box share one card: a conversation and the way to
-            answer it are the same thing, and splitting them made the page read
-            as two unrelated sections. */}
-        <div className="bg-white rounded-2xl border border-border p-4">
-          <button
-            type="button"
-            onClick={toggleThread}
-            aria-expanded={threadOpen}
-            className="w-full flex items-center justify-between gap-2 text-left"
-          >
-            <span className="text-sm font-bold">
-              Follow up
-              {notes.length > 0 && (
-                <span className="ml-1.5 font-semibold text-muted-foreground">{notes.length}</span>
-              )}
-            </span>
-            {threadOpen ? (
-              <ChevronDown size={16} className="text-muted-foreground" />
-            ) : (
-              <ChevronRight size={16} className="text-muted-foreground" />
-            )}
-          </button>
-          {threadOpen && (
-            <>
-              <div
-                ref={threadRef}
-                className="mt-3 border border-border rounded-xl p-3 min-h-[160px] max-h-[420px] overflow-y-auto"
-              >
-                <ConversationThread
-                  notes={notes}
-                  viewerId={user?.id}
-                  emptyLabel="Belum ada pesan dari sales."
-                />
-              </div>
-              <ChatComposer
-                className="mt-3"
-                value={noteInput}
-                onChange={setNoteInput}
-                onSubmit={handleSendNote}
-                placeholder="Ketik pertanyaan..."
-                disabled={posting}
-              />
-            </>
-          )}
-        </div>
+        <FollowUpThread
+          notes={notes}
+          viewerId={user?.id}
+          open={threadOpen}
+          onToggle={toggleThread}
+          threadRef={threadRef}
+          emptyLabel="Belum ada pesan dari sales."
+        >
+          <ChatComposer
+            className="mt-3"
+            value={noteInput}
+            onChange={setNoteInput}
+            onSubmit={handleSendNote}
+            placeholder="Ketik pertanyaan..."
+            disabled={posting}
+          />
+        </FollowUpThread>
 
         {/* Ordering opens by itself once the price is in the system, so the
             button is the only thing on this page that needs a decision. */}

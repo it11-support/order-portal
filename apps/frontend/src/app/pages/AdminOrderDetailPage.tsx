@@ -1,22 +1,17 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
-import {
-  Loader,
-  StatusBadge,
-  StatusSteps,
-  SapStatusBadge,
-  ConversationThread,
-  ChatComposer,
-} from '@components'
+import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
 import { useOrders, useCategories, useAuth } from '@contexts'
 import { fmtDate } from '@lib'
-import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import type { Order, OrderStatus, FollowUpNote, RequestKind } from '@repo/shared'
 import { ORDER_FLOW, QUOTE_FLOW } from '@repo/shared'
 import { STATUS_CONFIG } from '../components/StatusBadge'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import OrderKindMismatch from '../components/orders/OrderKindMismatch'
+import FollowUpThread from '../components/orders/FollowUpThread'
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/admin/orders', quote: '/admin/inquiries' }
 
@@ -103,35 +98,25 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     loadOrder()
   }, [orderId, orders, fetchOrder, fetchFollowUps])
 
-  if (loading || orderLoading) return <Shell title="Memuat permintaan"><Loader /></Shell>
+  if (loading || orderLoading)
+    return (
+      <Shell title="Memuat permintaan">
+        <Loader />
+      </Shell>
+    )
 
   if (!order) {
     return <Shell title="Pesanan tidak ditemukan">Pesanan tidak ditemukan</Shell>
   }
 
-  // The id belongs to the other list. The status transitions and the sales note
-  // field differ between the two, so refuse rather than render the wrong form.
   if ((order.kind ?? 'order') !== kind) {
-    const actual = order.kind ?? 'order'
     return (
-      <Shell
-        title={actual === 'quote' ? 'Permintaan penawaran' : 'Pesanan'}
-        showBack
-        backTo={LIST_PATH[actual]}
-      >
-        <div className="text-center py-12 text-muted-foreground space-y-3">
-          <p className="text-sm">
-            {order.id} adalah {actual === 'quote' ? 'permintaan penawaran' : 'pesanan'}, bukan{' '}
-            {kind === 'quote' ? 'permintaan penawaran' : 'pesanan'}.
-          </p>
-          <button
-            onClick={() => navigate(`${LIST_PATH[actual]}/${order.id}`)}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-white"
-          >
-            Buka {actual === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'}
-          </button>
-        </div>
-      </Shell>
+      <OrderKindMismatch
+        orderId={order.id}
+        actualKind={order.kind ?? 'order'}
+        expectedKind={kind}
+        admin
+      />
     )
   }
 
@@ -205,7 +190,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
               key={s}
               disabled={posting}
               onClick={() => handleStatusChange(s)}
-              className="w-full sm:w-auto sm:min-w-[140px] sm:px-6 py-3 rounded-xl text-sm font-bold bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors active:scale-[0.98]"
+              className="w-full sm:w-auto sm:min-w-35 sm:px-6 py-3 rounded-xl text-sm font-bold bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors active:scale-[0.98]"
             >
               {actionLabel(s)}
             </button>
@@ -216,7 +201,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
             key="cancelled"
             disabled={posting}
             onClick={() => handleStatusChange('cancelled')}
-            className="w-full sm:w-auto sm:min-w-[140px] sm:px-6 py-3 rounded-xl text-sm font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors active:scale-[0.98]"
+            className="w-full sm:w-auto sm:min-w-35 sm:px-6 py-3 rounded-xl text-sm font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors active:scale-[0.98]"
           >
             Tolak
           </button>
@@ -372,83 +357,55 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
           </div>
         )}
 
-        {/* The thread and the reply box share one card: a conversation and the way to
-            answer it are the same thing, and splitting them made the page read
-            as two unrelated sections. */}
-        <div className="bg-white rounded-2xl border border-border p-4">
-          <button
-            type="button"
-            onClick={toggleThread}
-            aria-expanded={threadOpen}
-            className="w-full flex items-center justify-between gap-2 text-left"
-          >
-            <span className="text-sm font-bold">
-              Follow up
-              {notes.length > 0 && (
-                <span className="ml-1.5 font-semibold text-muted-foreground">{notes.length}</span>
-              )}
-            </span>
-            {threadOpen ? (
-              <ChevronDown size={16} className="text-muted-foreground" />
-            ) : (
-              <ChevronRight size={16} className="text-muted-foreground" />
-            )}
-          </button>
-          {threadOpen && (
-            <>
-              <div
-                ref={threadRef}
-                className="mt-3 border border-border rounded-xl p-3 min-h-[160px] max-h-[420px] overflow-y-auto"
-              >
-                <ConversationThread
-                  notes={notes}
-                  viewerId={user?.id}
-                  emptyLabel="Belum ada pesan."
-                />
+        <FollowUpThread
+          notes={notes}
+          viewerId={user?.id}
+          open={threadOpen}
+          onToggle={toggleThread}
+          threadRef={threadRef}
+          emptyLabel="Belum ada pesan."
+        >
+          <ChatComposer
+            className="mt-3"
+            value={noteInput}
+            onChange={setNoteInput}
+            onSubmit={handleSendNote}
+            disabled={posting}
+            placeholder={
+              internalNote
+                ? 'Pesan internal (tidak dilihat customer)...'
+                : isQuote && order.status === 'pending'
+                  ? 'Tuliskan harga / penawaran...'
+                  : 'Ketik pesan...'
+            }
+            header={
+              <div className="mb-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setInternalNote(false)}
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                    internalNote
+                      ? 'border-border bg-white text-muted-foreground'
+                      : 'border-accent bg-accent text-white'
+                  }`}
+                >
+                  Untuk customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInternalNote(true)}
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+                    internalNote
+                      ? 'border-amber-300 bg-amber-100 text-amber-800'
+                      : 'border-border bg-white text-muted-foreground'
+                  }`}
+                >
+                  Internal saja
+                </button>
               </div>
-              <ChatComposer
-                className="mt-3"
-                value={noteInput}
-                onChange={setNoteInput}
-                onSubmit={handleSendNote}
-                disabled={posting}
-                placeholder={
-                  internalNote
-                    ? 'Pesan internal (tidak dilihat customer)...'
-                    : isQuote && order.status === 'pending'
-                      ? 'Tuliskan harga / penawaran...'
-                      : 'Ketik pesan...'
-                }
-                header={
-                  <div className="mb-1.5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setInternalNote(false)}
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                        internalNote
-                          ? 'bg-white text-muted-foreground border-border'
-                          : 'bg-accent text-white border-accent'
-                      }`}
-                    >
-                      Untuk customer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInternalNote(true)}
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                        internalNote
-                          ? 'bg-amber-100 text-amber-800 border-amber-300'
-                          : 'bg-white text-muted-foreground border-border'
-                      }`}
-                    >
-                      Internal saja
-                    </button>
-                  </div>
-                }
-              />
-            </>
-          )}
-        </div>
+            }
+          />
+        </FollowUpThread>
 
         {/* Info note */}
         <div className="-mt-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
