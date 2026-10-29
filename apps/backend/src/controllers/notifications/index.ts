@@ -2,8 +2,9 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { ws } from '@/services/websocket'
+import type { Notification } from '@/generated/prisma/client'
 
-const serialize = (row: any) => ({
+const serialize = (row: Notification) => ({
   id: row.id,
   userId: row.userId,
   title: row.title,

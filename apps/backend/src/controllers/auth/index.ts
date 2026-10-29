@@ -3,8 +3,20 @@ import { generateToken, prisma } from '@utils'
 import * as bcrypt from 'bcrypt'
 import { LoginRequest, LoginResponse, ApiError, RoleType, User } from '@repo/shared'
 import { AuthenticatedRequest } from '@auth'
+import { UserGetPayload } from '@/generated/prisma/models'
+import { Decimal } from '@prisma/client/runtime/client'
 
-const toUserPayload = (user: any): User => ({
+type UserWithRelations = UserGetPayload<{
+  include: {
+    role: true
+    customer: true
+  }
+}>
+
+const serializeDecimal = (value: Decimal | null) =>
+  value?.toString() ?? null
+
+const toUserPayload = (user: UserWithRelations): User => ({
   id: user.id,
   username: user.username,
   email: user.email ?? undefined,
@@ -19,7 +31,13 @@ const toUserPayload = (user: any): User => ({
     createdAt: user.role.createdAt,
   },
   customerId: user.customerId,
-  customer: user.customer ?? null,
+  customer: user.customer
+    ? {
+      ...user.customer,
+      creditLimit: serializeDecimal(user.customer.creditLimit),
+      balance: serializeDecimal(user.customer.balance),
+    }
+    : null,
   slpCode: user.slpCode ?? null,
 })
 

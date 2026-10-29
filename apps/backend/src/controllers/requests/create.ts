@@ -9,6 +9,14 @@ import { generateRequestNumber } from '@/services/order-number'
 import { ws } from '@/services/websocket'
 import { actorOf, deniedMessage, targetCustomer, customerSelect } from '@/services/requests/access'
 import { serialize } from '@/services/requests/serializer'
+import { PortalRequest } from '@/generated/prisma/client'
+import { ProductWhereInput } from '@/generated/prisma/models'
+
+
+type SnapshotItem = {
+  productId: string | number
+  qty: number
+}
 
 export const createRequest = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)
@@ -58,7 +66,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   if (new Set(ids.map(String)).size !== ids.length)
     return res.status(400).json({ message: 'Produk duplikat.' })
 
-  let parentInquiry: any = null
+  let parentInquiry: PortalRequest | null = null
   if (inquiryId) {
     parentInquiry = await prisma.portalRequest.findUnique({
       where: { id: String(inquiryId) },
@@ -79,21 +87,40 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   // because they know what the customer asked for. An order started from an
   // inquiry is the third case: the customer may order exactly what they asked a
   // price for, which is the deal path in requirement four.
-  let productWhere: any = { isActive: true }
+  let productWhere: ProductWhereInput = { isActive: true }
   if (parentInquiry) {
-    const inquiryItems = Array.isArray(parentInquiry.items) ? (parentInquiry.items as any[]) : []
+    const inquiryItems: unknown[] = Array.isArray(parentInquiry.items)
+      ? parentInquiry.items
+      : []
+
     const itemCodes = [
       ...new Set(
         inquiryItems
-          .map((item) => item?.product?.itemCode)
+          .map((item) => {
+            if (!item || typeof item !== 'object' || !('product' in item)) {
+              return null
+            }
+
+            const product = item.product
+
+            if (!product || typeof product !== 'object' || !('itemCode' in product)) {
+              return null
+            }
+
+            return product.itemCode
+          })
           .filter((code): code is string => typeof code === 'string'),
       ),
     ]
+
     const productsOfInquiry = await prisma.product.findMany({
       where: { isActive: true, itemCode: { in: itemCodes } },
       select: { id: true },
     })
-    productWhere = { id: { in: productsOfInquiry.map((product) => product.id) } }
+
+    productWhere = {
+      id: { in: productsOfInquiry.map((product) => product.id) },
+    }
   } else if (actor.role === 'customer') {
     productWhere =
       kind === 'order'
@@ -128,7 +155,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
 
     const linePrices = await pricesForItems(customerId, items)
 
-    const snapshot = items.map((item: any) => {
+    const snapshot = items.map((item: SnapshotItem) => {
       const product = products.find(
         (p) => String(p.id) === String(item.productId),
       )!
@@ -204,7 +231,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   }
   const linePrices = await pricesForItems(customerId, items)
   const sources = new Set<string>()
-  const snapshot = items.map((item: any) => {
+  const snapshot = items.map((item: SnapshotItem) => {
     const product = products.find((p) => String(p.id) === String(item.productId))
     const price = product ? linePrices.get(product.itemCode) : undefined
     if (price) sources.add(price.source)
@@ -294,14 +321,15 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   })
   for (const notification of createdNotifications) ws.emitNotificationCreated(notification)
 
-  const itemsWithPricing = snapshot.map((item: any) => ({
-    productId: String(item.product?.id ?? item.productId),
-    productName: item.product?.itemName ?? item.product?.name ?? 'Unknown',
-    qty: item.qty ?? 1,
+  const itemsWithPricing = snapshot.map((item) => ({
+    productId: String(item.product?.id ?? ''),
+    productName: item.product?.itemName ?? 'Unknown',
+    qty: item.qty,
     price: item.price ?? 0,
     total: item.lineTotal ?? 0,
   }))
-  const totalAmount = itemsWithPricing.reduce((sum: number, item: any) => sum + item.total, 0)
+
+  const totalAmount = itemsWithPricing.reduce((sum: number, item) => sum + item.total, 0)
   ws.emitOrderCreated(
     row.id,
     String(row.customerId),

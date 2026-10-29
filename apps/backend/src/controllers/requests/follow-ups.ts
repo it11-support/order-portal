@@ -5,8 +5,9 @@ import { currentCustomer } from '@/services/customer-catalog'
 import { customerRecipientFor, staffRecipientsFor } from '@/services/audience'
 import { ws } from '@/services/websocket'
 import { actorOf, deniedMessage, customerSelect } from '@/services/requests/access'
+import { FollowUpNote } from '@/generated/prisma/client'
 
-const serializeFollowUp = (note: any) => ({
+const serializeFollowUp = (note: FollowUpNote) => ({
   id: note.id,
   requestId: note.requestId,
   author: {

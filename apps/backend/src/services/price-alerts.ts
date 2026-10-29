@@ -241,10 +241,23 @@ export const announcePriceChanges = async (
   return announcements
 }
 
-const inquiryItems = (inquiry: InquiryRow) => {
-  const items = Array.isArray(inquiry.items) ? (inquiry.items as any[]) : []
+const inquiryItems = (inquiry: InquiryRow): string[] => {
+  const items = Array.isArray(inquiry.items) ? inquiry.items : []
+
   return items
-    .map((item) => item?.product?.itemCode)
+    .map((item) => {
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+        return null
+      }
+
+      const product = item.product
+
+      if (product === null || typeof product !== 'object' || Array.isArray(product)) {
+        return null
+      }
+
+      return product.itemCode
+    })
     .filter((code): code is string => typeof code === 'string')
 }
 
