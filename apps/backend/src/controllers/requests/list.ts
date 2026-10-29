@@ -1,85 +1,213 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
+import type { PortalRequestWhereInput } from '@/generated/prisma/models'
+
 import { prisma } from '@/utils'
 import { currentCustomer } from '@/services/customer-catalog'
 import { reconcileRequests } from '@/services/sap-sync'
-import { actorOf, deniedMessage, customerSelect } from '@/services/requests/access'
+import {
+  actorOf,
+  deniedMessage,
+  customerSelect,
+} from '@/services/requests/access'
+import type { Actor } from '@/services/requests/access'
 import { serialize } from '@/services/requests/serializer'
+import { settleInquiryOrderability } from '@/services/price-alerts'
 
-export const listRequests = async (req: AuthenticatedRequest, res: Response) => {
-  const actor = actorOf(req)
-  if (!actor) return res.status(403).json({ message: deniedMessage(req) })
+// Import dari lokasi implementasi sebenarnya.
+// import { settleInquiryOrderability } from '@/services/...'
 
-  let whereClause: any = {}
+const VALID_STATUSES = new Set([
+  'draft',
+  'pending',
+  'confirmed',
+  'processing',
+  'delivered',
+  'cancelled',
+])
+
+const requestInclude = {
+  customer: { select: customerSelect },
+  createdBy: { select: { name: true } },
+} as const
+
+const deny = (res: Response, message: string, status = 403) =>
+  res.status(status).json({ message })
+
+const validateStatus = (value: unknown): value is string =>
+  typeof value === 'string' && VALID_STATUSES.has(value)
+
+const validateCustomerId = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d+$/.test(value)
+
+const buildAccessFilter = async (
+  req: AuthenticatedRequest,
+  actor: Actor,
+): Promise<PortalRequestWhereInput | null> => {
   if (actor.role === 'customer') {
     const customer = await currentCustomer(req)
-    if (!customer) return res.status(403).json({ message: 'Akun pelanggan tidak aktif.' })
-    whereClause = { customerId: BigInt(String(customer.id)) }
-  } else if (actor.role === 'sales_admin') {
-    whereClause = { customer: { SlpCode: actor.slpCode } }
+
+    if (!customer) return null
+
+    return {
+      customerId: BigInt(String(customer.id)),
+    }
+  }
+
+  if (actor.role === 'sales_admin') {
+    return {
+      customer: {
+        SlpCode: actor.slpCode,
+      },
+    }
+  }
+
+  return {}
+}
+
+const checkRowAccess = (
+  req: AuthenticatedRequest,
+  actor: Actor,
+  row: {
+    customerId: bigint
+    customer: { SlpCode: number | null }
+  },
+): string | null => {
+  if (
+    actor.role === 'customer' &&
+    String(row.customerId) !== String(req.user?.customerId)
+  ) {
+    return 'Akses ditolak.'
+  }
+
+  if (
+    actor.role === 'sales_admin' &&
+    row.customer.SlpCode !== actor.slpCode
+  ) {
+    return 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.'
+  }
+
+  return null
+}
+
+export const listRequests = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
+  const actor = actorOf(req)
+
+  if (!actor) {
+    return deny(res, deniedMessage(req))
+  }
+
+  const where = await buildAccessFilter(req, actor)
+
+  if (!where) {
+    return deny(res, 'Akun pelanggan tidak aktif.')
   }
 
   const statusFilter = req.query.status
+
   if (statusFilter !== undefined) {
-    if (typeof statusFilter !== 'string' || !['draft', 'pending', 'confirmed', 'processing', 'delivered', 'cancelled'].includes(statusFilter))
-      return res.status(400).json({ message: 'Filter status tidak valid.' })
-    whereClause = { ...whereClause, status: statusFilter }
+    if (!validateStatus(statusFilter)) {
+      return deny(res, 'Filter status tidak valid.', 400)
+    }
+
+    where.status = statusFilter
   }
+
   const customerFilter = req.query.customerId
+
   if (customerFilter !== undefined) {
-    if (typeof customerFilter !== 'string' || !/^\d+$/.test(customerFilter))
-      return res.status(400).json({ message: 'Customer ID tidak valid.' })
-    if (actor.role === 'customer') {
-      if (String(whereClause.customerId) !== customerFilter)
-        return res.status(403).json({ message: 'Akses ditolak.' })
-    } else {
-      whereClause = { ...whereClause, customerId: BigInt(customerFilter) }
+    if (!validateCustomerId(customerFilter)) {
+      return deny(res, 'Customer ID tidak valid.', 400)
+    }
+
+    const customerId = BigInt(customerFilter)
+
+    if (
+      actor.role === 'customer' &&
+      where.customerId !== customerId
+    ) {
+      return deny(res, 'Akses ditolak.')
+    }
+
+    if (actor.role !== 'customer') {
+      where.customerId = customerId
     }
   }
+
   const rows = await prisma.portalRequest.findMany({
-    where: whereClause,
-    include: { customer: { select: customerSelect }, createdBy: { select: { name: true } } },
+    where,
+    include: requestInclude,
     orderBy: { createdAt: 'desc' },
   })
-  // Reading the list is also when SAP is consulted, so a delivery that closed
-  // in SAP shows up without anyone waiting for the next manual status change.
+
+  // Sinkronkan status SAP sebelum response.
   const views = await reconcileRequests(rows)
+
   res.setHeader('Cache-Control', 'no-store')
-  return res.json({ data: rows.map((row) => serialize(row, views, actor)) })
+
+  return res.json({
+    data: rows.map((row) => serialize(row, views, actor)),
+  })
 }
 
-export const getRequest = async (req: AuthenticatedRequest, res: Response) => {
+export const getRequest = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const actor = actorOf(req)
-  if (!actor) return res.status(403).json({ message: deniedMessage(req) })
-  if (actor.role === 'customer') {
-    const customer = await currentCustomer(req)
-    if (!customer) return res.status(403).json({ message: 'Akun pelanggan tidak aktif.' })
+
+  if (!actor) {
+    return deny(res, deniedMessage(req))
   }
-  const row = await prisma.portalRequest.findUnique({
-    where: { id: String(req.params.id) },
-    include: { customer: { select: customerSelect }, createdBy: { select: { name: true } } },
+
+  const accessFilter = await buildAccessFilter(req, actor)
+
+  if (!accessFilter) {
+    return deny(res, 'Akun pelanggan tidak aktif.')
+  }
+
+  const id = String(req.params.id)
+
+  const row = await prisma.portalRequest.findFirst({
+    where: {
+      id,
+      ...accessFilter,
+    },
+    include: requestInclude,
   })
-  if (!row) return res.status(404).json({ message: 'Permintaan tidak ditemukan.' })
-  if (actor.role === 'customer' && String(row.customerId) !== String(req.user!.customerId))
-    return res.status(403).json({ message: 'Akses ditolak.' })
-  if (
-    actor.role === 'sales_admin' &&
-    String(row.customer.SlpCode) !== String(actor.slpCode)
-  )
-    return res
-      .status(403)
-      .json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
-  res.setHeader('Cache-Control', 'no-store')
-  // Opening an inquiry is also when the portal asks whether the price has
-  // landed, so an inquiry whose price was written in the system is already
-  // orderable by the time anybody is looking at it.
-  if (await settleInquiryOrderability(row.id)) {
-    const settled = await prisma.portalRequest.findUniqueOrThrow({
-      where: { id: row.id },
-      include: { customer: { select: customerSelect }, createdBy: { select: { name: true } } },
-    })
-    return res.json({ data: serialize(settled, undefined, actor) })
+
+  if (!row) {
+    return deny(res, 'Permintaan tidak ditemukan.', 404)
   }
+
+  const accessError = checkRowAccess(req, actor, row)
+
+  if (accessError) {
+    return deny(res, accessError)
+  }
+
+  res.setHeader('Cache-Control', 'no-store')
+
+  // Periksa apakah inquiry sudah dapat dikonversi menjadi order.
+  const settled = await settleInquiryOrderability(row.id)
+
+  if (settled) {
+    const updatedRow = await prisma.portalRequest.findUniqueOrThrow({
+      where: { id: row.id },
+      include: requestInclude,
+    })
+
+    return res.json({
+      data: serialize(updatedRow, undefined, actor),
+    })
+  }
+
   const views = await reconcileRequests([row])
-  return res.json({ data: serialize(row, views, actor) })
+
+  return res.json({
+    data: serialize(row, views, actor),
+  })
 }

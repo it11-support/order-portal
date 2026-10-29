@@ -354,7 +354,6 @@ export const updateRequest = async (
       req,
       row,
       effectiveStatus,
-      status,
       actor.role === 'customer' ? undefined : salesNotes,
     )
   }

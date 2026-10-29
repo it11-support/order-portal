@@ -1,15 +1,51 @@
 import type { Actor } from './access'
+import type { Prisma } from '@/generated/prisma/client'
 
-/**
- * How a portal request stands in the system, for the UI.
- *
- * Once a request is linked to a document, the customer follows that document
- * rather than an internal guess: "Open" means the document is still being worked
- * on, "Closed" means it is finished, "Canceled" means it will not happen.
- */
-export const sapView = (row: any, views?: Map<string, any>) => {
-  if (!row.sapDocEntry) return null
-  const view = views?.get(row.id) ?? {
+type RequestRow = Prisma.PortalRequestGetPayload<{
+  include: {
+    customer: {
+      select: {
+        CntctPrsn: true
+        CardName: true
+        CardCode: true
+        Cellular: true
+        Phone1: true
+        SalesName: true
+      }
+    }
+    createdBy: {
+      select: {
+        name: true
+      }
+    }
+  }
+}>
+
+type SapDocumentStatus = 'open' | 'closed' | 'unknown'
+
+type SapViewData = {
+  companyId: string | null
+  docEntry: number | null
+  docNum: number | null
+  docStatus: SapDocumentStatus
+  canceled: boolean
+  syncedAt: string | null
+  portalStatus?: string
+}
+
+type SapView = SapViewData & {
+  status: 'open' | 'closed' | 'canceled' | 'unknown'
+}
+
+export type RequestViews = Map<string, SapViewData>
+
+export const sapView = (
+  row: RequestRow,
+  views?: RequestViews,
+): SapView | null => {
+  if (row.sapDocEntry === null) return null
+
+  const view: SapViewData = views?.get(row.id) ?? {
     companyId: row.sapCompanyId,
     docEntry: row.sapDocEntry,
     docNum: row.sapDocNum,
@@ -22,38 +58,37 @@ export const sapView = (row: any, views?: Map<string, any>) => {
     canceled: row.sapCanceled?.trim() === 'Y',
     syncedAt: row.sapSyncedAt?.toISOString() ?? null,
   }
+
+  const status: SapView['status'] = view.canceled
+    ? 'canceled'
+    : view.docStatus
+
   return {
     ...view,
-    status:
-      view.canceled ? 'canceled' : view.docStatus === 'closed' ? 'closed' : view.docStatus === 'open' ? 'open' : 'unknown',
+    status,
   }
 }
 
-/**
- * The customer's side of a request.
- *
- * A viewer is required so staff-only fields can be dropped instead of merely
- * hidden by the UI: the payload the customer receives must not carry them at
- * all, otherwise the internal note is one devtools tab away.
- */
-export const serialize = (row: any, views?: Map<string, any>, viewer?: Actor | null) => {
+export const serialize = (
+  row: RequestRow,
+  views?: RequestViews,
+  viewer?: Actor | null,
+) => {
   const forCustomer = viewer?.role === 'customer'
+
   return {
     id: row.id,
     kind: row.kind,
     userId: String(row.customerId),
-    userName: row.customer.CntctPrsn || row.customer.CardName,
+    userName:
+      row.customer.CntctPrsn || row.customer.CardName,
     company: row.customer.CardName,
     cardCode: row.customer.CardCode,
-    phone: row.customer.Cellular || row.customer.Phone1,
+    phone:
+      row.customer.Cellular || row.customer.Phone1,
     salesName: row.customer.SalesName,
     items: row.items,
-    // Reconciling against SAP can move the status during this very read, so the
-    // value the caller sees is the reconciled one, not the row we read a moment ago.
     status: views?.get(row.id)?.portalStatus ?? row.status,
-    // customer | sales: who raised it. A sales-entered order has to look
-    // different from the customer's own, otherwise the customer is surprised by
-    // an order they did not place.
     source: row.source ?? 'customer',
     createdByName: row.createdBy?.name ?? null,
     priceBasis: row.priceBasis ?? null,
@@ -63,6 +98,8 @@ export const serialize = (row: any, views?: Map<string, any>, viewer?: Actor | n
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     notes: row.notes,
-    ...(forCustomer ? {} : { salesNotes: row.salesNotes ?? null }),
+    ...(forCustomer
+      ? {}
+      : { salesNotes: row.salesNotes ?? null }),
   }
 }

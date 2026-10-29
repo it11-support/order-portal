@@ -7,27 +7,36 @@ const adapter = new PrismaPg({
 })
 
 const basePrisma = new PrismaClient({ adapter })
+const convertBigInt = (value: unknown): unknown => {
+  if (typeof value === 'bigint') {
+    return value.toString()
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(convertBigInt)
+  }
+
+  if (value instanceof Date || value === null) {
+    return value
+  }
+
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        convertBigInt(item),
+      ]),
+    )
+  }
+
+  return value
+}
 
 export const prisma = basePrisma.$extends({
   query: {
     $allModels: {
       async $allOperations({ args, query }) {
         const result = await query(args)
-
-        const convertBigInt = (obj: any): any => {
-          if (obj === null || obj === undefined) return obj
-          if (typeof obj === 'bigint') return obj.toString()
-          if (Array.isArray(obj)) return obj.map(convertBigInt)
-          if (typeof obj === 'object') {
-            for (const key in obj) {
-              if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                obj[key] = convertBigInt(obj[key])
-              }
-            }
-          }
-          return obj
-        }
-
         return convertBigInt(result)
       },
     },

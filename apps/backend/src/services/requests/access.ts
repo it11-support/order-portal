@@ -2,6 +2,10 @@ import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { currentCustomer } from '@/services/customer-catalog'
 
+type TargetCustomerResult =
+  | { id: bigint; CardCode: string | null }
+  | { error: string }
+
 export const customerSelect = {
   id: true,
   CardCode: true,
@@ -56,26 +60,69 @@ export const deniedMessage = (req: AuthenticatedRequest) => {
 export const targetCustomer = async (
   req: AuthenticatedRequest,
   actor: Actor,
-  body: any,
-): Promise<{ id: bigint; CardCode: string | null } | { error: string }> => {
+  body: unknown,
+): Promise<TargetCustomerResult> => {
   if (actor.role === 'customer') {
     const customer = await currentCustomer(req)
-    if (!customer) return { error: 'Hanya pelanggan aktif dapat mengirim permintaan.' }
-    return { id: BigInt(String(customer.id)), CardCode: customer.CardCode }
+
+    if (!customer) {
+      return {
+        error: 'Hanya pelanggan aktif dapat mengirim permintaan.',
+      }
+    }
+
+    return {
+      id: BigInt(String(customer.id)),
+      CardCode: customer.CardCode,
+    }
   }
 
-  const raw = body?.customerId
-  if (raw === undefined || raw === null || !/^\d+$/.test(String(raw)))
+  const raw =
+    body !== null &&
+      typeof body === 'object' &&
+      'customerId' in body
+      ? body.customerId
+      : undefined
+
+  if (
+    (typeof raw !== 'string' && typeof raw !== 'number') ||
+    (typeof raw === 'number' && !Number.isSafeInteger(raw)) ||
+    !/^[1-9]\d*$/.test(String(raw))
+  ) {
     return { error: 'Pelanggan tujuan wajib dipilih.' }
+  }
 
   const customer = await prisma.customers.findUnique({
     where: { id: BigInt(String(raw)) },
-    select: { id: true, CardCode: true, NonActive: true, SlpCode: true },
+    select: {
+      id: true,
+      CardCode: true,
+      NonActive: true,
+      SlpCode: true,
+    },
   })
-  if (!customer) return { error: 'Pelanggan tidak ditemukan.' }
-  if (!customer.CardCode || customer.NonActive === 'Y')
-    return { error: 'Pelanggan tidak aktif atau tidak memiliki CardCode.' }
-  if (actor.role === 'sales_admin' && String(customer.SlpCode) !== String(actor.slpCode))
-    return { error: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' }
-  return { id: BigInt(String(customer.id)), CardCode: customer.CardCode }
+
+  if (!customer) {
+    return { error: 'Pelanggan tidak ditemukan.' }
+  }
+
+  if (!customer.CardCode || customer.NonActive === 'Y') {
+    return {
+      error: 'Pelanggan tidak aktif atau tidak memiliki CardCode.',
+    }
+  }
+
+  if (
+    actor.role === 'sales_admin' &&
+    customer.SlpCode !== actor.slpCode
+  ) {
+    return {
+      error: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.',
+    }
+  }
+
+  return {
+    id: BigInt(String(customer.id)),
+    CardCode: customer.CardCode,
+  }
 }
