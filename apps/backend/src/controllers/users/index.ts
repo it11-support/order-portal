@@ -2,11 +2,19 @@ import { prisma } from '@utils'
 import { Request, Response } from 'express'
 import * as bcrypt from 'bcrypt'
 import { RoleType, User } from '@repo/shared'
-import { AuthenticatedRequest } from '@auth'
+import { UserWhereInput } from '@/generated/prisma/models'
 
-const serializeUser = (user: any) => {
-  const { password: _password, encryptedPassword, ...rest } = user
-  return { ...rest, password: encryptedPassword ?? null }
+function serializeUser<T extends {
+  password: string
+  encryptedPassword: string | null
+}>(user: T): Omit<T, 'password' | 'encryptedPassword'> {
+  const {
+    password: _password,
+    encryptedPassword: _encryptedPassword,
+    ...rest
+  } = user
+
+  return rest
 }
 
 export interface UserListResponse {
@@ -26,7 +34,7 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
   const skip = (page - 1) * limit
 
-  const where: any = {
+  const where: UserWhereInput = {
     role: {
       name: { not: 'customer' as const },
     },
@@ -41,7 +49,9 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
   }
 
   if (roleFilter && roleFilter !== 'all') {
-    where.role.name = roleFilter as RoleType
+    where.role = {
+      name: roleFilter as RoleType,
+    }
   }
 
   const [total, users] = await prisma.$transaction([
@@ -115,6 +125,29 @@ const resolveSlpCode = async (
   if (!salesPerson) return { error: 'SLP Code tidak ditemukan' }
   return { slpCode }
 }
+
+const resolveUpdateSlpCode = async (
+  currentRole: { id: number; name: string },
+  roleId?: number,
+  slpCode?: number | null,
+) => {
+  if (slpCode === undefined && (roleId === undefined || roleId === currentRole.id)) {
+    return {}
+  }
+
+  const role = roleId !== undefined && roleId !== currentRole.id
+    ? await prisma.role.findUnique({ where: { id: roleId } })
+    : currentRole
+
+  if (!role) return { error: 'Role tidak valid' }
+
+  if (role.name === 'customer') {
+    return { error: 'Tidak dapat mengubah user ke role customer melalui modul ini' }
+  }
+
+  return resolveSlpCode(role.name, slpCode)
+}
+
 
 export const createUser = async (
   req: Request<{}, {}, CreateUserRequest>,
@@ -208,51 +241,50 @@ export const updateUser = async (
   req: Request<{ id: string }, {}, UpdateUserRequest>,
   res: Response,
 ): Promise<void> => {
-  const { id } = req.params
-  const { username, password, name, email, roleId, isActive, slpCode } = req.body
+  const id = Number(req.params.id)
+  const { password, slpCode, roleId, ...fields } = req.body
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    res.status(400).json({ message: 'ID tidak valid' })
+    return
+  }
 
   const existing = await prisma.user.findUnique({
-    where: { id: parseInt(id) },
+    where: { id },
     include: { role: true },
   })
+
   if (!existing) {
     res.status(404).json({ message: 'User tidak ditemukan' })
     return
   }
 
-  const updateData: any = {}
-  if (slpCode !== undefined || (roleId && roleId !== existing.roleId)) {
-    // The role decides whether the territory is mandatory, so it is resolved
-    // from the role the account ends up with, not the one it has today.
-    let targetRoleName = existing.role.name
-    if (roleId && roleId !== existing.roleId) {
-      const role = await prisma.role.findUnique({ where: { id: roleId } })
-      if (!role) {
-        res.status(400).json({ message: 'Role tidak valid' })
-        return
-      }
-      targetRoleName = role.name
-    }
-    const slp = await resolveSlpCode(targetRoleName, slpCode ?? undefined)
-    if (slp.error) {
-      res.status(400).json({ message: slp.error })
-      return
-    }
-    if (slp.slpCode !== undefined) updateData.slpCode = slp.slpCode
+  const slp = await resolveUpdateSlpCode(
+    { id: existing.roleId, name: existing.role.name },
+    roleId,
+    slpCode,
+  )
+
+  if (slp.error) {
+    res.status(400).json({ message: slp.error })
+    return
   }
-  if (username) updateData.username = username
-  if (password) {
-    updateData.password = await bcrypt.hash(password, 10)
-    updateData.encryptedPassword = password
+
+  const data = {
+    ...(fields.username && { username: fields.username }),
+    ...(fields.name && { name: fields.name }),
+    ...(fields.email !== undefined && { email: fields.email || null }),
+    ...(fields.isActive !== undefined && { isActive: fields.isActive }),
+    ...(roleId !== undefined && { roleId }),
+    ...(slp.slpCode !== undefined && { slpCode: slp.slpCode }),
+    ...(password && {
+      password: await bcrypt.hash(password, 10),
+    }),
   }
-  if (name) updateData.name = name
-  if (email !== undefined) updateData.email = email || null
-  if (roleId) updateData.roleId = roleId
-  if (isActive !== undefined) updateData.isActive = isActive
 
   const user = await prisma.user.update({
-    where: { id: parseInt(id) },
-    data: updateData,
+    where: { id },
+    data,
     include: { role: true, customer: true },
   })
 
