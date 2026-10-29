@@ -9,7 +9,8 @@
   SetStateAction,
 } from 'react'
 import type { Order, OrderStatus, CartItem, FollowUpNote, PriceChange } from '@repo/shared'
-import { api } from '@lib'
+import { api, swrFetcher } from '@lib'
+import useSWR from 'swr'
 import { useAuth } from './authHook'
 import { useWSEvent } from './WebSocketContext'
 
@@ -60,41 +61,59 @@ const OrderContext = createContext<OrderContextType | null>(null)
 export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
   const identity = user ? `${user.role.name}:${user.id}` : ''
-  const [data, setData] = useState<{ owner: string; orders: Order[] }>({ owner: '', orders: [] })
-  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [followUps, setFollowUps] = useState<Record<string, FollowUpNote[]>>({})
   const busy = useRef(false)
 
+  type RequestsResponse = {
+    data: Order[]
+  }
+
+  const {
+    data: response,
+    mutate,
+    isLoading,
+    error: swrError,
+  } = useSWR<RequestsResponse>(
+    identity ? (['/requests', identity] as const) : null,
+    ([url]) => swrFetcher<RequestsResponse>(url),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
+      keepPreviousData: false,
+    },
+  )
+
+  const orders = response?.data ?? []
+  const loading = Boolean(identity) && isLoading
+  const displayError = error || (swrError ? 'Gagal memuat pesanan dan penawaran.' : '')
+
   const refresh = useCallback(async () => {
     if (!identity) return
-    const response = await api.get('/requests')
-    setData({ owner: identity, orders: response.data.data })
-  }, [identity])
+    await mutate()
+  }, [identity, mutate])
 
   useEffect(() => {
-    let disposed = false
     setError('')
     setOrderPlaced(false)
-    setLoading(Boolean(identity))
-    if (identity)
-      api
-        .get('/requests')
-        .then((response) => {
-          if (!disposed) setData({ owner: identity, orders: response.data.data })
-        })
-        .catch(() => {
-          if (!disposed) setError('Gagal memuat pesanan dan penawaran.')
-        })
-        .finally(() => {
-          if (!disposed) setLoading(false)
-        })
-    return () => {
-      disposed = true
-    }
+    setFollowUps({})
   }, [identity])
+
+  const fetchFollowUpsInternal = useCallback(
+    async (id: string) => {
+      if (!identity) return
+      try {
+        const response = await api.get(`/requests/${id}/follow-ups`)
+        setFollowUps((prev) => ({ ...prev, [id]: response.data.data }))
+      } catch {
+        setFollowUps((prev) => ({ ...prev, [id]: [] }))
+      }
+    },
+    [identity],
+  )
+
   useWSEvent('order.status_changed', () => {
     if (identity) void refresh()
   })
@@ -136,13 +155,12 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const response = await api.post('/requests', payload)
       const order: Order = response.data.data
-      setData((previous) => ({
-        owner: identity,
-        orders: [
-          order,
-          ...(previous.owner === identity ? previous.orders.filter((o) => o.id !== order.id) : []),
-        ],
-      }))
+      await mutate(
+        (current) => ({
+          data: [order, ...(current?.data ?? []).filter((o) => o.id !== order.id)],
+        }),
+        { revalidate: false },
+      )
     } catch (e: any) {
       if (e.response?.data?.code === 'PRICE_INCREASED') {
         // The order was never created, so the retry key must stay valid.
@@ -184,15 +202,12 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
           notes: input.notes,
         })
         const request: Order = response.data.data
-        setData((previous) => ({
-          owner: identity,
-          orders: [
-            request,
-            ...(previous.owner === identity
-              ? previous.orders.filter((o) => o.id !== request.id)
-              : []),
-          ],
-        }))
+        await mutate(
+          (current) => ({
+            data: [request, ...(current?.data ?? []).filter((o) => o.id !== request.id)],
+          }),
+          { revalidate: false },
+        )
         return request
       } catch (e: any) {
         const message = e.response?.data?.message ?? 'Gagal menyimpan. Silakan coba lagi.'
@@ -200,19 +215,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error(message)
       }
     },
-    [identity],
-  )
-  const fetchFollowUpsInternal = useCallback(
-    async (id: string) => {
-      if (!identity) return
-      try {
-        const response = await api.get(`/requests/${id}/follow-ups`)
-        setFollowUps((prev) => ({ ...prev, [id]: response.data.data }))
-      } catch {
-        setFollowUps((prev) => ({ ...prev, [id]: [] }))
-      }
-    },
-    [identity],
+    [mutate],
   )
   const updateStatus: OrderContextType['updateStatus'] = useCallback(
     async (id, status, salesNotes = '') => {
@@ -279,10 +282,10 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <OrderContext.Provider
       value={{
-        orders: data.owner === identity ? data.orders : [],
+        orders,
         loading,
         submitting,
-        error,
+        error: displayError,
         refreshOrders: refresh,
         placeOrder,
         sendQuote: (items, notes) => send('quote', items, notes),
