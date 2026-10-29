@@ -1,7 +1,7 @@
 import { AxiosRequestConfig } from 'axios'
 import { api } from './api'
 
-export const swrFetcher = async <T = any>(
+export const swrFetcher = async <T = unknown>(
   args: string | [string, AxiosRequestConfig],
 ): Promise<T> => {
   if (typeof args === 'string') {
