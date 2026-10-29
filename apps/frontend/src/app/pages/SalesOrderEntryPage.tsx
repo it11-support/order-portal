@@ -227,20 +227,41 @@ const SalesOrderEntryPage = () => {
     }
   }
 
-  const addLine = (product: Product) => {
-    setLines((previous) =>
-      previous.some((line) => String(line.product.id) === String(product.id))
-        ? previous
-        : [...previous, { product, qty: 1 }],
-    )
+  const addLine = (product: Product, qty = 1) => {
+    setLines((previous) => {
+      const existing = previous.find((line) => String(line.product.id) === String(product.id))
+
+      if (existing) {
+        return previous.map((line) =>
+          String(line.product.id) === String(product.id)
+            ? {
+                product,
+                qty: line.qty + qty,
+              }
+            : line,
+        )
+      }
+
+      return [...previous, { product, qty }]
+    })
   }
 
   const setLineQty = (productId: string, qty: number) => {
-    setLines((previous) =>
-      previous.map((line) =>
-        String(line.product.id) === productId ? { ...line, qty: Math.max(1, qty) } : line,
-      ),
-    )
+    setLines((previous) => {
+      const exists = previous.some((line) => String(line.product.id) === productId)
+
+      if (exists) {
+        return previous.map((line) =>
+          String(line.product.id) === productId ? { ...line, qty: Math.max(1, qty) } : line,
+        )
+      }
+
+      const product = products.find((item) => String(item.id) === productId)
+
+      if (!product) return previous
+
+      return [...previous, { product, qty: Math.max(1, qty) }]
+    })
   }
 
   const removeLine = (productId: string) => {
@@ -620,7 +641,7 @@ const SalesOrderEntryPage = () => {
               <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Daftar Produk · Harga Customer
               </div>
-              <div className="max-h-[430px] overflow-y-auto">
+              <div className="max-h-107.5 overflow-y-auto">
                 {products.length === 0 && (
                   <div className="px-4 py-10 text-center text-sm text-slate-500">
                     Tidak ada produk yang ditemukan.
@@ -672,20 +693,32 @@ const SalesOrderEntryPage = () => {
                         </span>
                         <QtyControl
                           product={product}
+                          cardcode={selectedCustomer.CardCode ?? undefined}
+                          listMode
                           qty={existing?.qty ?? 0}
-                          onQtyChange={(id, qty) => setLineQty(String(id), Math.max(1, qty))}
+                          onAdd={(pricedProduct, qty) => addLine(pricedProduct, qty ?? 1)}
+                          onQtyChange={(id, qty) => setLineQty(String(id), qty)}
                           onIncrease={(p) => {
                             const line = lines.find((l) => String(l.product.id) === String(p.id))
-                            setLineQty(String(p.id), (line?.qty ?? 0) + 1)
+
+                            if (!line) {
+                              addLine(p)
+                            } else {
+                              setLineQty(String(p.id), line.qty + 1)
+                            }
                           }}
                           onDecrease={(p) => {
                             const line = lines.find((l) => String(l.product.id) === String(p.id))
-                            const next = (line?.qty ?? 1) - 1
-                            if (next <= 0) removeLine(String(p.id))
-                            else setLineQty(String(p.id), next)
+
+                            if (!line) return
+
+                            if (line.qty <= 1) {
+                              removeLine(String(p.id))
+                            } else {
+                              setLineQty(String(p.id), line.qty - 1)
+                            }
                           }}
                           onRemove={(id) => removeLine(String(id))}
-                          onAdd={(p) => addLine(p)}
                         />
                       </div>
                     </div>

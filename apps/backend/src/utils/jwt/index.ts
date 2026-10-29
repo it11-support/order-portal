@@ -23,3 +23,22 @@ export const verifyAccessToken = (token: string): { userId: number } | null => {
     return null
   }
 }
+
+export const createSapToken = (user: {
+  id: number
+  role: string
+}) => {
+  return jwt.sign(
+    {
+      sub: String(user.id),
+      role: user.role,
+    },
+    process.env.JWT_SECRET!,
+    {
+      algorithm: 'HS256',
+      expiresIn: '5m',
+      issuer: 'order-portal',
+      audience: 'sap-worker',
+    },
+  )
+}

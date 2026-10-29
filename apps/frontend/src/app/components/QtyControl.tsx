@@ -5,28 +5,32 @@ import { useAuth } from '../contexts/authHook'
 import { useCart } from '../contexts'
 import { useContactSales } from '../contexts/ContactSalesContext'
 import { formatRupiah } from '@/lib/formatCurrency'
+import { api } from '@lib'
 
 type QtyControlProps = {
   product: Product
+  cardcode?: string
   onContactSales?: (product: Product) => void
   qty?: number
   onQtyChange?: (productId: number, qty: number) => void
   onIncrease?: (product: Product) => void
   onDecrease?: (product: Product) => void
   onRemove?: (productId: number) => void
-  onAdd?: (product: Product) => void
+  onAdd?: (product: Product, qty?: number) => void
   listMode?: boolean
   disabled?: boolean
 }
 
 const QtyControlComponent = ({
   product,
+  cardcode,
   onContactSales,
   qty: propsQty,
   onQtyChange: propsOnQtyChange,
   onIncrease: propsOnIncrease,
   onDecrease: propsOnDecrease,
   onRemove: propsOnRemove,
+  onAdd: propsOnAdd,
   listMode = false,
   disabled,
 }: QtyControlProps) => {
@@ -68,6 +72,119 @@ const QtyControlComponent = ({
 
   const isActualPrice = product.priceSource === 'actual'
   const hasPrice = product.price != null && Number(product.price) > 0
+
+  // Sales menggunakan CardCode customer yang dipilih; customer memakai akunnya sendiri.
+  const customerCardCode =
+    (customer as { CardCode?: string | null; cardCode?: string | null } | null | undefined)
+      ?.CardCode ??
+    (customer as { cardCode?: string | null } | null | undefined)?.cardCode ??
+    null
+  const targetCardCode = cardcode || customerCardCode
+
+  const [sapChecking, setSapChecking] = useState(false)
+  const [sapCheckError, setSapCheckError] = useState('')
+  const [stockChecked, setStockChecked] = useState(false)
+  const [priceChecked, setPriceChecked] = useState(false)
+  const [sapPrice, setSapPrice] = useState<number | null>(null)
+  const [sapStock, setSapStock] = useState<number | null>(null)
+  const [stockChecking, setStockChecking] = useState(false)
+
+  useEffect(() => {
+    if (!showQtyDialog) return
+
+    const controller = new AbortController()
+    let active = true
+    setSapChecking(true)
+    setSapCheckError('')
+    setStockChecked(false)
+    setPriceChecked(false)
+    setSapPrice(null)
+
+    const check = async () => {
+      try {
+        if (!targetCardCode) {
+          setSapCheckError('CardCode customer tidak tersedia.')
+          return
+        }
+
+        setSapStock(null)
+
+        const [stockResult, priceResult] = await Promise.allSettled([
+          api.get('/sap/stock', {
+            params: { itemcode: product.itemCode },
+            signal: controller.signal,
+          }),
+          api.get('/sap/price', {
+            params: {
+              cardcode: targetCardCode,
+              itemcode: product.itemCode,
+            },
+            signal: controller.signal,
+          }),
+        ])
+
+        if (!active) return
+
+        // STOCK
+        if (stockResult.status === 'fulfilled') {
+          const response = stockResult.value.data as Record<string, unknown>
+          const data = response?.data
+
+          const payload =
+            data && typeof data === 'object' && !Array.isArray(data)
+              ? (data as Record<string, unknown>)
+              : response
+
+          const raw = payload.Available ?? payload.available
+          const parsed = raw == null || raw === '' ? NaN : Number(raw)
+
+          if (Number.isFinite(parsed)) {
+            setSapStock(parsed)
+            setStockChecked(true)
+          } else {
+            setStockChecked(false)
+            setSapCheckError('Respons stok SAP tidak valid.')
+          }
+        } else {
+          setStockChecked(false)
+          setSapCheckError('Gagal memeriksa stok SAP.')
+        }
+
+        // PRICE
+        if (priceResult.status === 'fulfilled') {
+          const response = priceResult.value.data as Record<string, unknown>
+          const data = response?.data
+
+          const payload =
+            data && typeof data === 'object' && !Array.isArray(data)
+              ? (data as Record<string, unknown>)
+              : response
+
+          const raw = payload.price ?? payload.Price ?? payload.actualPrice ?? payload.ActualPrice
+
+          const parsed = raw == null || raw === '' ? NaN : Number(raw)
+
+          if (Number.isFinite(parsed) && parsed > 0) {
+            setSapPrice(parsed)
+            setPriceChecked(true)
+          } else {
+            setSapCheckError('Respons harga SAP tidak memuat harga yang valid.')
+          }
+        } else {
+          setSapCheckError('Gagal memeriksa harga SAP.')
+        }
+      } catch {
+        if (active) setSapCheckError('Gagal memeriksa SAP.')
+      } finally {
+        if (active) setSapChecking(false)
+      }
+    }
+    void check()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [showQtyDialog, product.itemCode, targetCardCode])
 
   useEffect(() => {
     if (!editing) {
@@ -128,7 +245,7 @@ const QtyControlComponent = ({
       setShowCreditModal(true)
       return
     }
-    if (isActualPrice && hasPrice) {
+    if (cardcode || (isActualPrice && hasPrice)) {
       setDialogQty('1')
       setSelectedUnit('salesUnit')
       setShowQtyDialog(true)
@@ -143,7 +260,7 @@ const QtyControlComponent = ({
       setShowCreditModal(true)
       return
     }
-    if (!hasPrice) {
+    if (!hasPrice && !targetCardCode) {
       return
     }
     setShowPriceConfirm(false)
@@ -157,7 +274,15 @@ const QtyControlComponent = ({
     /^\d+$/.test(dialogQty) && Number.isSafeInteger(dialogQuantity) && dialogQuantity > 0
 
   const handleConfirmQty = () => {
-    if (!validConvertedQty || disabled) return
+    if (
+      !validConvertedQty ||
+      disabled ||
+      sapChecking ||
+      !stockChecked ||
+      !priceChecked ||
+      sapPrice === null
+    )
+      return
 
     if (isOverCredit) {
       setShowQtyDialog(false)
@@ -166,7 +291,13 @@ const QtyControlComponent = ({
     }
 
     // Selalu simpan quantity dalam salesUnit
-    onQtyChange(product.id, qty + convertedQty)
+    const pricedProduct = { ...product, price: sapPrice } as Product
+    if (propsOnAdd) {
+      // Parent bertanggung jawab menyimpan harga SAP dan qty sekaligus.
+      propsOnAdd(pricedProduct, convertedQty)
+    } else {
+      onQtyChange(product.id, qty + convertedQty)
+    }
 
     setShowQtyDialog(false)
     setDialogQty('1')
@@ -207,7 +338,11 @@ const QtyControlComponent = ({
         </div>
         <p className="mt-4 text-sm font-semibold text-foreground">{product.itemName}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          {formatRupiah(Number(product.price ?? 0))}
+          {sapChecking
+            ? 'Memeriksa harga ...'
+            : sapPrice !== null
+              ? formatRupiah(sapPrice)
+              : 'Harga SAP belum tersedia'}
           {product.salesUnit ? ` / ${product.salesUnit}` : ''}
         </p>
         {qty > 0 && <p className="mt-2 text-xs text-muted-foreground">Sudah di keranjang: {qty}</p>}
@@ -220,9 +355,10 @@ const QtyControlComponent = ({
             <select
               id={`unit-dialog-${product.id}`}
               value={selectedUnit}
-              onChange={(event) =>
+              onChange={(event) => {
                 setSelectedUnit(event.target.value as 'salesUnit' | 'purchaseUnit')
-              }
+                setDialogQty('1')
+              }}
               className="mt-2 h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
             >
               <option value="salesUnit">{salesUnit}</option>
@@ -287,15 +423,32 @@ const QtyControlComponent = ({
             </span>
           </div>
         )}
+        <div className="mt-3 text-xs text-muted-foreground" role="status">
+          {sapChecking
+            ? 'Memeriksa harga dan stok SAP...'
+            : sapCheckError ||
+              (stockChecked
+                ? priceChecked
+                  ? 'Harga dan stok telah diverifikasi.'
+                  : 'Stok telah diperiksa. Harga SAP belum diverifikasi.'
+                : 'Stok belum berhasil diperiksa.')}
+        </div>
         <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
           <span className="text-sm text-muted-foreground">Subtotal</span>
           <span className="font-bold">
-            {formatRupiah(validConvertedQty ? convertedQty * Number(product.price ?? 0) : 0)}
+            {formatRupiah(validConvertedQty && sapPrice !== null ? convertedQty * sapPrice : 0)}
           </span>
         </div>
         <button
           type="button"
-          disabled={!validConvertedQty || disabled}
+          disabled={
+            !validConvertedQty ||
+            disabled ||
+            sapChecking ||
+            !stockChecked ||
+            !priceChecked ||
+            sapPrice === null
+          }
           onClick={handleConfirmQty}
           className="mt-5 w-full rounded-xl bg-accent py-3 font-semibold text-accent-foreground disabled:opacity-50"
         >
@@ -347,7 +500,7 @@ const QtyControlComponent = ({
       <>
         {creditModal}
         {qtyDialog}
-        {isCustomer && (
+        {(isCustomer || cardcode) && (
           <button
             type="button"
             onClick={handleAdd}
@@ -387,6 +540,13 @@ const QtyControlComponent = ({
                   {product.itemCode}
                   {product.salesUnit ? ` · ${product.salesUnit}` : ''}
                 </p>
+                {product.priceIncreased &&
+                  product.priceIncreasePercent != null &&
+                  product.priceIncreasePercent > 0 && (
+                    <p className="mt-1 text-xs font-medium text-amber-600">
+                      Harga naik {product.priceIncreasePercent.toFixed(2)}%
+                    </p>
+                  )}
               </div>
               {hasPrice ? (
                 <>

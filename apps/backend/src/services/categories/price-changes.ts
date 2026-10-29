@@ -33,26 +33,46 @@ export const asFiniteNumber = (value: unknown): number | null => {
 }
 const round2 = (value: number) => Math.round(value * 100) / 100
 
-function calculateChange(row: PriceChangeRow): PriceChange {
+const calculateChange = (row: PriceChangeRow): PriceChange => {
   const currentPrice = asFiniteNumber(row.current_price)
   const lastInvoicePrice = asFiniteNumber(row.last_invoice_price)
   const lastInvoiceBasePrice = asFiniteNumber(row.last_invoice_base_price)
-  const increased = currentPrice !== null && lastInvoiceBasePrice !== null &&
-    lastInvoiceBasePrice > 0 && currentPrice > lastInvoiceBasePrice
-  const priceDifference = increased ? round2(currentPrice - lastInvoiceBasePrice) : null
-  const priceIncreasePercent = priceDifference !== null && lastInvoiceBasePrice !== null
-    ? round2(priceDifference / lastInvoiceBasePrice * 100) : null
+
+  const increased =
+    currentPrice !== null &&
+    lastInvoicePrice !== null &&
+    lastInvoicePrice > 0 &&
+    currentPrice > lastInvoicePrice
+
+  const priceDifference = increased
+    ? round2(currentPrice - lastInvoicePrice)
+    : null
+
+  const priceIncreasePercent =
+    priceDifference !== null && lastInvoicePrice !== null
+      ? round2((priceDifference / lastInvoicePrice) * 100)
+      : null
+
   return {
-    lastInvoice: row.last_invoice_num == null ? null : String(row.last_invoice_num),
-    lastInvoiceDate: row.last_invoice_date ? new Date(row.last_invoice_date).toISOString().slice(0, 10) : null,
+    lastInvoice:
+      row.last_invoice_num == null
+        ? null
+        : String(row.last_invoice_num),
+
+    lastInvoiceDate: row.last_invoice_date
+      ? new Date(row.last_invoice_date).toISOString().slice(0, 10)
+      : null,
+
     lastInvoicePrice,
     lastInvoiceBasePrice,
     currentPrice,
+
     discountApplied: asFiniteNumber(row.discount_applied),
     discountSource: row.discount_source ?? 'none',
+
     priceDifference,
     priceIncreasePercent,
-    priceIncreased: priceDifference !== null && priceDifference > 0,
+    priceIncreased: increased,
   }
 }
 

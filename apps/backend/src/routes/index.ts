@@ -8,6 +8,7 @@ import productRoutes from './products'
 import userRoutes from './users'
 import requestRoutes from './requests'
 import notificationRoutes from './notifications'
+import sapRoutes from './sap-api'
 const router = Router()
 
 router.use('/auth', authRoute)
@@ -18,5 +19,6 @@ router.use('/products', productRoutes)
 router.use('/users', userRoutes)
 router.use('/requests', requestRoutes)
 router.use('/notifications', notificationRoutes)
+router.use('/sap', sapRoutes)
 
 export default router

@@ -259,7 +259,12 @@ const saveCustomerInvoicePrice = async (
   now: Date,
 ): Promise<void> => {
   await prisma.customerItemPrice.upsert({
-    where: { customerId_itemCode: { customerId, itemCode } },
+    where: {
+      customerId_itemCode: {
+        customerId,
+        itemCode,
+      },
+    },
     create: {
       customerId,
       itemCode,
@@ -268,17 +273,18 @@ const saveCustomerInvoicePrice = async (
       discountApplied: new Decimal(0),
       source: 'invoice',
       sourceDoc: invoiceRef(row),
-      lastChangedAt: null,
+      lastInvoicePrice: new Decimal(value),
+      lastInvoiceDate: row.doc_date ?? null,
+      lastChangedAt: now,
       lastPurchasedAt: row.doc_date ?? null,
       updatedAt: now,
     },
     update: {
-      price: new Decimal(value),
-      currency: row.currency ?? null,
-      source: 'invoice',
-      sourceDoc: invoiceRef(row),
-      lastChangedAt: now,
+      // Do not overwrite SAP master price or source.
+      lastInvoicePrice: new Decimal(value),
+      lastInvoiceDate: row.doc_date ?? null,
       lastPurchasedAt: row.doc_date ?? null,
+      updatedAt: now,
     },
   })
 }

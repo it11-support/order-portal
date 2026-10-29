@@ -82,6 +82,10 @@ export interface Product {
   salesPackUnit?: string
   launchDate?: Date | string
   isActive: boolean
+  priceIncreased?: boolean
+  priceDifference?: number | null
+  priceIncreasePercent?: number | null
+  currentPrice?: number | null
   /** Effective net price for the viewing customer. Null when no price is set. */
   price?: number | null
   currency?: string | null
