@@ -3,7 +3,7 @@ import { FileText, ChevronRight } from 'lucide-react'
 import { useCart, useOrders } from '@contexts'
 import { api } from '@lib'
 import { toast } from 'sonner'
-import { useActiveDraft } from '../hooks/useActiveDraft'
+import { useActiveDraft } from '@hooks'
 
 export default function DraftOrdersList() {
   const { orders, refreshOrders } = useOrders()

@@ -153,3 +153,5 @@ const DayDivider = ({ label }: { label: string }) => {
     </div>
   )
 }
+
+export default ConversationThread

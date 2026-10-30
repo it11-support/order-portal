@@ -34,3 +34,5 @@ export const InfiniteScrollWatcher = React.forwardRef<HTMLDivElement, InfiniteSc
 )
 
 InfiniteScrollWatcher.displayName = 'InfiniteScrollWatcher'
+
+export default InfiniteScrollWatcher

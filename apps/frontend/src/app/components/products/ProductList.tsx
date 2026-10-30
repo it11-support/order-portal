@@ -33,7 +33,7 @@ export const ProductList = ({ products, cart, onContactSales }: ProductListProps
           return (
             <div
               key={String(product.id)}
-              className={`rounded-2xl px-4 min-h-[88px] transition-colors ${
+              className={`rounded-2xl px-4 min-h-22 transition-colors ${
                 selected
                   ? 'border border-accent bg-accent/5'
                   : 'border border-border bg-white hover:border-accent/40'
@@ -47,3 +47,5 @@ export const ProductList = ({ products, cart, onContactSales }: ProductListProps
     </>
   )
 }
+
+export default ProductList

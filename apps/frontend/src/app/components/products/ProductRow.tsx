@@ -45,7 +45,7 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-muted-foreground">
+              <span className="text-[10px] font-semibold text-muted-foreground">
                 {formatRupiah(currentPrice)}
                 {product.salesUnit ? ` / ${product.salesUnit}` : ''}
               </span>

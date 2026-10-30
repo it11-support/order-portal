@@ -1,4 +1,4 @@
-import { ShoppingCart, CheckCircle, TrendingUp, Save } from 'lucide-react'
+import { ShoppingCart, CheckCircle, TrendingUp, Save, Send } from 'lucide-react'
 import { Shell } from '@layouts'
 import { useState, useEffect, useMemo } from 'react'
 import { QtyControl } from '@components'
@@ -10,7 +10,7 @@ import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { formatRupiah } from '@/lib/formatCurrency'
 import { api } from '@lib'
 import CartDraftSection from './CartDraftSection'
-import { useActiveDraft } from '../hooks/useActiveDraft'
+import { useActiveDraft } from '@hooks'
 
 const CartPage = () => {
   const { cart, setCart, cartQty, inquiryId, setInquiryId } = useCart()
@@ -161,16 +161,16 @@ const CartPage = () => {
               disabled={submitting || draftBusy}
               className="inline-flex items-center gap-2 rounded-xl border border-accent px-4 py-3 text-sm font-bold text-accent disabled:opacity-50"
             >
-              <Save size={16} /> Simpan Draft
+              <Save size={14} /> Simpan Draft
             </button>
           )}
           <button
             type="button"
             onClick={() => void handlePlaceOrder()}
             disabled={submitting || draftBusy}
-            className="rounded-xl bg-accent px-6 py-3.5 text-sm font-bold text-white disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-bold text-white disabled:opacity-50"
           >
-            {submitting || draftBusy ? 'Memproses...' : `Kirim Order (${cartQty})`}
+            <Send size={14} /> {submitting || draftBusy ? 'Memproses...' : `Kirim Order`}
           </button>
         </div>
       )

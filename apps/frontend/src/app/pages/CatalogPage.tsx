@@ -17,17 +17,16 @@ import { Shell } from '@layouts'
 
 import { useNavigate } from 'react-router-dom'
 
-import { ProductList, Loader } from '@components'
+import { ProductList, Loader, CategoryIcon } from '@components'
 
 import { useAuth, useCart, useCategories, useCatalogProducts, useOrders } from '@contexts'
-
-import ActiveCartList from './ActiveCartList'
-import CategoryIcon from '@/app/components/categories/CategoryIcon'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@lib'
 import { toast } from 'sonner'
-import { useActiveDraft } from '../hooks/useActiveDraft'
+import { useActiveDraft } from '@hooks'
+import { formatRupiah } from '@/lib/formatCurrency'
+import ActiveCartList from '@components/cart/ActiveCartList'
 
 // One cart line per product. Repeated lines from draft/cart state must not
 // double the ordered quantity; keep the latest quantity for each product.
@@ -475,13 +474,20 @@ const CatalogPage = () => {
                     const selected = inquiryItems.some(
                       (item) => item.productId === String(product.id),
                     )
+                    const currentPrice = product.price
+
                     return (
                       <div key={product.id} className="flex items-center justify-between gap-3 p-4">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">
                             {product.itemName}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">{product.itemCode}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-semibold text-muted-foreground">
+                              {formatRupiah(currentPrice)}
+                              {product.salesUnit ? ` / ${product.salesUnit}` : ''}
+                            </span>
+                          </div>
                         </div>
                         <button
                           type="button"

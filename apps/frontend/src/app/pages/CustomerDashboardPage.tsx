@@ -291,7 +291,7 @@ const CustomerDashboard = () => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Ppayment Term</span>
+              <span className="text-sm text-muted-foreground">Payment Term</span>
               <span className="text-sm font-medium text-foreground">
                 {currentUser?.customer?.PaymentTerm ?? '-'}
               </span>

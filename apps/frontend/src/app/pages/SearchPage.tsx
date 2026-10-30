@@ -11,12 +11,13 @@ import {
   useOrders,
   resolveCatalogQuery,
 } from '@contexts'
-import CategoryIcon from '@/app/components/categories/CategoryIcon'
-import ActiveCartList from './ActiveCartList'
+import CategoryIcon from '@components/categories/CategoryIcon'
+import ActiveCartList from '@components/cart/ActiveCartList'
 import { api } from '@lib'
 import { toast } from 'sonner'
-import DraftOrdersList from './DraftOrdersList'
-import { useActiveDraft } from '../hooks/useActiveDraft'
+
+import { useActiveDraft } from '@hooks'
+import DraftOrdersList from '@components/orders/DraftOrdersList'
 
 const MemoProductList = memo(ProductList)
 

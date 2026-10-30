@@ -26,7 +26,7 @@ export type ChatComposerProps = {
 
 const MAX_HEIGHT = 72 // two lines plus the field's own padding
 
-export const ChatComposer = ({
+const ChatComposer = ({
   value,
   onChange,
   onSubmit,
@@ -88,3 +88,5 @@ export const ChatComposer = ({
     </div>
   )
 }
+
+export default ChatComposer

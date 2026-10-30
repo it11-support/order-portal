@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useCart } from '@contexts'
-import QuantityInput from '../components/QuantityInput'
+import QuantityInput from '../QuantityInput'
 
 const money = (n: number) => `Rp ${n.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
 

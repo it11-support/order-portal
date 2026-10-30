@@ -6,7 +6,7 @@ import { useAuth } from './authHook'
 import { useWSEvent } from './WebSocketContext'
 import { swrFetcher } from '@lib'
 import { ApiResponse, Product } from '@repo/shared'
-import { useDebounce } from '../hooks/useDebounce'
+import { useDebounce } from '@hooks'
 
 export type Category = {
   id: number

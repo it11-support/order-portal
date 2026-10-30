@@ -9,8 +9,9 @@ import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 import { toast } from 'sonner'
 import { ShoppingCart } from 'lucide-react'
 import { formatRupiah } from '@/lib/formatCurrency'
-import OrderKindMismatch from '../components/orders/OrderKindMismatch'
-import FollowUpThread from '../components/orders/FollowUpThread'
+import OrderKindMismatch from './OrderKindMismatch'
+import FollowUpThread from './FollowUpThread'
+
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/orders', quote: '/inquiries' }
 

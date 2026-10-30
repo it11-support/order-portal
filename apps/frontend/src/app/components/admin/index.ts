@@ -1,0 +1,5 @@
+export { default as AdminOrderDetailPage } from './AdminOrderDetailPage'
+export { default as AdminOrdersPage } from './AdminOrdersPage'
+export { default as AdminInquiriesPage } from './AdminInquiriesPage'
+export { default as AdminCategoriesPage } from './AdminCategoriesPage'
+export { default as AdminProductListPage } from './AdminProductListPage'

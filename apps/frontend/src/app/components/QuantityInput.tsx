@@ -52,7 +52,7 @@ const QuantityInput = ({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center justify-center gap-1">
       <button
         type="button"
         aria-label={`Kurangi jumlah ${name}`}

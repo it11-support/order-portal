@@ -6,12 +6,12 @@ import { fmtDate } from '@lib'
 import { AlertCircle } from 'lucide-react'
 import type { Order, OrderStatus, FollowUpNote, RequestKind } from '@repo/shared'
 import { ORDER_FLOW, QUOTE_FLOW } from '@repo/shared'
-import { STATUS_CONFIG } from '../components/StatusBadge'
+import { STATUS_CONFIG } from '../StatusBadge'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import OrderKindMismatch from '../components/orders/OrderKindMismatch'
-import FollowUpThread from '../components/orders/FollowUpThread'
+import OrderKindMismatch from '../orders/OrderKindMismatch'
+import FollowUpThread from '../orders/FollowUpThread'
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/admin/orders', quote: '/admin/inquiries' }
 

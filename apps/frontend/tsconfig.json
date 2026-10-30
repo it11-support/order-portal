@@ -10,8 +10,11 @@
       "@/*": ["./src/*"],
       "@lib": ["./src/lib/index.ts"],
       "@hooks": ["./src/app/hooks/index.ts"],
+      "@hooks/*": ["./src/app/hooks/*"],
       "@components": ["./src/app/components/index.ts"],
+      "@components/*": ["./src/app/components/*"],
       "@contexts": ["./src/app/contexts/index.ts"],
+      "@contexts/*": ["./src/app/contexts/*"],
       "@layouts": ["./src/app/layouts/index.ts"],
       "@pages": ["./src/app/pages/index.ts"]
     }
