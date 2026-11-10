@@ -8,21 +8,37 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  test-ssh:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test SSH Connection
+      - uses: actions/checkout@v5
+
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          timeout: 30s
-          command_timeout: 1m
+          port: ${{ secrets.SSH_PORT }}          
           script: |
-            echo "SSH connection successful"
-            whoami
-            hostname
-            pwd
+            # Exit immediately if a command exits with a non-zero status
+            set -e
+            ulimit -v unlimited || true
+            ulimit -m unlimited || true
+
+            cd /home/order-portal
+            git pull origin release/v1
+
+            # Backend env
+            cat > apps/backend/.env <<EOF           
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            SAP_API_URL=${{ secrets.SAP_API_URL }}
+            SAP_SERVICE_TOKEN=${{ secrets.SAP_SERVICE_TOKEN }}
+            
+            TZ=Asia/Makassar
+            NODE_ENV=production
+            PORT=3001
+            EOF
