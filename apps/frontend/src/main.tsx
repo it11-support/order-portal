@@ -11,28 +11,34 @@ import AuthProvider, {
   NotificationsProvider,
   WebSocketProvider,
   ContactSalesProvider,
+  AccessDeniedProvider,
 } from '@contexts'
 import { Toaster } from '@/app/components/ui/sonner'
 import ContactSalesModal from '@/app/components/ContactSalesModal'
+import AccessDeniedBoundary from '@/app/components/AccessDeniedBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
-    <WebSocketProvider>
-      <CategoriesProvider>
-        <ProductsProvider>
-          <OrderProvider>
-            <CartProvider>
-              <NotificationsProvider>
-                <ContactSalesProvider>
-                  <RouterProvider router={router} />
-                  <ContactSalesModal />
-                </ContactSalesProvider>
-              </NotificationsProvider>
-              <Toaster />
-            </CartProvider>
-          </OrderProvider>
-        </ProductsProvider>
-      </CategoriesProvider>
-    </WebSocketProvider>
+    <AccessDeniedProvider>
+      <AccessDeniedBoundary>
+        <WebSocketProvider>
+          <CategoriesProvider>
+            <ProductsProvider>
+              <OrderProvider>
+                <CartProvider>
+                  <NotificationsProvider>
+                    <ContactSalesProvider>
+                      <RouterProvider router={router} />
+                      <ContactSalesModal />
+                    </ContactSalesProvider>
+                  </NotificationsProvider>
+                  <Toaster />
+                </CartProvider>
+              </OrderProvider>
+            </ProductsProvider>
+          </CategoriesProvider>
+        </WebSocketProvider>
+      </AccessDeniedBoundary>
+    </AccessDeniedProvider>
   </AuthProvider>,
 )
