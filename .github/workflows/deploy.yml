@@ -1,0 +1,28 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [ "release/v1" ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 30s
+          command_timeout: 1m
+          script: |
+            echo "SSH connection successful"
+            whoami
+            hostname
+            pwd
