@@ -96,10 +96,10 @@ jobs:
             # Start or restart applications
             for app in order-portal-backend order-portal-frontend; do
               if pm2 describe "$app" >/dev/null 2>&1; then
-                pm2 restart ecosystem.config.js \
+                pm2 restart ecosystem.config.cjs \
                   --only "$app" --update-env
               else
-                pm2 start ecosystem.config.js \
+                pm2 start ecosystem.config.cjs \
                   --only "$app"
               fi
             done
