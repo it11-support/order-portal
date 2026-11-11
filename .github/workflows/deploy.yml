@@ -94,16 +94,47 @@ jobs:
             # Database migration
             pnpm --filter ./apps/backend exec prisma migrate deploy
 
-            # Start or restart applications
-            for app in order-portal-backend order-portal-frontend; do
-              if pm2 describe "$app" >/dev/null 2>&1; then
-                pm2 restart ecosystem.config.cjs \
-                  --only "$app" --update-env
-              else
-                pm2 start ecosystem.config.cjs \
-                  --only "$app"
-              fi
-            done
+            # PM2 deployment
+            export NODE_ENV=production
+            export PORT=3001
+            export TZ=Asia/Makassar
+
+            : "${DATABASE_URL:?Missing DATABASE_URL}"
+            : "${JWT_SECRET:?Missing JWT_SECRET}"
+            : "${FRONTEND_URL:?Missing FRONTEND_URL}"
+            : "${SAP_API_URL:?Missing SAP_API_URL}"
+            : "${SAP_SERVICE_TOKEN:?Missing SAP_SERVICE_TOKEN}"
+
+            # Restart with latest ecosystem environment
+            pm2 startOrReload ecosystem.config.cjs --update-env
+
+            # Verify backend configuration
+            pm2 jlist | node -e '
+              let input = "";
+              process.stdin.on("data", chunk => input += chunk);
+              process.stdin.on("end", () => {
+                const apps = JSON.parse(input);
+                const backend = apps.find(app => app.name === "order-portal-backend");
+                const frontend = apps.find(app => app.name === "order-portal-frontend");
+
+                if (!backend || backend.pm2_env.status !== "online") {
+                  console.error("Backend is not online");
+                  process.exit(1);
+                }
+
+                if (!frontend || frontend.pm2_env.status !== "online") {
+                  console.error("Frontend is not online");
+                  process.exit(1);
+                }
+
+                if (backend.pm2_env.SAP_API_URL !== process.env.SAP_API_URL) {
+                  console.error("SAP_API_URL mismatch");
+                  process.exit(1);
+                }
+
+                console.log("PM2 applications and SAP_API_URL verified");
+              });
+            '
 
             pm2 save
             pm2 status

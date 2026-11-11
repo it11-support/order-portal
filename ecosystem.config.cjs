@@ -12,6 +12,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3001,
+        TZ: 'Asia/Makassar',
+        DATABASE_URL: process.env.DATABASE_URL,
+        JWT_SECRET: process.env.JWT_SECRET,
+        FRONTEND_URL: process.env.FRONTEND_URL,
+        SAP_API_URL: process.env.SAP_API_URL,
+        SAP_SERVICE_TOKEN: process.env.SAP_SERVICE_TOKEN,
       },
     },
     {
@@ -27,8 +33,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 5173,
+        TZ: 'Asia/Makassar',
         PATH: process.env.PATH,
       },
-    }
+    },
   ],
 }
