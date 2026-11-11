@@ -81,6 +81,9 @@ jobs:
             # Prisma Client
             pnpm --filter ./apps/backend exec prisma generate
 
+            # Build Shared
+            pnpm --filter @repo/shared build
+
             # Build backend
             pnpm --filter ./apps/backend build
 
