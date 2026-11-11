@@ -56,7 +56,7 @@ jobs:
             git pull --ff-only origin release/v1
 
             # Backend environment
-            umask 077
+            umask 022
 
             {
               printf 'DATABASE_URL=%s\n' "$DATABASE_URL"
@@ -89,6 +89,7 @@ jobs:
 
             # Build frontend
             pnpm --filter ./apps/frontend build
+            chmod -R a+rX /home/order-portal/apps/frontend/dist
 
             # Database migration
             pnpm --filter ./apps/backend exec prisma migrate deploy
