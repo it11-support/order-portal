@@ -17,8 +17,9 @@ module.exports = {
     {
       name: 'order-portal-frontend',
       cwd: '/home/order-portal/apps/frontend',
-      script: 'pnpm',
+      script: '/root/.local/share/pnpm/bin/pnpm',
       args: 'start',
+      interpreter: '/bin/bash',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,
@@ -26,7 +27,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 5173,
+        PATH: process.env.PATH,
       },
-    },
+    }
   ],
 }
