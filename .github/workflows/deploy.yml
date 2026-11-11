@@ -2,43 +2,92 @@ name: Deploy Production
 
 on:
   push:
-    branches: [ "release/v1" ]
+    branches: ["release/v1"]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
-
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.2.1
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          SAP_API_URL: ${{ secrets.SAP_API_URL }}
+          SAP_SERVICE_TOKEN: ${{ secrets.SAP_SERVICE_TOKEN }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}          
+          port: ${{ secrets.SSH_PORT }}
+          envs: DATABASE_URL,JWT_SECRET,FRONTEND_URL,SAP_API_URL,SAP_SERVICE_TOKEN,VITE_API_URL,VITE_WS_URL
+          command_timeout: 20m
           script: |
-            # Exit immediately if a command exits with a non-zero status
-            set -e
-            ulimit -v unlimited || true
-            ulimit -m unlimited || true
+            set -eu
 
             cd /home/order-portal
-            git pull origin release/v1
 
-            # Backend env
-            cat > apps/backend/.env <<EOF           
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-            SAP_API_URL=${{ secrets.SAP_API_URL }}
-            SAP_SERVICE_TOKEN=${{ secrets.SAP_SERVICE_TOKEN }}
-            
-            TZ=Asia/Makassar
-            NODE_ENV=production
-            PORT=3001
-            EOF
+            # Update source
+            git fetch origin release/v1
+            git checkout release/v1
+            git pull --ff-only origin release/v1
+
+            # Backend environment
+            umask 077
+
+            {
+              printf 'DATABASE_URL=%s\n' "$DATABASE_URL"
+              printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+              printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
+              printf 'SAP_API_URL=%s\n' "$SAP_API_URL"
+              printf 'SAP_SERVICE_TOKEN=%s\n' "$SAP_SERVICE_TOKEN"
+              printf 'TZ=Asia/Makassar\n'
+              printf 'NODE_ENV=production\n'
+              printf 'PORT=3001\n'
+            } > apps/backend/.env
+
+            # Frontend environment
+            {
+              printf 'VITE_API_URL=%s\n' "$VITE_API_URL"
+              printf 'VITE_WS_URL=%s\n' "$VITE_WS_URL"
+            } > apps/frontend/.env.production
+
+            # Dependencies
+            pnpm install --frozen-lockfile
+
+            # Prisma Client
+            pnpm --filter ./apps/backend db:generate
+
+            # Build backend
+            pnpm --filter ./apps/backend build
+
+            # Build frontend
+            pnpm --filter ./apps/frontend build
+
+            # Database migration
+            pnpm --filter ./apps/backend exec prisma migrate deploy
+
+            # Start or restart applications
+            for app in order-portal-backend order-portal-frontend; do
+              if pm2 describe "$app" >/dev/null 2>&1; then
+                pm2 restart ecosystem.config.js \
+                  --only "$app" --update-env
+              else
+                pm2 start ecosystem.config.js \
+                  --only "$app"
+              fi
+            done
+
+            pm2 save
+            pm2 status

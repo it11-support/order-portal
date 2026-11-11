@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "start": "vite preview --host 127.0.0.1 --port 5173",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts src/**/*.tsx --fix",
     "format": "prettier --write .",
