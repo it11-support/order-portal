@@ -106,6 +106,8 @@ export const exportDtwOrder = async (
 
   const docDueDate = formatDate(dueDate)
 
+  const comments = order.notes?.trim() ?? ''
+
   // DocNum = 1 sebagai kunci batch lokal.
   // Pastikan numbering ini sesuai template DTW yang digunakan.
   const docNum = 1
@@ -117,6 +119,7 @@ export const exportDtwOrder = async (
       'DocDate',
       'DocDueDate',
       'CardCode',
+      'Comments',
       'U_PortalRef',
     ],
     [[
@@ -125,6 +128,7 @@ export const exportDtwOrder = async (
       docDate,
       docDueDate,
       customer.CardCode,
+      comments,
       orderId,
     ]],
   )
