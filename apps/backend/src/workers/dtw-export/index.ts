@@ -3,6 +3,7 @@ import 'dotenv/config'
 import { prisma } from '@/utils'
 import { exportDtwOrder } from '@/services/dtw-export'
 
+process.umask(0o002)
 
 const POLL_INTERVAL = Number(
   process.env.DTW_POOL_INTERVAL ?? 30000,
