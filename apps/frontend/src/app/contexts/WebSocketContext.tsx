@@ -37,7 +37,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
 
     const newSocket = io(WS_URL, {
       auth: { token: accessToken },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
