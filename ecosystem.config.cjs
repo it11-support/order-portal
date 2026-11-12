@@ -41,6 +41,7 @@ module.exports = {
       name: 'order-portal-dtw',
       cwd: '/home/order-portal/apps/backend',
       script: 'dist/workers/dtw-export/index.js',
+      interpreter: 'node',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

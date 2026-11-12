@@ -1,7 +1,11 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    index: 'src/index.ts',
+    'workers/dtw-export/index': 'src/workers/dtw-export/index.ts',
+  },
+
   format: ['esm'],
   target: 'node22',
   platform: 'node',
