@@ -139,16 +139,12 @@ export const exportDtwOrder = async (
       'LineNum',
       'ItemCode',
       'Quantity',
-      'UnitPrice',
-      'TaxCode',
     ],
     items.map((item, index) => [
       docNum,
       index,
       item.product.itemCode,
       item.qty,
-      item.price,
-      item.product.vatGroup ?? '',
     ]),
   )
 
