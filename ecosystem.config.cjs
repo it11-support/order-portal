@@ -37,5 +37,19 @@ module.exports = {
         PATH: process.env.PATH,
       },
     },
+    {
+      name: 'order-portal-dtw',
+      cwd: '/home/order-portal/apps/backend',
+      script: 'dist/workers/dtw-export/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '256M',
+      env: {
+        NODE_ENV: 'production',
+        PATH: process.env.PATH,
+      },
+    }
   ],
 }
