@@ -54,7 +54,7 @@ const CustomerCredentials = ({
             aria-label={usernameCopied ? 'Username tersalin' : 'Salin username'}
             title={usernameCopied ? 'Username tersalin' : 'Salin username'}
             onClick={copyUsername}
-            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-blue-600"
           >
             {usernameCopied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
           </button>
@@ -76,7 +76,7 @@ const CustomerCredentials = ({
             aria-label={visible ? 'Sembunyikan password' : 'Lihat password'}
             title={visible ? 'Sembunyikan password' : 'Lihat password'}
             aria-pressed={visible}
-            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-blue-600"
             onClick={() => {
               setVisible(!visible)
               setCopied(false)
@@ -91,7 +91,7 @@ const CustomerCredentials = ({
               aria-label={copied ? 'Password tersalin' : 'Salin password'}
               title={copied ? 'Password tersalin' : 'Salin password'}
               onClick={copyPassword}
-              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-2 focus-visible:outline-blue-600"
             >
               {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
             </button>
@@ -133,10 +133,17 @@ const CustomerList: React.FC = () => {
     return () => clearTimeout(t)
   }, [search])
 
-  const getKey = (pageIndex: number, previousPageData: ApiResponse<Customer>) => {
-    if (previousPageData && previousPageData.data.length === 0) return null
+  const getKey = (pageIndex: number, previousPageData: ApiResponse<Customer> | null) => {
+    if (previousPageData && previousPageData.data.length < limit) return null
 
-    return `/customers?page=${pageIndex + 1}&limit=${limit}&search=${debouncedSearch}&showInactive=${showInactive}`
+    const params = new URLSearchParams({
+      page: String(pageIndex + 1),
+      limit: String(limit),
+      search: debouncedSearch,
+      showInactive: String(showInactive),
+    })
+
+    return `/customers?${params.toString()}`
   }
 
   const handleClearSearch = () => setSearch('')
@@ -144,12 +151,12 @@ const CustomerList: React.FC = () => {
   const {
     data: pages,
     setSize,
-
     isLoading,
     isValidating,
     mutate,
   } = useSWRInfinite<ApiResponse<Customer>>(getKey, swrFetcher, {
     revalidateFirstPage: false,
+    persistSize: false,
   })
 
   const customers: Customer[] = pages
@@ -213,11 +220,12 @@ const CustomerList: React.FC = () => {
   const isFetching = isLoading || isValidating
 
   const observerTargetRef = useIntersectionObserver({
-    enabled: !isReachingEnd && !isFetching,
+    enabled: Boolean(pages) && !isReachingEnd && !isFetching,
     onIntersect: () => {
+      if (isFetching || isReachingEnd) return
       setSize((prev) => prev + 1)
     },
-    rootMargin: '0px 0px -120px 0px',
+    rootMargin: '0px 0px 200px 0px',
     threshold: 0,
   })
   return (
@@ -363,15 +371,6 @@ const CustomerList: React.FC = () => {
                 Tidak ada data yang ditemukan.
               </p>
             )}
-
-            <div ref={observerTargetRef}>
-              <InfiniteScrollWatcher
-                isLoading={isLoading}
-                isValidating={isValidating}
-                isReachingEnd={isReachingEnd}
-                isEmpty={isEmpty}
-              />
-            </div>
           </>
         )}
       </div>
@@ -479,20 +478,18 @@ const CustomerList: React.FC = () => {
                   </td>
                 </tr>
               )}
-              <tr>
-                <td colSpan={isAdmin ? 6 : 5} className="p-0">
-                  <InfiniteScrollWatcher
-                    ref={observerTargetRef}
-                    isLoading={isLoading}
-                    isValidating={isValidating}
-                    isReachingEnd={isReachingEnd}
-                    isEmpty={isEmpty}
-                  />
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div ref={observerTargetRef} className="w-full min-h-1">
+        <InfiniteScrollWatcher
+          isLoading={isLoading}
+          isValidating={isValidating}
+          isReachingEnd={isReachingEnd}
+          isEmpty={isEmpty}
+        />
       </div>
     </div>
   )
