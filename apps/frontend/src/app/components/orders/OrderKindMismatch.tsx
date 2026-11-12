@@ -11,12 +11,7 @@ type Props = {
 
 const kindLabel = (kind: RequestKind) => (kind === 'quote' ? 'permintaan penawaran' : 'pesanan')
 
-export default function OrderKindMismatch({
-  orderId,
-  actualKind,
-  expectedKind,
-  admin = false,
-}: Props) {
+const OrderKindMismatch = ({ orderId, actualKind, expectedKind, admin = false }: Props) => {
   const navigate = useNavigate()
 
   const basePath = admin ? '/admin' : ''
@@ -44,3 +39,5 @@ export default function OrderKindMismatch({
     </Shell>
   )
 }
+
+export default OrderKindMismatch

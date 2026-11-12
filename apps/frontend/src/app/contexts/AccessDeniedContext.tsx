@@ -7,7 +7,7 @@ type AccessDeniedContextType = {
 
 const AccessDeniedContext = createContext<AccessDeniedContextType | null>(null)
 
-export function AccessDeniedProvider({ children }: { children: ReactNode }) {
+export const AccessDeniedProvider = ({ children }: { children: ReactNode }) => {
   const [deniedMessage, setDeniedMessage] = useState<string | null>(null)
 
   return (
@@ -17,7 +17,7 @@ export function AccessDeniedProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useAccessDenied() {
+export const useAccessDenied = () => {
   const context = useContext(AccessDeniedContext)
 
   if (!context) throw new Error('useAccessDenied must be used within AccessDeniedProvider')

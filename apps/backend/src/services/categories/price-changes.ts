@@ -76,7 +76,7 @@ const calculateChange = (row: PriceChangeRow): PriceChange => {
   }
 }
 
-export async function loadPriceChanges(customerId: bigint | null, products: CatalogProduct[]) {
+export const loadPriceChanges = async (customerId: bigint | null, products: CatalogProduct[]) => {
   const changes = new Map<string, PriceChange>()
   if (!customerId || !products.length) return changes
   const itemCodes = [...new Set(products.map((product) => product.itemCode))]

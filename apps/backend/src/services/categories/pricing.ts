@@ -3,19 +3,19 @@ import type { CatalogProduct } from './catalog'
 
 type CatalogPrices = Awaited<ReturnType<typeof pricesForCatalog>>
 
-export async function resolveCatalogPrices(customerId: bigint | null, products: CatalogProduct[]) {
+export const resolveCatalogPrices =  async(customerId: bigint | null, products: CatalogProduct[]) => {
   const prices: CatalogPrices = customerId && products.length
     ? await pricesForCatalog(customerId, products.map((product) => product.itemCode))
     : new Map()
   return prices
 }
 
-export function filterAndSortProducts(
+export const filterAndSortProducts = (
   products: CatalogProduct[],
   prices: CatalogPrices,
   hasPriceCustomer: boolean,
   priceSource: string,
-): CatalogProduct[] {
+): CatalogProduct[] => {
   const filtered = products.filter((product) => {
     const resolved = prices.get(product.itemCode)
     if (hasPriceCustomer && (!resolved || resolved.price == null ||

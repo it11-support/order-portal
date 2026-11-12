@@ -13,7 +13,7 @@ type Props = {
   children: ReactNode
 }
 
-export default function FollowUpThread({
+const FollowUpThread = ({
   notes,
   viewerId,
   open,
@@ -21,7 +21,7 @@ export default function FollowUpThread({
   threadRef,
   emptyLabel,
   children,
-}: Props) {
+}: Props) => {
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
       <button
@@ -59,3 +59,5 @@ export default function FollowUpThread({
     </div>
   )
 }
+
+export default FollowUpThread

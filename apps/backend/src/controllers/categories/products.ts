@@ -15,7 +15,7 @@ type CatalogQuery = {
   shouldPaginate: boolean
 }
 
-function parseCatalogQuery(req: AuthenticatedRequest): CatalogQuery {
+const parseCatalogQuery = (req: AuthenticatedRequest): CatalogQuery => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
   const category = search ? '' : typeof req.query.category === 'string' ? req.query.category.trim() : ''
   const priceSource = typeof req.query.priceSource === 'string' ? req.query.priceSource.trim().toLowerCase() : ''

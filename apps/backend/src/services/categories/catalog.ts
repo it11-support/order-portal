@@ -25,7 +25,7 @@ const searchWhere = (search: string): ProductWhereInput => search
 const byName = { itemName: 'asc' as const }
 
 // Purchased products come first; normalize item codes before deduplication.
-function mergeDistinct(first: CatalogProduct[], second: CatalogProduct[]): CatalogProduct[] {
+const mergeDistinct = (first: CatalogProduct[], second: CatalogProduct[]): CatalogProduct[] => {
   const seen = new Set<string>()
   const result: CatalogProduct[] = []
   for (const product of [...first, ...second]) {
@@ -37,7 +37,7 @@ function mergeDistinct(first: CatalogProduct[], second: CatalogProduct[]): Catal
   return result
 }
 
-async function purchasedFirst(codes: string[], where: ProductWhereInput): Promise<CatalogProduct[]> {
+const purchasedFirst = async(codes: string[], where: ProductWhereInput): Promise<CatalogProduct[]> => {
   const purchased = codes.length
     ? await prisma.product.findMany({
       where: { isActive: true, itemCode: { in: codes }, ...where },
@@ -56,7 +56,7 @@ async function purchasedFirst(codes: string[], where: ProductWhereInput): Promis
   return mergeDistinct(purchased, others)
 }
 
-export async function resolveTargetCustomer(req: AuthenticatedRequest, customerId: string) {
+export const resolveTargetCustomer = async(req: AuthenticatedRequest, customerId: string) => {
   const target = await prisma.customers.findUnique({
     where: { id: BigInt(customerId) },
     select: { id: true, CardCode: true, IndustryC: true, SlpCode: true, NonActive: true },
@@ -69,10 +69,10 @@ export async function resolveTargetCustomer(req: AuthenticatedRequest, customerI
   return target
 }
 
-export async function loadCatalog(req: AuthenticatedRequest, options: CatalogOptions): Promise<{
+export const loadCatalog = async(req: AuthenticatedRequest, options: CatalogOptions): Promise<{
   products: CatalogProduct[]
   priceCustomerId: bigint | null
-}> {
+}> => {
   const { category, search, customerId } = options
   const where: ProductWhereInput = {
     ...(category ? { productCategory: category } : {}),

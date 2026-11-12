@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { api } from '@/lib/api'
 import { useAccessDenied } from '@/app/contexts'
 
-export function AccessDeniedInterceptor() {
+export const AccessDeniedInterceptor = () => {
   const { setDeniedMessage } = useAccessDenied()
 
   useEffect(() => {

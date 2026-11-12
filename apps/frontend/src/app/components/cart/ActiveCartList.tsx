@@ -5,7 +5,7 @@ import QuantityInput from '../QuantityInput'
 
 const money = (n: number) => `Rp ${n.toLocaleString('id-ID', { maximumFractionDigits: 0 })}`
 
-function ActiveCartList() {
+const ActiveCartList = () => {
   const { cart, setCart } = useCart()
   if (!cart.length) return null
   const complete = cart.every(

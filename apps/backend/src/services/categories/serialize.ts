@@ -3,11 +3,11 @@ import { round6, pricesForCatalog } from '@/services/pricing'
 import type { CatalogProduct } from './catalog'
 import { asFiniteNumber, type PriceChange } from './price-changes'
 
-export function serializeCatalogProducts(
+export const serializeCatalogProducts = (
   products: CatalogProduct[],
   prices: Awaited<ReturnType<typeof pricesForCatalog>>,
   changes: Map<string, PriceChange>,
-) {
+) => {
   return products.map((product) => {
     const resolved = prices.get(product.itemCode)
     const change = changes.get(normalizeItemCode(product.itemCode))

@@ -5,7 +5,7 @@ import { api } from '@lib'
 import { toast } from 'sonner'
 import { useActiveDraft } from '@hooks'
 
-export default function DraftOrdersList() {
+const DraftOrdersList = () => {
   const { orders, refreshOrders } = useOrders()
   const { cart, setCart } = useCart()
   const { editingDraftId, setEditingDraftId } = useActiveDraft()
@@ -131,3 +131,5 @@ export default function DraftOrdersList() {
     </section>
   )
 }
+
+export default DraftOrdersList

@@ -8,7 +8,7 @@ type Props = {
   children: ReactNode
 }
 
-export default function AccessDeniedBoundary({ children }: Props) {
+const AccessDeniedBoundary = ({ children }: Props) => {
   const { deniedMessage, setDeniedMessage } = useAccessDenied()
   const { logout } = useAuth()
 
@@ -29,3 +29,5 @@ export default function AccessDeniedBoundary({ children }: Props) {
     </>
   )
 }
+
+export default AccessDeniedBoundary

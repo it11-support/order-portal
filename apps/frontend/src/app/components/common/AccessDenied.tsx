@@ -7,11 +7,11 @@ type AccessDeniedProps = {
   onLogout: () => void
 }
 
-function AccessDenied({
+const AccessDenied = ({
   title = 'Akses Ditolak',
   message = 'Anda tidak memiliki izin untuk mengakses aplikasi.',
   onLogout,
-}: AccessDeniedProps) {
+}: AccessDeniedProps) => {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <section
