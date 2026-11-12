@@ -100,13 +100,11 @@ export const exportDtwOrder = async (
     )
   }
 
-  const docDate = process.env.DTW_TEST_MODE === 'true'
-    ? process.env.DTW_TEST_DOC_DATE ?? '20251221'
-    : formatDate(order.createdAt)
+  const docDate = formatDate(order.createdAt)
+  const dueDate = new Date(order.createdAt)
+  dueDate.setDate(dueDate.getDate() + 1)
 
-  const docDueDate = process.env.DTW_TEST_MODE === 'true'
-    ? process.env.DTW_TEST_DUE_DATE ?? '20251222'
-    : formatDate(order.createdAt)
+  const docDueDate = formatDate(dueDate)
 
   // DocNum = 1 sebagai kunci batch lokal.
   // Pastikan numbering ini sesuai template DTW yang digunakan.
