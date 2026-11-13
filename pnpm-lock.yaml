@@ -144,8 +144,8 @@ importers:
         specifier: 11.14.1
         version: 11.14.1(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
       '@iconify/react':
-        specifier: ^6.0.3
-        version: 6.0.3(react@18.3.1)
+        specifier: ^6.0.4
+        version: 6.0.4(react@18.3.1)
       '@mui/icons-material':
         specifier: 7.3.11
         version: 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
@@ -929,8 +929,8 @@ packages:
     peerDependencies:
       react: '>=18.0.0'
 
-  '@iconify/react@6.0.3':
-    resolution: {integrity: sha512-2x7gVs+tpUG75aXYo/0c5wPOqrFy75YSGKmuJZyuHyrHMydzXpI/+i9/USIzWXJL9WWc2BCgPVnGY2FhbeiiDQ==}
+  '@iconify/react@6.0.4':
+    resolution: {integrity: sha512-7nKd1eF52E1QGIl46eDWfMNPuTQHUxsXoK2Evgtu5jr386jCWTuWFLHM9vfsTNbUcKp+uq6ao+3skNUalDhH/w==}
     peerDependencies:
       react: '>=18.0.0'
 
@@ -5114,7 +5114,7 @@ snapshots:
       '@iconify/types': 2.0.0
       react: 18.3.1
 
-  '@iconify/react@6.0.3(react@18.3.1)':
+  '@iconify/react@6.0.4(react@18.3.1)':
     dependencies:
       '@iconify/types': 2.0.0
       react: 18.3.1
