@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.ts"
-import type * as Prisma from "../internal/prismaNamespace.ts"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model Customers
@@ -34,6 +34,7 @@ export type CustomersAvgAggregateOutputType = {
   IndustryC: number | null
   creditLimit: runtime.Decimal | null
   balance: runtime.Decimal | null
+  ShipType: number | null
 }
 
 export type CustomersSumAggregateOutputType = {
@@ -44,6 +45,7 @@ export type CustomersSumAggregateOutputType = {
   IndustryC: number | null
   creditLimit: runtime.Decimal | null
   balance: runtime.Decimal | null
+  ShipType: number | null
 }
 
 export type CustomersMinAggregateOutputType = {
@@ -75,6 +77,8 @@ export type CustomersMinAggregateOutputType = {
   frozenTo: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  ShipType: number | null
+  TrnspName: string | null
 }
 
 export type CustomersMaxAggregateOutputType = {
@@ -106,6 +110,8 @@ export type CustomersMaxAggregateOutputType = {
   frozenTo: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  ShipType: number | null
+  TrnspName: string | null
 }
 
 export type CustomersCountAggregateOutputType = {
@@ -137,6 +143,8 @@ export type CustomersCountAggregateOutputType = {
   frozenTo: number
   createdAt: number
   updatedAt: number
+  ShipType: number
+  TrnspName: number
   _all: number
 }
 
@@ -149,6 +157,7 @@ export type CustomersAvgAggregateInputType = {
   IndustryC?: true
   creditLimit?: true
   balance?: true
+  ShipType?: true
 }
 
 export type CustomersSumAggregateInputType = {
@@ -159,6 +168,7 @@ export type CustomersSumAggregateInputType = {
   IndustryC?: true
   creditLimit?: true
   balance?: true
+  ShipType?: true
 }
 
 export type CustomersMinAggregateInputType = {
@@ -190,6 +200,8 @@ export type CustomersMinAggregateInputType = {
   frozenTo?: true
   createdAt?: true
   updatedAt?: true
+  ShipType?: true
+  TrnspName?: true
 }
 
 export type CustomersMaxAggregateInputType = {
@@ -221,6 +233,8 @@ export type CustomersMaxAggregateInputType = {
   frozenTo?: true
   createdAt?: true
   updatedAt?: true
+  ShipType?: true
+  TrnspName?: true
 }
 
 export type CustomersCountAggregateInputType = {
@@ -252,6 +266,8 @@ export type CustomersCountAggregateInputType = {
   frozenTo?: true
   createdAt?: true
   updatedAt?: true
+  ShipType?: true
+  TrnspName?: true
   _all?: true
 }
 
@@ -370,6 +386,8 @@ export type CustomersGroupByOutputType = {
   frozenTo: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  ShipType: number | null
+  TrnspName: string | null
   _count: CustomersCountAggregateOutputType | null
   _avg: CustomersAvgAggregateOutputType | null
   _sum: CustomersSumAggregateOutputType | null
@@ -424,6 +442,8 @@ export type CustomersWhereInput = {
   frozenTo?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   createdAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   updatedAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
+  ShipType?: Prisma.IntNullableFilter<"Customers"> | number | null
+  TrnspName?: Prisma.StringNullableFilter<"Customers"> | string | null
   Subgroup?: Prisma.XOR<Prisma.SubgroupsNullableScalarRelationFilter, Prisma.SubgroupsWhereInput> | null
   salesPerson?: Prisma.XOR<Prisma.SalesPersonNullableScalarRelationFilter, Prisma.SalesPersonWhereInput> | null
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -461,6 +481,8 @@ export type CustomersOrderByWithRelationInput = {
   frozenTo?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  ShipType?: Prisma.SortOrderInput | Prisma.SortOrder
+  TrnspName?: Prisma.SortOrderInput | Prisma.SortOrder
   Subgroup?: Prisma.SubgroupsOrderByWithRelationInput
   salesPerson?: Prisma.SalesPersonOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
@@ -501,6 +523,8 @@ export type CustomersWhereUniqueInput = Prisma.AtLeast<{
   frozenTo?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   createdAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   updatedAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
+  ShipType?: Prisma.IntNullableFilter<"Customers"> | number | null
+  TrnspName?: Prisma.StringNullableFilter<"Customers"> | string | null
   Subgroup?: Prisma.XOR<Prisma.SubgroupsNullableScalarRelationFilter, Prisma.SubgroupsWhereInput> | null
   salesPerson?: Prisma.XOR<Prisma.SalesPersonNullableScalarRelationFilter, Prisma.SalesPersonWhereInput> | null
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -538,6 +562,8 @@ export type CustomersOrderByWithAggregationInput = {
   frozenTo?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrderInput | Prisma.SortOrder
   updatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  ShipType?: Prisma.SortOrderInput | Prisma.SortOrder
+  TrnspName?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CustomersCountOrderByAggregateInput
   _avg?: Prisma.CustomersAvgOrderByAggregateInput
   _max?: Prisma.CustomersMaxOrderByAggregateInput
@@ -577,6 +603,8 @@ export type CustomersScalarWhereWithAggregatesInput = {
   frozenTo?: Prisma.DateTimeNullableWithAggregatesFilter<"Customers"> | Date | string | null
   createdAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Customers"> | Date | string | null
   updatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Customers"> | Date | string | null
+  ShipType?: Prisma.IntNullableWithAggregatesFilter<"Customers"> | number | null
+  TrnspName?: Prisma.StringNullableWithAggregatesFilter<"Customers"> | string | null
 }
 
 export type CustomersCreateInput = {
@@ -606,6 +634,8 @@ export type CustomersCreateInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
@@ -643,6 +673,8 @@ export type CustomersUncheckedCreateInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
@@ -676,6 +708,8 @@ export type CustomersUpdateInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
@@ -713,6 +747,8 @@ export type CustomersUncheckedUpdateInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
@@ -748,6 +784,8 @@ export type CustomersCreateManyInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
 }
 
 export type CustomersUpdateManyMutationInput = {
@@ -777,6 +815,8 @@ export type CustomersUpdateManyMutationInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CustomersUncheckedUpdateManyInput = {
@@ -808,6 +848,8 @@ export type CustomersUncheckedUpdateManyInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CustomersNullableScalarRelationFilter = {
@@ -844,6 +886,8 @@ export type CustomersCountOrderByAggregateInput = {
   frozenTo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  ShipType?: Prisma.SortOrder
+  TrnspName?: Prisma.SortOrder
 }
 
 export type CustomersAvgOrderByAggregateInput = {
@@ -854,6 +898,7 @@ export type CustomersAvgOrderByAggregateInput = {
   IndustryC?: Prisma.SortOrder
   creditLimit?: Prisma.SortOrder
   balance?: Prisma.SortOrder
+  ShipType?: Prisma.SortOrder
 }
 
 export type CustomersMaxOrderByAggregateInput = {
@@ -885,6 +930,8 @@ export type CustomersMaxOrderByAggregateInput = {
   frozenTo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  ShipType?: Prisma.SortOrder
+  TrnspName?: Prisma.SortOrder
 }
 
 export type CustomersMinOrderByAggregateInput = {
@@ -916,6 +963,8 @@ export type CustomersMinOrderByAggregateInput = {
   frozenTo?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  ShipType?: Prisma.SortOrder
+  TrnspName?: Prisma.SortOrder
 }
 
 export type CustomersSumOrderByAggregateInput = {
@@ -926,6 +975,7 @@ export type CustomersSumOrderByAggregateInput = {
   IndustryC?: Prisma.SortOrder
   creditLimit?: Prisma.SortOrder
   balance?: Prisma.SortOrder
+  ShipType?: Prisma.SortOrder
 }
 
 export type CustomersScalarRelationFilter = {
@@ -1132,6 +1182,8 @@ export type CustomersCreateWithoutUserInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   requests?: Prisma.PortalRequestCreateNestedManyWithoutCustomerInput
@@ -1168,6 +1220,8 @@ export type CustomersUncheckedCreateWithoutUserInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
   priceChanges?: Prisma.PriceChangeLogUncheckedCreateNestedManyWithoutCustomerInput
@@ -1216,6 +1270,8 @@ export type CustomersUpdateWithoutUserInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   requests?: Prisma.PortalRequestUpdateManyWithoutCustomerNestedInput
@@ -1252,6 +1308,8 @@ export type CustomersUncheckedUpdateWithoutUserInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
   priceChanges?: Prisma.PriceChangeLogUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1284,6 +1342,8 @@ export type CustomersCreateWithoutItemPricesInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
@@ -1320,6 +1380,8 @@ export type CustomersUncheckedCreateWithoutItemPricesInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   priceChanges?: Prisma.PriceChangeLogUncheckedCreateNestedManyWithoutCustomerInput
@@ -1368,6 +1430,8 @@ export type CustomersUpdateWithoutItemPricesInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
@@ -1404,6 +1468,8 @@ export type CustomersUncheckedUpdateWithoutItemPricesInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   priceChanges?: Prisma.PriceChangeLogUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1436,6 +1502,8 @@ export type CustomersCreateWithoutPriceChangesInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
@@ -1472,6 +1540,8 @@ export type CustomersUncheckedCreateWithoutPriceChangesInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
@@ -1520,6 +1590,8 @@ export type CustomersUpdateWithoutPriceChangesInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
@@ -1556,6 +1628,8 @@ export type CustomersUncheckedUpdateWithoutPriceChangesInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1588,6 +1662,8 @@ export type CustomersCreateWithoutSalesPersonInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestCreateNestedManyWithoutCustomerInput
@@ -1623,6 +1699,8 @@ export type CustomersUncheckedCreateWithoutSalesPersonInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
@@ -1687,6 +1765,8 @@ export type CustomersScalarWhereInput = {
   frozenTo?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   createdAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
   updatedAt?: Prisma.DateTimeNullableFilter<"Customers"> | Date | string | null
+  ShipType?: Prisma.IntNullableFilter<"Customers"> | number | null
+  TrnspName?: Prisma.StringNullableFilter<"Customers"> | string | null
 }
 
 export type CustomersCreateWithoutSubgroupInput = {
@@ -1716,6 +1796,8 @@ export type CustomersCreateWithoutSubgroupInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestCreateNestedManyWithoutCustomerInput
@@ -1751,6 +1833,8 @@ export type CustomersUncheckedCreateWithoutSubgroupInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   requests?: Prisma.PortalRequestUncheckedCreateNestedManyWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
@@ -1810,6 +1894,8 @@ export type CustomersCreateWithoutRequestsInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   Subgroup?: Prisma.SubgroupsCreateNestedOneWithoutCustomersInput
   salesPerson?: Prisma.SalesPersonCreateNestedOneWithoutCustomersInput
   user?: Prisma.UserCreateNestedOneWithoutCustomerInput
@@ -1846,6 +1932,8 @@ export type CustomersUncheckedCreateWithoutRequestsInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
   user?: Prisma.UserUncheckedCreateNestedOneWithoutCustomerInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedCreateNestedManyWithoutCustomerInput
   priceChanges?: Prisma.PriceChangeLogUncheckedCreateNestedManyWithoutCustomerInput
@@ -1894,6 +1982,8 @@ export type CustomersUpdateWithoutRequestsInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
@@ -1930,6 +2020,8 @@ export type CustomersUncheckedUpdateWithoutRequestsInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
   priceChanges?: Prisma.PriceChangeLogUncheckedUpdateManyWithoutCustomerNestedInput
@@ -1963,6 +2055,8 @@ export type CustomersCreateManySalesPersonInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
 }
 
 export type CustomersUpdateWithoutSalesPersonInput = {
@@ -1992,6 +2086,8 @@ export type CustomersUpdateWithoutSalesPersonInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Subgroup?: Prisma.SubgroupsUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUpdateManyWithoutCustomerNestedInput
@@ -2027,6 +2123,8 @@ export type CustomersUncheckedUpdateWithoutSalesPersonInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
@@ -2061,6 +2159,8 @@ export type CustomersUncheckedUpdateManyWithoutSalesPersonInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CustomersCreateManySubgroupInput = {
@@ -2091,6 +2191,8 @@ export type CustomersCreateManySubgroupInput = {
   frozenTo?: Date | string | null
   createdAt?: Date | string | null
   updatedAt?: Date | string | null
+  ShipType?: number | null
+  TrnspName?: string | null
 }
 
 export type CustomersUpdateWithoutSubgroupInput = {
@@ -2120,6 +2222,8 @@ export type CustomersUpdateWithoutSubgroupInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   salesPerson?: Prisma.SalesPersonUpdateOneWithoutCustomersNestedInput
   user?: Prisma.UserUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUpdateManyWithoutCustomerNestedInput
@@ -2155,6 +2259,8 @@ export type CustomersUncheckedUpdateWithoutSubgroupInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUncheckedUpdateOneWithoutCustomerNestedInput
   requests?: Prisma.PortalRequestUncheckedUpdateManyWithoutCustomerNestedInput
   itemPrices?: Prisma.CustomerItemPriceUncheckedUpdateManyWithoutCustomerNestedInput
@@ -2189,6 +2295,8 @@ export type CustomersUncheckedUpdateManyWithoutSubgroupInput = {
   frozenTo?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   updatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ShipType?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  TrnspName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -2269,6 +2377,8 @@ export type CustomersSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   frozenTo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  ShipType?: boolean
+  TrnspName?: boolean
   Subgroup?: boolean | Prisma.Customers$SubgroupArgs<ExtArgs>
   salesPerson?: boolean | Prisma.Customers$salesPersonArgs<ExtArgs>
   user?: boolean | Prisma.Customers$userArgs<ExtArgs>
@@ -2307,6 +2417,8 @@ export type CustomersSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   frozenTo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  ShipType?: boolean
+  TrnspName?: boolean
   Subgroup?: boolean | Prisma.Customers$SubgroupArgs<ExtArgs>
   salesPerson?: boolean | Prisma.Customers$salesPersonArgs<ExtArgs>
 }, ExtArgs["result"]["customers"]>
@@ -2340,6 +2452,8 @@ export type CustomersSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   frozenTo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  ShipType?: boolean
+  TrnspName?: boolean
   Subgroup?: boolean | Prisma.Customers$SubgroupArgs<ExtArgs>
   salesPerson?: boolean | Prisma.Customers$salesPersonArgs<ExtArgs>
 }, ExtArgs["result"]["customers"]>
@@ -2373,9 +2487,11 @@ export type CustomersSelectScalar = {
   frozenTo?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  ShipType?: boolean
+  TrnspName?: boolean
 }
 
-export type CustomersOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "CardCode" | "CardName" | "GroupName" | "CntctPrsn" | "Phone1" | "Cellular" | "SlpCode" | "SalesName" | "Address" | "Block" | "City" | "ZipCode" | "Country" | "PaymentTerm" | "PriceList" | "priceListNum" | "discountLevel" | "JoinDate" | "IndustryC" | "NonActive" | "creditLimit" | "balance" | "frozenFor" | "frozenFrom" | "frozenTo" | "createdAt" | "updatedAt", ExtArgs["result"]["customers"]>
+export type CustomersOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "CardCode" | "CardName" | "GroupName" | "CntctPrsn" | "Phone1" | "Cellular" | "SlpCode" | "SalesName" | "Address" | "Block" | "City" | "ZipCode" | "Country" | "PaymentTerm" | "PriceList" | "priceListNum" | "discountLevel" | "JoinDate" | "IndustryC" | "NonActive" | "creditLimit" | "balance" | "frozenFor" | "frozenFrom" | "frozenTo" | "createdAt" | "updatedAt" | "ShipType" | "TrnspName", ExtArgs["result"]["customers"]>
 export type CustomersInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Subgroup?: boolean | Prisma.Customers$SubgroupArgs<ExtArgs>
   salesPerson?: boolean | Prisma.Customers$salesPersonArgs<ExtArgs>
@@ -2433,6 +2549,8 @@ export type $CustomersPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     frozenTo: Date | null
     createdAt: Date | null
     updatedAt: Date | null
+    ShipType: number | null
+    TrnspName: string | null
   }, ExtArgs["result"]["customers"]>
   composites: {}
 }
@@ -2890,6 +3008,8 @@ export interface CustomersFieldRefs {
   readonly frozenTo: Prisma.FieldRef<"Customers", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Customers", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Customers", 'DateTime'>
+  readonly ShipType: Prisma.FieldRef<"Customers", 'Int'>
+  readonly TrnspName: Prisma.FieldRef<"Customers", 'String'>
 }
     
 

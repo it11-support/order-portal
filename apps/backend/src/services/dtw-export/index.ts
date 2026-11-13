@@ -91,7 +91,7 @@ export const exportDtwOrder = async (
   // Sesuaikan field cardCode dengan Prisma schema.
   const customer = await prisma.customers.findUnique({
     where: { id: order.customerId },
-    select: { CardCode: true },
+    select: { CardCode: true, TrnspName: true },
   })
 
   if (!customer?.CardCode) {
@@ -119,6 +119,7 @@ export const exportDtwOrder = async (
       'DocDate',
       'DocDueDate',
       'CardCode',
+      'NumAtCard',
       'Comments',
       'U_PortalRef',
     ],
@@ -128,6 +129,7 @@ export const exportDtwOrder = async (
       docDate,
       docDueDate,
       customer.CardCode,
+      customer.TrnspName ?? '',
       comments,
       orderId,
     ]],
