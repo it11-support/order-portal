@@ -82,6 +82,8 @@ model Customers {
   Subgroup Subgroups? @relation(fields: [IndustryC], references: [IndCode])
 
   salesPerson SalesPerson? @relation(fields: [SlpCode], references: [slpCode])
+  ShipType  Int?    @map("ship_type")
+  TrnspName String? @map("trnsp_name") @db.VarChar(100)
 
   user         User?
   requests     PortalRequest[]
