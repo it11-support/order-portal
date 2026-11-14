@@ -1,12 +1,10 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
 import { useOrders, useCategories, useAuth } from '@contexts'
 import { fmtDate } from '@lib'
 import { AlertCircle } from 'lucide-react'
-import type { Order, OrderStatus, FollowUpNote, RequestKind } from '@repo/shared'
-import { ORDER_FLOW, QUOTE_FLOW } from '@repo/shared'
-import { STATUS_CONFIG } from '../StatusBadge'
+import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
@@ -23,26 +21,12 @@ const LIST_PATH: Record<RequestKind, string> = { order: '/admin/orders', quote: 
  * the price gate once every line is priced, not by a button, and admin should not
  * have to carry the customer conversation.
  */
-const canMoveStatus = (
-  isQuote: boolean,
-  isAdmin: boolean,
-  isSalesAdmin: boolean,
-  status: OrderStatus,
-): boolean => {
-  if (status === 'cancelled') return isAdmin || isSalesAdmin
-  if (!isQuote) return isAdmin
-  // ready is opened by the price gate, not by a staff status edit.
-  if (status === 'ready') return false
-  return isAdmin || isSalesAdmin
-}
 
 const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const { orderId } = useParams<{ orderId: string }>()
-  const navigate = useNavigate()
   const { user } = useAuth()
   const {
     orders,
-    updateStatus,
     addFollowUp,
     fetchFollowUps,
     fetchOrder,
@@ -141,38 +125,8 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     }
   }
 
-  const handleStatusChange = async (status: OrderStatus) => {
-    if (!order) return
-    setPosting(true)
-    try {
-      await toast.promise(updateStatus(order.id, status), {
-        loading: 'Memperbarui...',
-        success: 'Status berhasil diperbarui',
-        error: 'Gagal memperbarui status',
-      })
-      // Back to the list this request actually lives in.
-      navigate(LIST_PATH[kind])
-    } finally {
-      setPosting(false)
-    }
-  }
-
   const isQuote = order.kind === 'quote'
   const isAdmin = user?.role.name === 'admin'
-  const isSalesAdmin = user?.role.name === 'sales_admin'
-
-  // The server owns the transition table; the UI only offers the steps this
-  // role may actually take, so nobody is offered a button the API rejects.
-  const nextStatuses = (isQuote ? QUOTE_FLOW : ORDER_FLOW)[order.status] ?? []
-
-  const positiveActions = nextStatuses.filter(
-    (status) => status !== 'cancelled' && canMoveStatus(isQuote, isAdmin, isSalesAdmin, status),
-  )
-
-  const canManageStatus = positiveActions.length > 0
-  const canReject =
-    canManageStatus && !['delivered', 'cancelled', 'converted'].includes(order.status)
-
 
   const handleSapLink = async () => {
     if (!order) return
@@ -197,7 +151,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   }
 
   return (
-    <Shell title={order.id} showBack backTo={LIST_PATH[kind]} >
+    <Shell title={order.id} showBack backTo={LIST_PATH[kind]}>
       <div className="max-w-2xl space-y-4">
         {error && (
           <p role="alert" className="text-red-600">

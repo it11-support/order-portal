@@ -33,7 +33,6 @@ const CategoryList: React.FC = () => {
   const [editing, setEditing] = useState<Category | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
-  const [orderChanged, setOrderChanged] = useState(false)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [targetIndex, setTargetIndex] = useState<number | null>(null)
   const tableRef = useRef<HTMLTableElement>(null)
@@ -166,9 +165,6 @@ const CategoryList: React.FC = () => {
         ...c,
         sortOrder: i + 1,
       }))
-
-      setOrderChanged(true)
-
       await saveOrder(reordered)
     }
 
@@ -200,7 +196,6 @@ const CategoryList: React.FC = () => {
 
       await api.put('/categories/reorder/batch', { orders })
 
-      setOrderChanged(false)
       await mutateCategories()
     } catch (e) {
       console.error(e)
@@ -320,7 +315,7 @@ const CategoryList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-              {displayCategories.map((cat, index) => (
+              {displayCategories.map((cat) => (
                 <tr
                   key={cat.id}
                   onMouseDown={(e) =>

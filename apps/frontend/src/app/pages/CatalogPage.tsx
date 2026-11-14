@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ShoppingCart,
   MessageSquareText,
-  Trash2,
 } from 'lucide-react'
 
 import { Shell } from '@layouts'

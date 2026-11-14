@@ -1,6 +1,6 @@
 import { ArrowLeft, LogOut, Package, Search, ShoppingCart } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuth, useCart, useCategories, useNotifications } from '@contexts'
+import { useAuth, useCart, useCategories } from '@contexts'
 import NotificationPanel from '@/app/components/notifications/NotificationPanel'
 
 type AppHeaderProps = {
@@ -14,7 +14,7 @@ const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
   const location = useLocation()
   const { user: currentUser, logout } = useAuth()
   const { cartCount } = useCart()
-  const { search, selectedCategory } = useCategories()
+  const { search } = useCategories()
 
   const isSearchPage = location.pathname === '/search'
 

@@ -31,6 +31,7 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
 
     next()
   } catch (error) {
+    console.error('Token verification failed:', error)
     res.status(401).json({ message: 'Token kedaluwarsa atau tidak valid.' })
   }
 }

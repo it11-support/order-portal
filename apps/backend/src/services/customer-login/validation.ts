@@ -7,6 +7,7 @@ export class CustomerLoginError extends Error {
   ) {
     super(message)
     this.name = 'CustomerLoginError'
+    this.statusCode = statusCode
   }
 }
 

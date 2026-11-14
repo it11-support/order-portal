@@ -1,7 +1,7 @@
 import jwt, { SignOptions } from 'jsonwebtoken'
 
 import dotenv from 'dotenv'
-import { RoleType, User } from '@repo/shared'
+import { User } from '@repo/shared'
 
 dotenv.config()
 

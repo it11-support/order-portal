@@ -19,7 +19,7 @@ const fmtDate = (value: string) => {
 
 const NotificationPanel = () => {
   const navigate = useNavigate()
-  const { notifications, unreadCount, loading, markRead, dismiss, markAllRead } = useNotifications()
+  const { notifications, unreadCount, loading, markRead, dismiss } = useNotifications()
   const { isCustomer } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -66,7 +66,7 @@ const NotificationPanel = () => {
             </button>
           </div>
 
-          <div className="max-h-[420px] overflow-y-auto">
+          <div className="max-h-105 overflow-y-auto">
             {loading && visible.length === 0 ? (
               <Loader label="Memuat notifikasi..." className="py-8" />
             ) : visible.length === 0 ? (

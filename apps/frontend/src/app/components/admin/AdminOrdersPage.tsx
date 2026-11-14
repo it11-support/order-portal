@@ -42,7 +42,7 @@ const AdminOrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const allStatuses: (OrderStatus | 'all')[] =
     kind === 'quote'
       ? ['all', 'pending', 'processing', 'ready', 'converted', 'cancelled']
-      : ['all', 'pending', 'confirmed', 'processing', 'delivered', 'cancelled']
+      : ['all', 'draft', 'pending', 'confirmed', 'processing', 'delivered', 'cancelled']
 
   const EmptyIcon = kind === 'quote' ? MessageSquareQuote : ClipboardList
 
@@ -109,7 +109,18 @@ const AdminOrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
             {filteredOrders.map((order) => (
               <button
                 key={order.id}
-                onClick={() => navigate(`/admin/${copy.list}/${order.id}`)}
+                onClick={() => {
+                  if (order.status === 'draft' && kind === 'order') {
+                    navigate('/admin/sales-order', {
+                      state: {
+                        resumeDraft: order,
+                      },
+                    })
+                    return
+                  }
+
+                  navigate(`/admin/${copy.list}/${order.id}`)
+                }}
                 className="bg-white rounded-2xl border border-border p-4 text-left hover:border-accent/50 active:scale-[0.99] transition-all"
               >
                 <div className="flex items-start justify-between gap-2 mb-1.5">

@@ -10,12 +10,10 @@ import {
   ShoppingCart,
   User,
   Users,
-  Bell,
 } from 'lucide-react'
-import { useAuth, useCart, useNotifications } from '@contexts'
+import { useAuth, useCart } from '@contexts'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
-import NotificationPanel from '@/app/components/notifications/NotificationPanel'
 
 type NavItem = {
   id: string
@@ -29,7 +27,6 @@ type NavItem = {
 const Sidebar = () => {
   const { user: currentUser, logout, isAdmin } = useAuth()
   const { cartCount } = useCart()
-  const { unreadCount } = useNotifications()
   const location = useLocation()
   const [openMenus, setOpenMenus] = useState<string[]>([])
 
@@ -178,7 +175,6 @@ const Sidebar = () => {
                 {expanded && item.children && (
                   <div className="ml-4 mt-1 space-y-1">
                     {item.children.map((child) => {
-                      const childActive = location.pathname === child.path
                       if (!child.path) return null
                       return (
                         <NavLink

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -6,7 +7,6 @@ import {
   Plus,
   Search,
   Send,
-  ShoppingCart,
   Trash2,
   X,
   Building2,
@@ -16,14 +16,37 @@ import {
   Users,
   ChevronRight,
   Check,
+  ChevronDown,
 } from 'lucide-react'
 import { Shell } from '@layouts'
 import { Loader, QtyControl } from '@components'
-import { api } from '@lib'
+import { api, swrFetcher } from '@lib'
 import { useOrders } from '@contexts'
 import type { Customer, Order, Product } from '@repo/shared'
 import { toast } from 'sonner'
 import { formatRupiah } from '@/lib/formatCurrency'
+import { useDebounce } from '@/app/hooks'
+import useSWR from 'swr'
+
+type CustomerResponse = {
+  data: Customer[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+type ProductResponse = {
+  data: Product[]
+  meta: {
+    current_page: number
+    total_pages: number
+    total_records: number
+    limit: number
+  }
+}
 
 /**
  * Sales enters an order on behalf of one of their customers.
@@ -33,89 +56,111 @@ import { formatRupiah } from '@/lib/formatCurrency'
  * to reach another territory. Lines are priced server-side from that customer's
  * own prices, so what sales sees is what the customer will be charged.
  */
+
+type SelectedCustomer = Pick<Customer, 'id' | 'CardName'> & Partial<Customer>
+
+type DraftCustomerFields = {
+  customer?: Partial<Customer> | null
+  customerId?: string | number | null
+  CardCode?: string | null
+  cardCode?: string | null
+}
+
 const SalesOrderEntryPage = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const resumedDraftRef = useRef<string | null>(null)
+  const incomingDraft = (location.state as { resumeDraft?: Order } | null)?.resumeDraft
   const { submitForCustomer, orders, refreshOrders } = useOrders()
   const [step, setStep] = useState<'customer' | 'product' | 'confirm'>('customer')
   const [search, setSearch] = useState('')
-  const [debounced, setDebounced] = useState('')
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [customerId, setCustomerId] = useState('')
+
   const [productSearch, setProductSearch] = useState('')
-  const [debouncedProduct, setDebouncedProduct] = useState('')
-  const [products, setProducts] = useState<Product[]>([])
+  const [productTab, setProductTab] = useState<'actual' | 'pricelist'>('actual')
+  const [historyPage, setHistoryPage] = useState(1)
+  const [pricelistPage, setPricelistPage] = useState(1)
   const [lines, setLines] = useState<Array<{ product: Product; qty: number }>>([])
   const [notes, setNotes] = useState('')
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
   const [activeDraftVersion, setActiveDraftVersion] = useState<string | null>(null)
-  const [drafts, setDrafts] = useState<Order[]>([])
-  const [draftsLoading, setDraftsLoading] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [posting, setPosting] = useState(false)
-
-  const selectedCustomer = useMemo(
-    () => customers.find((customer) => String(customer.id) === customerId) ?? null,
-    [customers, customerId],
-  )
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null)
+  const customerId = selectedCustomer ? String(selectedCustomer.id) : ''
+  const debouncedSearch = useDebounce(search.trim(), 300)
+  const debouncedProductSearch = useDebounce(productSearch.trim(), 300)
+  const searchingProducts = debouncedProductSearch.length > 0
 
   const STEPS = ['Pilih customer', 'Pilih produk', 'Konfirmasi & kirim'] as const
   const stepOrder = ['customer', 'product', 'confirm'] as const
   const stepIndex = stepOrder.indexOf(step)
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
 
-  // Search boxes are debounced so typing does not hammer the API on every key.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(true)
-      api
-        .get(
-          `/customers?page=1&limit=100&search=${encodeURIComponent(debounced.trim())}&showInactive=false`,
-        )
-        .then((response) => setCustomers((response.data.data ?? []) as Customer[]))
-        .catch(() => setCustomers([]))
-        .finally(() => setLoading(false))
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [debounced])
+  const { data: customerData, isLoading: customersLoading } = useSWR<CustomerResponse>(
+    step === 'customer'
+      ? `/customers?page=1&limit=100&search=${encodeURIComponent(debouncedSearch)}&showInactive=false`
+      : null,
+    swrFetcher,
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    },
+  )
 
-  useEffect(() => {
-    if (!customerId) {
-      setProducts([])
-      return
-    }
-    const timer = setTimeout(() => {
-      api
-        .get(
-          `/categories/products?page=1&pageSize=20&search=${encodeURIComponent(
-            debouncedProduct.trim(),
-          )}&customerId=${customerId}`,
-        )
-        .then((response) => setProducts((response.data.data ?? []) as Product[]))
-        .catch(() => setProducts([]))
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [debouncedProduct, customerId])
+  const customers = customerData?.data ?? []
+
+  const productUrl =
+    customerId && step === 'product'
+      ? `/categories/products?customerId=${encodeURIComponent(customerId)}&pageSize=20&search=${encodeURIComponent(debouncedProductSearch)}`
+      : null
+
+  // History Pembelian
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+    error: historyError,
+  } = useSWR<ProductResponse>(
+    productUrl ? `${productUrl}&priceSource=actual&page=${historyPage}` : null,
+    swrFetcher,
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+    },
+  )
+
+  // Produk Lainnya
+  const {
+    data: pricelistData,
+    isLoading: pricelistLoading,
+    error: pricelistError,
+  } = useSWR<ProductResponse>(
+    productUrl ? `${productUrl}&priceSource=pricelist&page=${pricelistPage}` : null,
+    swrFetcher,
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+    },
+  )
+
+  // Data produk
+  const historyProducts = historyData?.data ?? []
+  const pricelistProducts = pricelistData?.data ?? []
+
+  // Metadata pagination
+  const historyMeta = historyData?.meta
+  const pricelistMeta = pricelistData?.meta
 
   const onCustomerSearch = (value: string) => {
     setSearch(value)
-    setDebounced(value)
   }
 
   const onProductSearch = (value: string) => {
     setProductSearch(value)
-    setDebouncedProduct(value)
+    setHistoryPage(1)
+    setPricelistPage(1)
   }
 
   // Drafts for the selected customer are already loaded by OrderContext
   // (scoped to the sales person's territory). Filter locally.
-  const customerDrafts = useMemo(
-    () =>
-      orders
-        .filter(
-          (o) => o.kind === 'order' && o.status === 'draft' && String(o.userId) === customerId,
-        )
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [orders, customerId],
-  )
-
   const allDrafts = useMemo(
     () =>
       orders
@@ -124,29 +169,71 @@ const SalesOrderEntryPage = () => {
     [orders],
   )
 
-  const resumeDraft = async (draft: Order) => {
-    setCustomerId(String(draft.userId))
+  const resumeDraft = (draft: Order): boolean => {
+    if (draft.status !== 'draft' || draft.kind !== 'order') {
+      toast.error('Pesanan ini bukan draft order')
+      return false
+    }
+
+    const details = draft as Order & DraftCustomerFields
+    const draftCustomerId = details.customerId ?? draft.userId
+    if (draftCustomerId == null || String(draftCustomerId) === '') {
+      toast.error('Customer draft tidak valid')
+      return false
+    }
+
+    // Use a complete customer when cached, otherwise retain the customer identity
+    // carried by the draft. Do not fabricate a full Customer object.
+    const cachedCustomer = customers.find((item) => String(item.id) === String(draftCustomerId))
+    const embeddedCustomer = details.customer
+    const customer: SelectedCustomer = cachedCustomer ?? {
+      ...embeddedCustomer,
+      id: draftCustomerId as Customer['id'],
+      CardName: embeddedCustomer?.CardName ?? draft.company ?? draft.userName ?? 'Customer',
+      CardCode: embeddedCustomer?.CardCode ?? details.CardCode ?? details.cardCode ?? '',
+    }
+
+    const draftLines = (draft.items ?? []).flatMap((item) => {
+      if (!item.product?.id) return []
+      return [
+        {
+          product: {
+            ...item.product,
+            id: Number(item.product.id),
+            price: item.price ?? item.product.price ?? null,
+            currency: item.currency ?? item.product.currency ?? null,
+            priceSource: item.priceSource ?? item.product.priceSource ?? null,
+          } as Product,
+          qty: Math.max(1, item.qty ?? 1),
+        },
+      ]
+    })
+
+    setSelectedCustomer(customer)
+    setLines(draftLines)
     setNotes(draft.notes ?? '')
     setActiveDraftId(draft.id)
     setActiveDraftVersion((draft as Order & { updatedAt?: string }).updatedAt ?? null)
-
-    const draftLines = (draft.items ?? []).map((item) => ({
-      product: {
-        ...item.product,
-        id: Number(item.product.id),
-        price: item.price ?? item.product.price ?? null,
-        currency: item.currency ?? item.product.currency ?? null,
-        priceSource: item.priceSource ?? item.product.priceSource ?? null,
-      } as Product,
-      qty: item.qty ?? 1,
-    }))
-
-    setLines(draftLines)
+    setProductSearch('')
+    setProductTab('actual')
+    setHistoryPage(1)
+    setPricelistPage(1)
+    setSummaryExpanded(false)
     setStep('product')
+    return true
   }
 
+  // Navigation from AdminOrdersPage passes the existing draft; no GET /customers/:id.
+  useEffect(() => {
+    if (!incomingDraft || resumedDraftRef.current === incomingDraft.id) return
+    if (!resumeDraft(incomingDraft)) return
+    resumedDraftRef.current = incomingDraft.id
+    navigate(location.pathname, { replace: true, state: null })
+    // Consume the navigation payload once; cached customer is optional.
+  }, [incomingDraft, location.pathname, navigate])
+
   const saveDraft = async () => {
-    if (!customerId || !lines.length) return
+    if (!customerId || !lines.length || posting) return
     setPosting(true)
     try {
       const payload = {
@@ -171,44 +258,8 @@ const SalesOrderEntryPage = () => {
     }
   }
 
-  const submitDraft = async (id: string) => {
-    setPosting(true)
-    try {
-      await api.patch(`/requests/${id}`, { status: 'pending' })
-      await refreshOrders()
-      if (activeDraftId === id) {
-        setActiveDraftId(null)
-        setActiveDraftVersion(null)
-        setLines([])
-        setNotes('')
-      }
-      toast.success('Draft dikirim sebagai pesanan')
-    } catch {
-      toast.error('Gagal mengirim draft')
-    } finally {
-      setPosting(false)
-    }
-  }
-
-  const deleteEmptyDraft = async (id: string) => {
-    try {
-      await api.patch(`/requests/${id}`, {
-        status: 'cancelled',
-      })
-
-      setActiveDraftId(null)
-      setActiveDraftVersion(null)
-      setLines([])
-      setNotes('')
-
-      await refreshOrders()
-      toast.success('Draft kosong telah dihapus')
-    } catch {
-      toast.error('Gagal menghapus draft kosong')
-    }
-  }
-
   const cancelDraft = async (id: string) => {
+    if (posting) return
     setPosting(true)
     try {
       await api.patch(`/requests/${id}`, { status: 'cancelled' })
@@ -218,6 +269,14 @@ const SalesOrderEntryPage = () => {
         setActiveDraftVersion(null)
         setLines([])
         setNotes('')
+        setSelectedCustomer(null)
+        setSearch('')
+        setProductSearch('')
+        setProductTab('actual')
+        setHistoryPage(1)
+        setPricelistPage(1)
+        setSummaryExpanded(false)
+        setStep('customer')
       }
       toast.success('Draft dihapus')
     } catch {
@@ -256,7 +315,9 @@ const SalesOrderEntryPage = () => {
         )
       }
 
-      const product = products.find((item) => String(item.id) === productId)
+      const product = [...historyProducts, ...pricelistProducts].find(
+        (item) => String(item.id) === productId,
+      )
 
       if (!product) return previous
 
@@ -265,25 +326,24 @@ const SalesOrderEntryPage = () => {
   }
 
   const removeLine = (productId: string) => {
-    const remaining = lines.filter((line) => String(line.product.id) !== productId)
-
-    setLines(remaining)
-
-    if (remaining.length === 0) {
-      if (activeDraftId) {
-        void deleteEmptyDraft(activeDraftId)
-      }
-
-      if (step === 'confirm') {
-        setStep('product')
-      }
-    }
+    setLines((previous) => previous.filter((line) => String(line.product.id) !== productId))
+    if (step === 'confirm' && lines.length === 1) setStep('product')
   }
 
-  const total = lines.reduce((sum, line) => sum + (line.product.price ?? 0) * line.qty, 0)
+  const { total, totalQty } = useMemo(
+    () =>
+      lines.reduce(
+        (result, line) => ({
+          total: result.total + Number(line.product.price ?? 0) * line.qty,
+          totalQty: result.totalQty + line.qty,
+        }),
+        { total: 0, totalQty: 0 },
+      ),
+    [lines],
+  )
 
   const submit = async () => {
-    if (!customerId || !lines.length) return
+    if (!customerId || !lines.length || posting) return
     setPosting(true)
     try {
       if (activeDraftId) {
@@ -315,12 +375,71 @@ const SalesOrderEntryPage = () => {
       setLines([])
       setNotes('')
       setSearch('')
-      setDebounced('')
-      setCustomerId('')
+      setSelectedCustomer(null)
+      setSummaryExpanded(false)
       setStep('customer')
+    } catch {
+      toast.error('Gagal mengirim order')
     } finally {
       setPosting(false)
     }
+  }
+
+  const renderProductRow = (product: Product) => {
+    const existing = lines.find((line) => String(line.product.id) === String(product.id))
+
+    return (
+      <div
+        key={String(product.id)}
+        className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${
+          existing ? 'bg-slate-50' : 'bg-white'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold leading-snug text-slate-800">
+              {product.itemName}
+            </p>
+
+            <p className="mt-1 font-mono text-[11px] text-slate-400">{product.itemCode}</p>
+          </div>
+
+          {existing && <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-sm font-bold tabular-nums text-slate-900">
+            {typeof product.price === 'number'
+              ? formatRupiah(product.price)
+              : 'Harga belum tersedia'}
+          </span>
+
+          <QtyControl
+            product={product}
+            cardcode={selectedCustomer?.CardCode ?? undefined}
+            listMode
+            qty={existing?.qty ?? 0}
+            onAdd={(pricedProduct, qty) => addLine(pricedProduct, qty ?? 1)}
+            onQtyChange={(id, qty) => setLineQty(String(id), qty)}
+            onIncrease={(p) => {
+              const line = lines.find((l) => String(l.product.id) === String(p.id))
+
+              if (!line) addLine(p)
+              else setLineQty(String(p.id), line.qty + 1)
+            }}
+            onDecrease={(p) => {
+              const line = lines.find((l) => String(l.product.id) === String(p.id))
+
+              if (!line) return
+
+              if (line.qty <= 1) removeLine(String(p.id))
+              else setLineQty(String(p.id), line.qty - 1)
+            }}
+            onRemove={(id) => removeLine(String(id))}
+          />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -506,23 +625,30 @@ const SalesOrderEntryPage = () => {
               <span>Nama / Kode customer</span>
               <span>Pilih</span>
             </div>
-            <div className="max-h-[430px] overflow-y-auto">
-              {loading && <Loader label="Memuat customer..." className="p-4" />}
-              {!loading && customers.length === 0 && (
+            <div className="max-h-130 overflow-y-auto">
+              {customersLoading && <Loader label="Memuat customer..." className="p-4" />}
+              {!customersLoading && customers.length === 0 && (
                 <div className="px-4 py-10 text-center">
                   <Users size={25} className="mx-auto mb-2 text-slate-300" />
                   <p className="text-sm font-medium text-slate-600">Tidak ada customer ditemukan</p>
                   <p className="mt-1 text-xs text-slate-400">Coba nama atau kode yang berbeda.</p>
                 </div>
               )}
-              {!loading &&
+              {!customersLoading &&
                 customers.map((customer) => (
                   <button
                     key={String(customer.id)}
                     type="button"
                     onClick={() => {
-                      setCustomerId(String(customer.id))
+                      setSelectedCustomer(customer)
+                      setActiveDraftId(null)
+                      setActiveDraftVersion(null)
+                      setNotes('')
+                      setProductSearch('')
+                      setHistoryPage(1)
+                      setPricelistPage(1)
                       setLines([])
+                      setSummaryExpanded(false)
                       setStep('product')
                     }}
                     className="group flex w-full items-center gap-3 border-b border-slate-200 px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-sky-50 focus-visible:bg-sky-50 focus-visible:outline-none"
@@ -581,13 +707,26 @@ const SalesOrderEntryPage = () => {
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setStep('customer')}
-                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Ganti
-                </button>
+                {!activeDraftId && (
+                  <button
+                    type="button"
+                    onClick={() => setStep('customer')}
+                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Ganti
+                  </button>
+                )}
+                {activeDraftId && (
+                  <button
+                    type="button"
+                    onClick={() => cancelDraft(activeDraftId)}
+                    disabled={posting}
+                    className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 size={14} className="inline-block mr-1" />
+                    Hapus Draft
+                  </button>
+                )}
                 {lines.length > 0 && (
                   <button
                     type="button"
@@ -600,6 +739,119 @@ const SalesOrderEntryPage = () => {
                 )}
               </div>
             </section>
+
+            {/* Selected lines / order summary */}
+            {lines.length > 0 && (
+              <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setSummaryExpanded((expanded) => !expanded)}
+                  aria-expanded={summaryExpanded}
+                  aria-controls="order-summary-content"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white">
+                      <ClipboardList size={17} />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Ringkasan Pesanan</h3>
+                      <p className="text-[11px] text-slate-500">
+                        {lines.length} produk · {totalQty} unit
+                      </p>
+                    </div>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm font-bold tabular-nums text-slate-900">
+                      {formatRupiah(total)}
+                    </span>
+                    <ChevronDown
+                      size={16}
+                      className={`text-slate-500 transition-transform ${summaryExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </span>
+                </button>
+                {summaryExpanded && (
+                  <div id="order-summary-content" className="border-t border-slate-200">
+                    <div className="max-h-90 divide-y divide-slate-200 overflow-y-auto">
+                      {lines.map((line, index) => (
+                        <div key={String(line.product.id)} className="px-4 py-3">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-0.5 w-5 shrink-0 font-mono text-[11px] text-slate-400">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] font-semibold leading-snug text-slate-900">
+                                {line.product.itemName}
+                              </p>
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                {formatRupiah(Number(line.product.price ?? 0))} / unit
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeLine(String(line.product.id))}
+                              aria-label={`Hapus ${line.product.itemName}`}
+                              className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between pl-8">
+                            <div className="inline-flex items-center overflow-hidden rounded-lg border border-slate-300 bg-white">
+                              <button
+                                type="button"
+                                aria-label={`Kurangi ${line.product.itemName}`}
+                                onClick={() => {
+                                  if (line.qty <= 1) removeLine(String(line.product.id))
+                                  else setLineQty(String(line.product.id), line.qty - 1)
+                                }}
+                                className="flex h-8 w-8 items-center justify-center text-slate-600 hover:bg-slate-100"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="flex h-8 min-w-9 items-center justify-center border-x border-slate-300 px-2 text-xs font-bold tabular-nums text-slate-900">
+                                {line.qty}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Tambah ${line.product.itemName}`}
+                                onClick={() => setLineQty(String(line.product.id), line.qty + 1)}
+                                className="flex h-8 w-8 items-center justify-center text-slate-600 hover:bg-slate-100"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                            <span className="text-sm font-bold tabular-nums text-slate-900">
+                              {formatRupiah(Number(line.product.price ?? 0) * line.qty)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+                      <div className="flex items-center justify-between text-xs text-slate-600">
+                        <span>Total unit</span>
+                        <span className="font-semibold tabular-nums">{totalQty}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold text-slate-800">Total pesanan</span>
+                        <span className="text-lg font-extrabold tabular-nums tracking-tight text-slate-900">
+                          {formatRupiah(total)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setStep('confirm')}
+                        className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white transition hover:bg-slate-800"
+                      >
+                        Review & Konfirmasi <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Product catalogue */}
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -638,202 +890,125 @@ const SalesOrderEntryPage = () => {
                   )}
                 </div>
               </div>
-              <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Daftar Produk · Harga Customer
-              </div>
-              <div className="max-h-107.5 overflow-y-auto">
-                {products.length === 0 && (
-                  <div className="px-4 py-10 text-center text-sm text-slate-500">
-                    Tidak ada produk yang ditemukan.
-                  </div>
-                )}
-                {products.map((product) => {
-                  const existing = lines.find(
-                    (line) => String(line.product.id) === String(product.id),
-                  )
-                  return (
-                    <div
-                      key={String(product.id)}
-                      className={`border-t border-slate-200 px-4 py-3 first:border-t-0 ${
-                        existing ? 'bg-blue-50/40' : 'bg-white'
+              {!searchingProducts && (
+                <div
+                  role="tablist"
+                  aria-label="Kelompok produk"
+                  className="grid grid-cols-2 gap-2 border-t border-slate-200 bg-slate-50 p-3"
+                >
+                  {(
+                    [
+                      {
+                        key: 'actual',
+                        label: 'History Pembelian',
+                        count: historyMeta?.total_records ?? 0,
+                      },
+                      {
+                        key: 'pricelist',
+                        label: 'Produk Lainnya',
+                        count: pricelistMeta?.total_records ?? 0,
+                      },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={productTab === tab.key}
+                      onClick={() => setProductTab(tab.key)}
+                      className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                        productTab === tab.key
+                          ? 'border-sky-500 bg-white text-sky-700 shadow-sm ring-1 ring-sky-500'
+                          : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-white'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold leading-snug text-slate-900">
-                            {product.itemName}
-                          </p>
-                          <p className="mt-1 font-mono text-[10px] text-slate-500">
-                            {product.itemCode}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold tabular-nums text-slate-900">
-                              {typeof product.price === 'number'
-                                ? formatRupiah(product.price)
-                                : 'Harga belum tersedia'}
-                            </span>
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                                product.priceSource === 'actual'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : 'bg-amber-50 text-amber-700'
-                              }`}
-                            >
-                              {product.priceSource === 'actual' ? 'Harga aktual' : 'Price list'}
-                            </span>
-                          </div>
+                      <span className="block text-xs font-bold">{tab.label}</span>
+                      <span className="mt-1 block text-[11px]">{tab.count} produk</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchingProducts && (
+                <div className="border-t border-sky-100 bg-sky-50 px-4 py-2 text-xs text-sky-800">
+                  Hasil pencarian dari History Pembelian dan Produk Lainnya
+                </div>
+              )}
+              <div className="max-h-107.5 overflow-y-auto">
+                {(
+                  [
+                    {
+                      key: 'actual',
+                      title: 'History Pembelian',
+                      description: 'Produk yang pernah dibeli customer',
+                      products: historyProducts,
+                      meta: historyMeta,
+                      page: historyPage,
+                      setPage: setHistoryPage,
+                      loading: historyLoading,
+                      error: historyError,
+                    },
+                    {
+                      key: 'pricelist',
+                      title: 'Produk Lainnya',
+                      description: 'Produk yang belum pernah dibeli customer',
+                      products: pricelistProducts,
+                      meta: pricelistMeta,
+                      page: pricelistPage,
+                      setPage: setPricelistPage,
+                      loading: pricelistLoading,
+                      error: pricelistError,
+                    },
+                  ] as const
+                )
+                  .filter((group) => searchingProducts || group.key === productTab)
+                  .map((group) => (
+                    <div key={group.key} className="border-t border-slate-200">
+                      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-slate-100 px-4 py-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800">{group.title}</h4>
+                          <p className="text-[11px] text-slate-500">{group.description}</p>
                         </div>
-                        {existing && (
-                          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-blue-600" />
-                        )}
-                      </div>
-                      <div className="mt-3 flex min-h-9 items-center justify-between border-t border-slate-200 pt-2.5">
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {existing ? `${existing.qty} dalam pesanan` : 'Jumlah pesanan'}
+                        <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-slate-700">
+                          {group.meta?.total_records ?? 0} produk
                         </span>
-                        <QtyControl
-                          product={product}
-                          cardcode={selectedCustomer.CardCode ?? undefined}
-                          listMode
-                          qty={existing?.qty ?? 0}
-                          onAdd={(pricedProduct, qty) => addLine(pricedProduct, qty ?? 1)}
-                          onQtyChange={(id, qty) => setLineQty(String(id), qty)}
-                          onIncrease={(p) => {
-                            const line = lines.find((l) => String(l.product.id) === String(p.id))
-
-                            if (!line) {
-                              addLine(p)
-                            } else {
-                              setLineQty(String(p.id), line.qty + 1)
-                            }
-                          }}
-                          onDecrease={(p) => {
-                            const line = lines.find((l) => String(l.product.id) === String(p.id))
-
-                            if (!line) return
-
-                            if (line.qty <= 1) {
-                              removeLine(String(p.id))
-                            } else {
-                              setLineQty(String(p.id), line.qty - 1)
-                            }
-                          }}
-                          onRemove={(id) => removeLine(String(id))}
-                        />
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            {/* Selected lines / order summary */}
-            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white">
-                    <ClipboardList size={17} />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Ringkasan Pesanan</h3>
-                    <p className="text-[11px] text-slate-500">Item yang akan diajukan</p>
-                  </div>
-                </div>
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold tabular-nums text-slate-700">
-                  {lines.length} item
-                </span>
-              </div>
-              {lines.length === 0 ? (
-                <div className="flex flex-col items-center px-4 py-9 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-                    <ShoppingCart size={22} />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-slate-700">Pesanan masih kosong</p>
-                  <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
-                    Tambahkan produk dari katalog untuk menyusun pesanan customer.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="max-h-[360px] divide-y divide-slate-200 overflow-y-auto">
-                    {lines.map((line, index) => (
-                      <div key={String(line.product.id)} className="px-4 py-3">
-                        <div className="flex items-start gap-3">
-                          <span className="mt-0.5 w-5 shrink-0 font-mono text-[11px] text-slate-400">
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-semibold leading-snug text-slate-900">
-                              {line.product.itemName}
-                            </p>
-                            <p className="mt-1 text-[11px] text-slate-500">
-                              {formatRupiah(Number(line.product.price ?? 0))} / unit
-                            </p>
-                          </div>
+                      {group.loading ? (
+                        <Loader label={`Memuat ${group.title.toLowerCase()}...`} className="p-4" />
+                      ) : group.error ? (
+                        <p className="px-4 py-6 text-sm text-red-600">Gagal memuat produk.</p>
+                      ) : group.products.length === 0 ? (
+                        <p className="px-4 py-6 text-sm text-slate-500">
+                          Tidak ada produk ditemukan.
+                        </p>
+                      ) : (
+                        group.products.map(renderProductRow)
+                      )}
+                      {!group.loading && !group.error && (group.meta?.total_pages ?? 0) > 1 && (
+                        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">
                           <button
                             type="button"
-                            onClick={() => removeLine(String(line.product.id))}
-                            aria-label={`Hapus ${line.product.itemName}`}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                            disabled={group.page <= 1}
+                            onClick={() => group.setPage((page) => Math.max(1, page - 1))}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40"
                           >
-                            <Trash2 size={16} />
+                            Sebelumnya
+                          </button>
+                          <span className="text-xs text-slate-600">
+                            Halaman {group.page} / {group.meta?.total_pages ?? 1}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={group.page >= (group.meta?.total_pages ?? 1)}
+                            onClick={() => group.setPage((page) => page + 1)}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40"
+                          >
+                            Berikutnya
                           </button>
                         </div>
-                        <div className="mt-3 flex items-center justify-between pl-8">
-                          <div className="inline-flex items-center overflow-hidden rounded-lg border border-slate-300 bg-white">
-                            <button
-                              type="button"
-                              aria-label={`Kurangi ${line.product.itemName}`}
-                              onClick={() => {
-                                if (line.qty <= 1) removeLine(String(line.product.id))
-                                else setLineQty(String(line.product.id), line.qty - 1)
-                              }}
-                              className="flex h-8 w-8 items-center justify-center text-slate-600 hover:bg-slate-100"
-                            >
-                              <Minus size={14} />
-                            </button>
-                            <span className="flex h-8 min-w-9 items-center justify-center border-x border-slate-300 px-2 text-xs font-bold tabular-nums text-slate-900">
-                              {line.qty}
-                            </span>
-                            <button
-                              type="button"
-                              aria-label={`Tambah ${line.product.itemName}`}
-                              onClick={() => setLineQty(String(line.product.id), line.qty + 1)}
-                              className="flex h-8 w-8 items-center justify-center text-slate-600 hover:bg-slate-100"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          </div>
-                          <span className="text-sm font-bold tabular-nums text-slate-900">
-                            {formatRupiah(Number(line.product.price ?? 0) * line.qty)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Total unit</span>
-                      <span className="font-semibold tabular-nums">
-                        {lines.reduce((sum, line) => sum + line.qty, 0)}
-                      </span>
+                      )}
                     </div>
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <span className="text-sm font-bold text-slate-800">Total pesanan</span>
-                      <span className="text-lg font-extrabold tabular-nums tracking-tight text-slate-900">
-                        {formatRupiah(total)}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setStep('confirm')}
-                      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white transition hover:bg-slate-800"
-                    >
-                      Review & Konfirmasi <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </>
-              )}
+                  ))}
+              </div>
             </section>
           </div>
         )}
@@ -860,6 +1035,17 @@ const SalesOrderEntryPage = () => {
                 <ArrowLeft size={14} />
                 Ubah
               </button>
+              {activeDraftId && (
+                <button
+                  type="button"
+                  onClick={() => cancelDraft(activeDraftId)}
+                  disabled={posting}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                  Hapus Draft
+                </button>
+              )}
               <button
                 type="button"
                 onClick={saveDraft}
@@ -967,9 +1153,7 @@ const SalesOrderEntryPage = () => {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-slate-500">Total Pesanan</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
-                    {lines.reduce((sum, line) => sum + line.qty, 0)} unit
-                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">{totalQty} unit</p>
                 </div>
 
                 <p className="text-xl font-bold tracking-tight tabular-nums text-slate-900">

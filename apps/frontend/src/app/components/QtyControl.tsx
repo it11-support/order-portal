@@ -1,4 +1,4 @@
-import { Product } from '@repo/shared'
+import type { Product } from '@repo/shared'
 import React, { useEffect, useState } from 'react'
 import { Minus, Plus, Trash2, MessageCircle, X, AlertTriangle, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../contexts/authHook'
@@ -56,7 +56,7 @@ const QtyControlComponent = ({
   const purchaseUnit = product.purchaseUnit
   const purchasePackSize = Number(product.purchasePackSize ?? 1)
   const qty = propsQty ?? ctxGetQty(product.id)
-  const onQtyChange = propsOnQtyChange ?? ((id: number, q: number) => ctxOnQtyChange(product, q))
+  const onQtyChange = propsOnQtyChange ?? ((_id: number, q: number) => ctxOnQtyChange(product, q))
   const onIncrease = propsOnIncrease ?? ctxIncrease
   const onDecrease = propsOnDecrease ?? ctxDecrease
   const onRemove = propsOnRemove ?? ctxRemove
@@ -86,8 +86,6 @@ const QtyControlComponent = ({
   const [stockChecked, setStockChecked] = useState(false)
   const [priceChecked, setPriceChecked] = useState(false)
   const [sapPrice, setSapPrice] = useState<number | null>(null)
-  const [sapStock, setSapStock] = useState<number | null>(null)
-  const [stockChecking, setStockChecking] = useState(false)
 
   useEffect(() => {
     if (!showQtyDialog) return
@@ -107,7 +105,6 @@ const QtyControlComponent = ({
           return
         }
 
-        setSapStock(null)
 
         const [stockResult, priceResult] = await Promise.allSettled([
           api.get('/sap/stock', {
@@ -139,7 +136,6 @@ const QtyControlComponent = ({
           const parsed = raw == null || raw === '' ? NaN : Number(raw)
 
           if (Number.isFinite(parsed)) {
-            setSapStock(parsed)
             setStockChecked(true)
           } else {
             setStockChecked(false)
@@ -642,7 +638,7 @@ const QtyControlComponent = ({
           aria-label="Hapus dari keranjang"
           disabled={disabled}
           onClick={() => onRemove(product.id)}
-          className="cursor-pointer w-7 h-7 flex items-center justify-center rounded-full border border-destructive/30 text-destructive hover:bg-destructive/5 active:scale-95 transition-transform ${disabled ? 'opacity-50 pointer-events-none' : ''}"
+          className={`cursor-pointer w-7 h-7 flex items-center justify-center rounded-full border border-destructive/30 text-destructive hover:bg-destructive/5 active:scale-95 transition-transform ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <Trash2 size={13} />
         </button>

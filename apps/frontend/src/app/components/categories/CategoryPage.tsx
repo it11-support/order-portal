@@ -8,7 +8,7 @@ import CategoryIcon from '@/app/components/categories/CategoryIcon'
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>()
 
-  const { cart, increase, decrease, remove, setQty } = useCart()
+  const { cart } = useCart()
 
   const { loading: categoriesLoading, getCategory, setSelectedCategory } = useCategories()
 

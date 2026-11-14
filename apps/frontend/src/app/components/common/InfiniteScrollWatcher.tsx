@@ -9,7 +9,7 @@ interface InfiniteScrollWatcherProps {
 }
 
 export const InfiniteScrollWatcher = React.forwardRef<HTMLDivElement, InfiniteScrollWatcherProps>(
-  ({ isLoading, isValidating, isReachingEnd, isEmpty }, ref) => {
+  ({ isLoading, isValidating, isReachingEnd }, ref) => {
     return (
       <div className="w-full flex flex-col items-center justify-center py-6">
         {/* SENTINEL */}
