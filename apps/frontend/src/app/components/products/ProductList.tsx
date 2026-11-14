@@ -12,10 +12,17 @@ export const ProductList = ({ products, cart, onContactSales }: ProductListProps
     cart.filter((item) => (item.qty ?? 0) > 0).map((item) => String(item.product.id)),
   )
 
+  const sortedProducts = [...products].sort((a, b) => {
+    const dateA = a.lastInvoiceDate ? new Date(a.lastInvoiceDate).getTime() : 0
+    const dateB = b.lastInvoiceDate ? new Date(b.lastInvoiceDate).getTime() : 0
+
+    return dateB - dateA
+  })
+
   return (
     <>
       <div className="md:hidden bg-white rounded-2xl border border-border divide-y divide-border overflow-hidden">
-        {products.map((product) => {
+        {sortedProducts.map((product) => {
           const selected = selectedIds.has(String(product.id))
           return (
             <div key={String(product.id)} className={selected ? 'bg-accent/5' : ''}>

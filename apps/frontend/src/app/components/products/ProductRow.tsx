@@ -11,6 +11,7 @@ type ProductPriceInfo = Product & {
   currentPrice?: number | null
   lastInvoicePrice?: number | null
   lastInvoiceBasePrice?: number | null
+  lastInvoiceDate?: string | Date | null
   priceIncreasePercent?: number | null
   priceIncreased?: boolean
 }
@@ -30,6 +31,18 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
     currentPrice != null &&
     oldPrice > 0 &&
     currentPrice > oldPrice
+
+  const lastInvoiceDate = priceInfo.lastInvoiceDate ? new Date(priceInfo.lastInvoiceDate) : null
+
+  const formattedLastInvoiceDate =
+    lastInvoiceDate && !Number.isNaN(lastInvoiceDate.getTime())
+      ? new Intl.DateTimeFormat('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          timeZone: 'Asia/Makassar',
+        }).format(lastInvoiceDate)
+      : null
 
   const increasePercent = increased ? ((currentPrice - oldPrice) / oldPrice) * 100 : null
 
@@ -56,6 +69,11 @@ export const ProductRow = ({ product, onContactSales }: ProductRowProps) => {
                 </span>
               )}
             </div>
+            {formattedLastInvoiceDate && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Terakhir dibeli: {formattedLastInvoiceDate}
+              </p>
+            )}
           </div>
         )}
       </div>

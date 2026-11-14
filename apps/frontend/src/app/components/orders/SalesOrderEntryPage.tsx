@@ -142,7 +142,16 @@ const SalesOrderEntryPage = () => {
   )
 
   // Data produk
-  const historyProducts = historyData?.data ?? []
+  const historyProducts = useMemo(
+    () =>
+      [...(historyData?.data ?? [])].sort((a, b) => {
+        const dateA = a.lastInvoiceDate ? new Date(a.lastInvoiceDate).getTime() : 0
+        const dateB = b.lastInvoiceDate ? new Date(b.lastInvoiceDate).getTime() : 0
+
+        return dateB - dateA
+      }),
+    [historyData?.data],
+  )
   const pricelistProducts = pricelistData?.data ?? []
 
   // Metadata pagination
@@ -151,6 +160,21 @@ const SalesOrderEntryPage = () => {
 
   const onCustomerSearch = (value: string) => {
     setSearch(value)
+  }
+
+  const formatLastPurchaseDate = (date?: Date | string | null) => {
+    if (!date) return null
+
+    const parsedDate = new Date(date)
+
+    if (Number.isNaN(parsedDate.getTime())) return null
+
+    return new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Makassar',
+    }).format(parsedDate)
   }
 
   const onProductSearch = (value: string) => {
@@ -400,8 +424,11 @@ const SalesOrderEntryPage = () => {
             <p className="text-[13px] font-semibold leading-snug text-slate-800">
               {product.itemName}
             </p>
-
-            <p className="mt-1 font-mono text-[11px] text-slate-400">{product.itemCode}</p>
+            {product.lastInvoiceDate && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Terakhir dibeli: {formatLastPurchaseDate(product.lastInvoiceDate)}
+              </p>
+            )}
           </div>
 
           {existing && <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />}

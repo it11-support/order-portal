@@ -81,6 +81,7 @@ export interface Product {
   salesPackSize?: number
   salesPackUnit?: string
   launchDate?: Date | string
+  lastInvoiceDate?: Date | string
   isActive: boolean
   priceIncreased?: boolean
   priceDifference?: number | null
