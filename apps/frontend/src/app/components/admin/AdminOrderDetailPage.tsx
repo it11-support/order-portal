@@ -173,41 +173,6 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const canReject =
     canManageStatus && !['delivered', 'cancelled', 'converted'].includes(order.status)
 
-  const actionLabel = (status: OrderStatus): string => {
-    if (status === 'cancelled') return 'Tolak'
-    if (status === 'delivered') return 'Selesai'
-    if (status === 'processing') return isQuote ? 'Mulai follow up' : 'Proses'
-    if (status === 'confirmed') return 'Konfirmasi'
-    return STATUS_CONFIG[status].label
-  }
-
-  const actionBar =
-    canManageStatus || canReject ? (
-      <div className="flex flex-col sm:flex-row gap-2 justify-center">
-        {canManageStatus &&
-          positiveActions.map((s) => (
-            <button
-              key={s}
-              disabled={posting}
-              onClick={() => handleStatusChange(s)}
-              className="w-full sm:w-auto sm:min-w-35 sm:px-6 py-3 rounded-xl text-sm font-bold bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors active:scale-[0.98]"
-            >
-              {actionLabel(s)}
-            </button>
-          ))}
-
-        {canReject && (
-          <button
-            key="cancelled"
-            disabled={posting}
-            onClick={() => handleStatusChange('cancelled')}
-            className="w-full sm:w-auto sm:min-w-35 sm:px-6 py-3 rounded-xl text-sm font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors active:scale-[0.98]"
-          >
-            Tolak
-          </button>
-        )}
-      </div>
-    ) : undefined
 
   const handleSapLink = async () => {
     if (!order) return
@@ -232,7 +197,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   }
 
   return (
-    <Shell title={order.id} showBack backTo={LIST_PATH[kind]} actionBar={actionBar}>
+    <Shell title={order.id} showBack backTo={LIST_PATH[kind]} >
       <div className="max-w-2xl space-y-4">
         {error && (
           <p role="alert" className="text-red-600">
