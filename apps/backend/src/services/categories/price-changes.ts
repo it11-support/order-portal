@@ -44,9 +44,7 @@ const calculateChange = (row: PriceChangeRow): PriceChange => {
     lastInvoicePrice > 0 &&
     currentPrice > lastInvoicePrice
 
-  const priceDifference = increased
-    ? round2(currentPrice - lastInvoicePrice)
-    : null
+  const priceDifference = increased ? round2(currentPrice - lastInvoicePrice) : null
 
   const priceIncreasePercent =
     priceDifference !== null && lastInvoicePrice !== null
@@ -54,10 +52,7 @@ const calculateChange = (row: PriceChangeRow): PriceChange => {
       : null
 
   return {
-    lastInvoice:
-      row.last_invoice_num == null
-        ? null
-        : String(row.last_invoice_num),
+    lastInvoice: row.last_invoice_num == null ? null : String(row.last_invoice_num),
 
     lastInvoiceDate: row.last_invoice_date
       ? new Date(row.last_invoice_date).toISOString().slice(0, 10)

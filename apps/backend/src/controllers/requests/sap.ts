@@ -56,9 +56,6 @@ export const linkRequestToSap = async (req: AuthenticatedRequest, res: Response)
   return res.json({
     success: result.linked,
     message: result.message ?? null,
-    data: serialize(
-      refreshed,
-      result.view ? new Map([[row.id, result.view]]) : undefined,
-    ),
+    data: serialize(refreshed, result.view ? new Map([[row.id, result.view]]) : undefined),
   })
 }

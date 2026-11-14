@@ -1,6 +1,4 @@
-export const formatRupiah = (
-  value: number | string | null | undefined,
-): string => {
+export const formatRupiah = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined || value === '') {
     return 'Harga belum tersedia'
   }

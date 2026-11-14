@@ -39,7 +39,8 @@ export interface SapOrderRow {
  * Written here so the format has one definition. The sync reads the same shape.
  */
 export const PORTAL_REF_MARKER = '[PORTAL:'
-export const portalRefMarker = (portalRequestId: string) => `${PORTAL_REF_MARKER}${portalRequestId}]`
+export const portalRefMarker = (portalRequestId: string) =>
+  `${PORTAL_REF_MARKER}${portalRequestId}]`
 
 const PORTAL_REF_PATTERN = /\[PORTAL:([A-Za-z0-9._:-]{1,64})\]/
 
@@ -194,7 +195,12 @@ interface RequestRow {
   customerId: bigint | string
   sapCompanyId: string | null
   sapDocEntry: number | null
-  customer: { CardCode: string | null; CardName: string | null; CntctPrsn: string | null; SlpCode: number | null }
+  customer: {
+    CardCode: string | null
+    CardName: string | null
+    CntctPrsn: string | null
+    SlpCode: number | null
+  }
 }
 
 /**
@@ -211,8 +217,7 @@ export const reconcileRequest = async (
   coverage?: DeliveryCoverage | null,
 ): Promise<{ view: SapStatusView; changed: boolean; status: string }> => {
   const next = portalStatusFromSap(row, request.status, coverage)
-  const firstLink =
-    request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId
+  const firstLink = request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId
 
   await prisma.portalRequest.update({
     where: { id: request.id },
@@ -233,7 +238,11 @@ export const reconcileRequest = async (
       await systemNote(request.id, linkNote(row, coverage))
       ws.emitOrderSapSynced(request.id, String(request.customerId), view(row))
     }
-    return { view: { ...view(row), portalStatus: request.status }, changed: false, status: request.status }
+    return {
+      view: { ...view(row), portalStatus: request.status },
+      changed: false,
+      status: request.status,
+    }
   }
 
   const updated = await prisma.portalRequest.updateMany({
@@ -241,7 +250,11 @@ export const reconcileRequest = async (
     data: { status: next },
   })
   if (updated.count !== 1)
-    return { view: { ...view(row), portalStatus: request.status }, changed: false, status: request.status }
+    return {
+      view: { ...view(row), portalStatus: request.status },
+      changed: false,
+      status: request.status,
+    }
 
   // What moved, when the source says it moved, and which invoice carries it.
   // The three belong in one sentence: the status alone says the portal reacted,
@@ -306,7 +319,8 @@ const systemNote = async (requestId: string, message: string) => {
 
 /** What the invoices say about this document, in one clause or none. */
 const linkNote = (row: SapOrderRow, coverage?: DeliveryCoverage | null) => {
-  const open = row.docStatus?.trim() === 'O' ? 'Open' : row.docStatus?.trim() === 'C' ? 'Closed' : 'Open'
+  const open =
+    row.docStatus?.trim() === 'O' ? 'Open' : row.docStatus?.trim() === 'C' ? 'Closed' : 'Open'
   const stamp = updatedInSystem(row)
   return (
     `Dokumen ${row.docNum} terhubung ke pesanan ini (${open}` +
@@ -394,7 +408,9 @@ export const deliveryCoverage = async (
  * documents. The list page calls this on every read, so it must stay cheap and
  * must never throw into the request.
  */
-export const reconcileRequests = async (requests: RequestRow[]): Promise<Map<string, SapStatusView>> => {
+export const reconcileRequests = async (
+  requests: RequestRow[],
+): Promise<Map<string, SapStatusView>> => {
   const views = new Map<string, SapStatusView>()
   if (!requests.length) return views
 
@@ -482,7 +498,15 @@ export const linkSapDocument = async (
     },
     orderBy: { updatedAt: 'desc' },
     take: 1,
-    select: { companyId: true, docEntry: true, docNum: true, docStatus: true, canceled: true, sapUpdatedAt: true, portalRef: true },
+    select: {
+      companyId: true,
+      docEntry: true,
+      docNum: true,
+      docStatus: true,
+      canceled: true,
+      sapUpdatedAt: true,
+      portalRef: true,
+    },
   })
   const row = candidates[0]
 

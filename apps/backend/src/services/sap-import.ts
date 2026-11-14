@@ -138,7 +138,8 @@ const withLines = { lines: { orderBy: { lineNum: 'asc' as const } } }
  * re-running reports what happened instead of claiming there is nothing to do.
  */
 export const resolveSapOrder = async (target: { docNum?: number; docEntry?: number }) => {
-  if (target.docNum == null && target.docEntry == null) return (await eligibleSapOrders())[0] ?? null
+  if (target.docNum == null && target.docEntry == null)
+    return (await eligibleSapOrders())[0] ?? null
   return prisma.salesOrder.findFirst({
     where: target.docEntry != null ? { docEntry: target.docEntry } : { docNum: target.docNum },
     orderBy: { updatedAt: 'desc' },
@@ -251,7 +252,8 @@ export const importSapOrder = async (
   // on its own: a customer looking at a finished order and reading it as unfinished
   // is the exact mistake this avoids.
   const coverage = await deliveryCoverage([order.docEntry])
-  const status = portalStatusFromSap(order, 'confirmed', coverage.get(order.docEntry) ?? null) ?? 'confirmed'
+  const status =
+    portalStatusFromSap(order, 'confirmed', coverage.get(order.docEntry) ?? null) ?? 'confirmed'
 
   // Nothing is written into the customer note: that field is what the customer
   // themselves typed, and filling it with import metadata reads on the order

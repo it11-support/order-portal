@@ -39,10 +39,7 @@ type SapView = SapViewData & {
 
 export type RequestViews = Map<string, SapViewData>
 
-export const sapView = (
-  row: RequestRow,
-  views?: RequestViews,
-): SapView | null => {
+export const sapView = (row: RequestRow, views?: RequestViews): SapView | null => {
   if (row.sapDocEntry === null) return null
 
   const view: SapViewData = views?.get(row.id) ?? {
@@ -59,9 +56,7 @@ export const sapView = (
     syncedAt: row.sapSyncedAt?.toISOString() ?? null,
   }
 
-  const status: SapView['status'] = view.canceled
-    ? 'canceled'
-    : view.docStatus
+  const status: SapView['status'] = view.canceled ? 'canceled' : view.docStatus
 
   return {
     ...view,
@@ -69,23 +64,17 @@ export const sapView = (
   }
 }
 
-export const serialize = (
-  row: RequestRow,
-  views?: RequestViews,
-  viewer?: Actor | null,
-) => {
+export const serialize = (row: RequestRow, views?: RequestViews, viewer?: Actor | null) => {
   const forCustomer = viewer?.role === 'customer'
 
   return {
     id: row.id,
     kind: row.kind,
     userId: String(row.customerId),
-    userName:
-      row.customer.CntctPrsn || row.customer.CardName,
+    userName: row.customer.CntctPrsn || row.customer.CardName,
     company: row.customer.CardName,
     cardCode: row.customer.CardCode,
-    phone:
-      row.customer.Cellular || row.customer.Phone1,
+    phone: row.customer.Cellular || row.customer.Phone1,
     salesName: row.customer.SalesName,
     items: row.items,
     status: views?.get(row.id)?.portalStatus ?? row.status,
@@ -98,8 +87,6 @@ export const serialize = (
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     notes: row.notes,
-    ...(forCustomer
-      ? {}
-      : { salesNotes: row.salesNotes ?? null }),
+    ...(forCustomer ? {} : { salesNotes: row.salesNotes ?? null }),
   }
 }

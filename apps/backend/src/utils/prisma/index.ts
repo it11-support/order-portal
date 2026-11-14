@@ -29,12 +29,7 @@ const convertBigInt = (value: unknown): unknown => {
     return value
   }
 
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key,
-      convertBigInt(item),
-    ]),
-  )
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, convertBigInt(item)]))
 }
 
 export const prisma = basePrisma.$extends({

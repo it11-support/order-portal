@@ -83,7 +83,7 @@ const NotificationsPage = () => {
                     </button>
                   </div>
                 </div>
-{(() => {
+                {(() => {
                   const target = notificationTarget(
                     notification.type,
                     notification.relatedId,

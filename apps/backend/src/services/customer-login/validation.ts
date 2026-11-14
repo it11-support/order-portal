@@ -23,17 +23,11 @@ export const getEligibleCustomer = async (id: bigint) => {
   })
 
   if (!customer) {
-    throw new CustomerLoginError(
-      404,
-      'Pelanggan tidak ditemukan.',
-    )
+    throw new CustomerLoginError(404, 'Pelanggan tidak ditemukan.')
   }
 
   if (!customer.CardCode || customer.NonActive === 'Y') {
-    throw new CustomerLoginError(
-      400,
-      'Pelanggan tidak aktif atau tidak memiliki CardCode.',
-    )
+    throw new CustomerLoginError(400, 'Pelanggan tidak aktif atau tidak memiliki CardCode.')
   }
 
   return {
@@ -48,10 +42,7 @@ export const getCustomerRole = async () => {
   })
 
   if (!role) {
-    throw new CustomerLoginError(
-      500,
-      'Role customer tidak ditemukan.',
-    )
+    throw new CustomerLoginError(500, 'Role customer tidak ditemukan.')
   }
 
   return role

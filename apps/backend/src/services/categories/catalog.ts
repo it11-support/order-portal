@@ -1,11 +1,16 @@
 import type { AuthenticatedRequest } from '@auth'
 import type { ProductWhereInput } from '@/generated/prisma/models'
 import { prisma } from '@utils'
-import { currentCustomer, customerItemCodes, customerPurchasedItemCodes, normalizeItemCode } from '@/services/customer-catalog'
+import {
+  currentCustomer,
+  customerItemCodes,
+  customerPurchasedItemCodes,
+  normalizeItemCode,
+} from '@/services/customer-catalog'
 
 export type CatalogProduct = Awaited<ReturnType<typeof prisma.product.findMany>>[number]
 
-export class CatalogAccessError extends Error { }
+export class CatalogAccessError extends Error {}
 
 export type CatalogOptions = {
   category: string
@@ -13,14 +18,15 @@ export type CatalogOptions = {
   customerId?: string
 }
 
-const searchWhere = (search: string): ProductWhereInput => search
-  ? {
-    OR: [
-      { itemName: { contains: search, mode: 'insensitive' } },
-      { itemCode: { contains: search, mode: 'insensitive' } },
-    ]
-  }
-  : {}
+const searchWhere = (search: string): ProductWhereInput =>
+  search
+    ? {
+        OR: [
+          { itemName: { contains: search, mode: 'insensitive' } },
+          { itemCode: { contains: search, mode: 'insensitive' } },
+        ],
+      }
+    : {}
 
 const byName = { itemName: 'asc' as const }
 
@@ -37,12 +43,15 @@ const mergeDistinct = (first: CatalogProduct[], second: CatalogProduct[]): Catal
   return result
 }
 
-const purchasedFirst = async(codes: string[], where: ProductWhereInput): Promise<CatalogProduct[]> => {
+const purchasedFirst = async (
+  codes: string[],
+  where: ProductWhereInput,
+): Promise<CatalogProduct[]> => {
   const purchased = codes.length
     ? await prisma.product.findMany({
-      where: { isActive: true, itemCode: { in: codes }, ...where },
-      orderBy: byName,
-    })
+        where: { isActive: true, itemCode: { in: codes }, ...where },
+        orderBy: byName,
+      })
     : []
   const claimedCodes = purchased.map((p) => p.itemCode)
   const others = await prisma.product.findMany({
@@ -56,20 +65,26 @@ const purchasedFirst = async(codes: string[], where: ProductWhereInput): Promise
   return mergeDistinct(purchased, others)
 }
 
-export const resolveTargetCustomer = async(req: AuthenticatedRequest, customerId: string) => {
+export const resolveTargetCustomer = async (req: AuthenticatedRequest, customerId: string) => {
   const target = await prisma.customers.findUnique({
     where: { id: BigInt(customerId) },
     select: { id: true, CardCode: true, IndustryC: true, SlpCode: true, NonActive: true },
   })
-  const allowed = Boolean(target?.CardCode && target.NonActive !== 'Y' && (
-    req.user?.role.name === 'admin' ||
-    (req.user?.slpCode != null && String(target.SlpCode) === String(req.user.slpCode))
-  ))
-  if (!allowed || !target?.CardCode) throw new CatalogAccessError('Customer not found or access denied.')
+  const allowed = Boolean(
+    target?.CardCode &&
+    target.NonActive !== 'Y' &&
+    (req.user?.role.name === 'admin' ||
+      (req.user?.slpCode != null && String(target.SlpCode) === String(req.user.slpCode))),
+  )
+  if (!allowed || !target?.CardCode)
+    throw new CatalogAccessError('Customer not found or access denied.')
   return target
 }
 
-export const loadCatalog = async(req: AuthenticatedRequest, options: CatalogOptions): Promise<{
+export const loadCatalog = async (
+  req: AuthenticatedRequest,
+  options: CatalogOptions,
+): Promise<{
   products: CatalogProduct[]
   priceCustomerId: bigint | null
 }> => {
@@ -79,11 +94,15 @@ export const loadCatalog = async(req: AuthenticatedRequest, options: CatalogOpti
     ...searchWhere(search),
   }
   if (req.user?.role.name === 'customer') {
-    const priceCustomerId = req.user?.customerId == null ? null : BigInt(String(req.user.customerId))
+    const priceCustomerId =
+      req.user?.customerId == null ? null : BigInt(String(req.user.customerId))
     // Original behavior: category view includes all active category products.
     if (category) {
       return {
-        products: await prisma.product.findMany({ where: { isActive: true, ...where }, orderBy: byName }),
+        products: await prisma.product.findMany({
+          where: { isActive: true, ...where },
+          orderBy: byName,
+        }),
         priceCustomerId,
       }
     }
@@ -102,9 +121,7 @@ export const loadCatalog = async(req: AuthenticatedRequest, options: CatalogOpti
       }
     }
 
-    const codes = [
-      ...new Set(await customerPurchasedItemCodes(target.CardCode)),
-    ]
+    const codes = [...new Set(await customerPurchasedItemCodes(target.CardCode))]
 
     return {
       products: await purchasedFirst(codes, where),
@@ -112,7 +129,10 @@ export const loadCatalog = async(req: AuthenticatedRequest, options: CatalogOpti
     }
   }
   return {
-    products: await prisma.product.findMany({ where: { isActive: true, ...where }, orderBy: byName }),
+    products: await prisma.product.findMany({
+      where: { isActive: true, ...where },
+      orderBy: byName,
+    }),
     priceCustomerId: null,
   }
 }

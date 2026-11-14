@@ -13,8 +13,7 @@ type UserWithRelations = UserGetPayload<{
   }
 }>
 
-const serializeDecimal = (value: Decimal | null) =>
-  value?.toString() ?? null
+const serializeDecimal = (value: Decimal | null) => value?.toString() ?? null
 
 const toUserPayload = (user: UserWithRelations): User => ({
   id: user.id,
@@ -33,10 +32,10 @@ const toUserPayload = (user: UserWithRelations): User => ({
   customerId: user.customerId,
   customer: user.customer
     ? {
-      ...user.customer,
-      creditLimit: serializeDecimal(user.customer.creditLimit),
-      balance: serializeDecimal(user.customer.balance),
-    }
+        ...user.customer,
+        creditLimit: serializeDecimal(user.customer.creditLimit),
+        balance: serializeDecimal(user.customer.balance),
+      }
     : null,
   slpCode: user.slpCode ?? null,
 })

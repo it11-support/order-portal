@@ -51,6 +51,6 @@ module.exports = {
         NODE_ENV: 'production',
         PATH: process.env.PATH,
       },
-    }
+    },
   ],
 }

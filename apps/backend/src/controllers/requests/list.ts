@@ -5,11 +5,7 @@ import type { PortalRequestWhereInput } from '@/generated/prisma/models'
 import { prisma } from '@/utils'
 import { currentCustomer } from '@/services/customer-catalog'
 import { reconcileRequests } from '@/services/sap-sync'
-import {
-  actorOf,
-  deniedMessage,
-  customerSelect,
-} from '@/services/requests/access'
+import { actorOf, deniedMessage, customerSelect } from '@/services/requests/access'
 import type { Actor } from '@/services/requests/access'
 import { serialize } from '@/services/requests/serializer'
 import { settleInquiryOrderability } from '@/services/price-alerts'
@@ -31,8 +27,7 @@ const requestInclude = {
   createdBy: { select: { name: true } },
 } as const
 
-const deny = (res: Response, message: string, status = 403) =>
-  res.status(status).json({ message })
+const deny = (res: Response, message: string, status = 403) => res.status(status).json({ message })
 
 const validateStatus = (value: unknown): value is string =>
   typeof value === 'string' && VALID_STATUSES.has(value)
@@ -73,27 +68,18 @@ const checkRowAccess = (
     customer: { SlpCode: number | null }
   },
 ): string | null => {
-  if (
-    actor.role === 'customer' &&
-    String(row.customerId) !== String(req.user?.customerId)
-  ) {
+  if (actor.role === 'customer' && String(row.customerId) !== String(req.user?.customerId)) {
     return 'Akses ditolak.'
   }
 
-  if (
-    actor.role === 'sales_admin' &&
-    row.customer.SlpCode !== actor.slpCode
-  ) {
+  if (actor.role === 'sales_admin' && row.customer.SlpCode !== actor.slpCode) {
     return 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.'
   }
 
   return null
 }
 
-export const listRequests = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const listRequests = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)
 
   if (!actor) {
@@ -125,10 +111,7 @@ export const listRequests = async (
 
     const customerId = BigInt(customerFilter)
 
-    if (
-      actor.role === 'customer' &&
-      where.customerId !== customerId
-    ) {
+    if (actor.role === 'customer' && where.customerId !== customerId) {
       return deny(res, 'Akses ditolak.')
     }
 
@@ -153,10 +136,7 @@ export const listRequests = async (
   })
 }
 
-export const getRequest = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const getRequest = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)
 
   if (!actor) {

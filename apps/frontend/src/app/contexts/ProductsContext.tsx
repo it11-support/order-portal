@@ -5,11 +5,7 @@ import { Product, ApiResponse } from '@repo/shared'
 import { useAuth } from './authHook'
 
 export type ProductSortField =
-  | 'itemCode'
-  | 'itemName'
-  | 'productCategory'
-  | 'salesUnit'
-  | 'launchDate'
+  'itemCode' | 'itemName' | 'productCategory' | 'salesUnit' | 'launchDate'
 
 export type SortDirection = 'asc' | 'desc'
 

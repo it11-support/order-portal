@@ -8,9 +8,7 @@ type ExistingUser = {
   encryptedPassword: string | null
 } | null
 
-export const prepareCustomerCredentials = (
-  existingUser: ExistingUser,
-) => {
+export const prepareCustomerCredentials = (existingUser: ExistingUser) => {
   const existingPassword = existingUser?.encryptedPassword
     ? decryptCustomerPassword(existingUser.encryptedPassword)
     : null

@@ -10,11 +10,7 @@ export type RequestKind = 'order' | 'quote'
 
 /** Notification kinds the portal produces. */
 export type NotificationType =
-  | 'new_order'
-  | 'new_quote'
-  | 'status_update'
-  | 'followup_note'
-  | 'price_increase'
+  'new_order' | 'new_quote' | 'status_update' | 'followup_note' | 'price_increase'
 
 /** Where a staff account's customers come from. */
 export interface SalesPersonOption {

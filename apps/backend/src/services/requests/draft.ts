@@ -1,4 +1,3 @@
-
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import type { Actor } from './access'
@@ -11,13 +10,8 @@ import {
   refreshCustomerPrices,
   round6,
 } from '@/services/pricing'
-import type {
-  PortalRequest,
-  Product,
-} from '@/generated/prisma/client'
-import type {
-  PortalRequestUpdateInput,
-} from '@/generated/prisma/models'
+import type { PortalRequest, Product } from '@/generated/prisma/client'
+import type { PortalRequestUpdateInput } from '@/generated/prisma/models'
 import type { InputJsonValue } from '@prisma/client/runtime/client'
 
 type DraftItemInput = {
@@ -49,15 +43,9 @@ type NormalizedItem = {
   price: number | null
 }
 
-type DraftItemsResult =
-  | { ok: true; items: DraftItemSnapshot[] | null }
-  | { ok: false }
+type DraftItemsResult = { ok: true; items: DraftItemSnapshot[] | null } | { ok: false }
 
-const fail = (
-  res: Response,
-  status: number,
-  message: string,
-): false => {
+const fail = (res: Response, status: number, message: string): false => {
   res.status(status).json({ message })
   return false
 }
@@ -65,25 +53,15 @@ const fail = (
 const toJsonValue = (value: unknown): InputJsonValue =>
   JSON.parse(
     JSON.stringify(value, (_, current: unknown) =>
-      typeof current === 'bigint'
-        ? current.toString()
-        : current,
+      typeof current === 'bigint' ? current.toString() : current,
     ),
   ) as InputJsonValue
 
-const isRecord = (
-  value: unknown,
-): value is Record<string, unknown> =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const parseId = (value: unknown): string | null => {
-  if (
-    typeof value !== 'string' &&
-    typeof value !== 'number' &&
-    typeof value !== 'bigint'
-  ) {
+  if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'bigint') {
     return null
   }
 
@@ -97,56 +75,39 @@ const parseId = (value: unknown): string | null => {
 }
 
 const parseQty = (value: unknown): number | null =>
-  typeof value === 'number' &&
-    Number.isSafeInteger(value) &&
-    value >= 1 &&
-    value <= 100000
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 100000
     ? value
     : null
 
 const parsePrice = (value: unknown): number | null => {
   if (value === null || value === undefined) return null
 
-  return typeof value === 'number' &&
-    Number.isFinite(value) &&
-    value >= 0
-    ? value
-    : null
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
-const parsePreviousItems = (
-  value: unknown,
-): PreviousDraftItem[] => {
+const parsePreviousItems = (value: unknown): PreviousDraftItem[] => {
   if (!Array.isArray(value)) return []
 
   return value.flatMap((item): PreviousDraftItem[] => {
     if (!isRecord(item)) return []
 
-    const product = isRecord(item.product)
-      ? item.product
-      : null
+    const product = isRecord(item.product) ? item.product : null
 
     const id = parseId(product?.id ?? item.productId)
     if (!id) return []
 
-    return [{
-      productId: id,
-      price: parsePrice(item.price),
-      currency:
-        typeof item.currency === 'string'
-          ? item.currency
-          : null,
-      priceSource:
-        typeof item.priceSource === 'string'
-          ? item.priceSource
-          : null,
-    }]
+    return [
+      {
+        productId: id,
+        price: parsePrice(item.price),
+        currency: typeof item.currency === 'string' ? item.currency : null,
+        priceSource: typeof item.priceSource === 'string' ? item.priceSource : null,
+      },
+    ]
   })
 }
 
-const normalizeDraftItems = (
-  value: unknown,
-): NormalizedItem[] | null => {
+const normalizeDraftItems = (value: unknown): NormalizedItem[] | null => {
   if (!Array.isArray(value) || !value.length) {
     return null
   }
@@ -156,13 +117,9 @@ const normalizeDraftItems = (
   for (const item of value) {
     if (!isRecord(item)) return null
 
-    const product = isRecord(item.product)
-      ? item.product
-      : null
+    const product = isRecord(item.product) ? item.product : null
 
-    const productId = parseId(
-      product?.id ?? item.productId,
-    )
+    const productId = parseId(product?.id ?? item.productId)
     const qty = parseQty(item.qty)
 
     if (!productId || qty === null) return null
@@ -180,24 +137,15 @@ const normalizeDraftItems = (
   return result
 }
 
-const hasDuplicateIds = (
-  items: { productId: string }[],
-): boolean =>
-  new Set(items.map((item) => item.productId)).size !==
-  items.length
+const hasDuplicateIds = (items: { productId: string }[]): boolean =>
+  new Set(items.map((item) => item.productId)).size !== items.length
 
-const refreshPrices = async (
-  customerId: bigint,
-  products: Product[],
-): Promise<void> => {
+const refreshPrices = async (customerId: bigint, products: Product[]): Promise<void> => {
   const customer = await priceableCustomer(customerId)
 
   if (!customer) return
 
-  await refreshCustomerPrices(
-    customer,
-    [...new Set(products.map((p) => p.itemCode))],
-  )
+  await refreshCustomerPrices(customer, [...new Set(products.map((p) => p.itemCode))])
 }
 
 // Preserve original reference prices when editing a draft.
@@ -237,25 +185,15 @@ export const prepareDraftItems = async (
     return { ok: false }
   }
 
-  const productMap = new Map(
-    products.map((product) => [String(product.id), product]),
-  )
+  const productMap = new Map(products.map((product) => [String(product.id), product]))
 
   const previousItems = parsePreviousItems(row.items)
 
-  const oldById = new Map(
-    previousItems.map((item) => [
-      String(item.productId),
-      item,
-    ]),
-  )
+  const oldById = new Map(previousItems.map((item) => [String(item.productId), item]))
 
   await refreshPrices(row.customerId, products)
 
-  const currentPrices = await pricesForItems(
-    row.customerId,
-    normalized,
-  )
+  const currentPrices = await pricesForItems(row.customerId, normalized)
 
   const nextItems: DraftItemSnapshot[] = normalized.map((item) => {
     const product = productMap.get(item.productId)!
@@ -264,21 +202,19 @@ export const prepareDraftItems = async (
     const current = currentPrices.get(product.itemCode)
 
     const price = previous?.price ?? current?.price ?? null
-    const currency =
-      previous?.currency ?? current?.currency ?? null
-    const priceSource =
-      previous?.priceSource ?? current?.source ?? null
+    const currency = previous?.currency ?? current?.currency ?? null
+    const priceSource = previous?.priceSource ?? current?.source ?? null
 
     return {
       product,
       qty: item.qty,
       ...(price !== null
         ? {
-          price,
-          currency,
-          priceSource,
-          lineTotal: round6(item.qty * price),
-        }
+            price,
+            currency,
+            priceSource,
+            lineTotal: round6(item.qty * price),
+          }
         : {}),
     }
   })
@@ -308,11 +244,7 @@ const validateCustomerSubmission = async (
   })
 
   if (allowedProducts.length !== ids.length) {
-    return fail(
-      res,
-      403,
-      'Draft berisi produk yang tidak dapat dipesan customer. Hubungi sales.',
-    )
+    return fail(res, 403, 'Draft berisi produk yang tidak dapat dipesan customer. Hubungi sales.')
   }
 
   const changes = await priceIncreaseCheck(customerId, items)
@@ -344,9 +276,7 @@ export const prepareDraftSubmission = async (
     return true
   }
 
-  const normalized = normalizeDraftItems(
-    nextItems ?? row.items,
-  )
+  const normalized = normalizeDraftItems(nextItems ?? row.items)
 
   if (!normalized) {
     return fail(res, 400, 'Item draft tidak valid.')
@@ -383,19 +313,11 @@ export const prepareDraftSubmission = async (
 
   await refreshPrices(row.customerId, products)
 
-  const prices = await pricesForItems(
-    row.customerId,
-    normalized,
-  )
+  const prices = await pricesForItems(row.customerId, normalized)
 
   const sources = new Set<string>()
 
-  const productMap = new Map(
-    products.map((product) => [
-      String(product.id),
-      product,
-    ]),
-  )
+  const productMap = new Map(products.map((product) => [String(product.id), product]))
 
   const snapshot = normalized.map((item) => {
     const product = productMap.get(item.productId)!
@@ -408,23 +330,18 @@ export const prepareDraftSubmission = async (
       qty: item.qty,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          lineTotal: round6(item.qty * price.price),
-          priceSource: price.source,
-        }
+            price: price.price,
+            currency: price.currency,
+            lineTotal: round6(item.qty * price.price),
+            priceSource: price.source,
+          }
         : {}),
     }
   })
 
   data.items = toJsonValue(snapshot)
 
-  data.priceBasis =
-    sources.size === 1
-      ? [...sources][0]
-      : sources.size > 1
-        ? 'mixed'
-        : null
+  data.priceBasis = sources.size === 1 ? [...sources][0] : sources.size > 1 ? 'mixed' : null
 
   return true
 }

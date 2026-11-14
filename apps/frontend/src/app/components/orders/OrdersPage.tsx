@@ -6,23 +6,21 @@ import { fmtDate } from '@lib'
 import { useNavigate } from 'react-router-dom'
 import type { RequestKind } from '@repo/shared'
 
-const COPY: Record<
-  RequestKind,
-  { title: string; empty: string; emptyHint: string; list: string }
-> = {
-  order: {
-    title: 'Order Saya',
-    empty: 'Belum ada order',
-    emptyHint: 'Order Anda akan muncul di sini',
-    list: 'orders',
-  },
-  quote: {
-    title: 'Penawaran Harga',
-    empty: 'Belum ada permintaan penawaran',
-    emptyHint: 'Ajukan penawaran untuk produk yang belum pernah Anda beli',
-    list: 'inquiries',
-  },
-}
+const COPY: Record<RequestKind, { title: string; empty: string; emptyHint: string; list: string }> =
+  {
+    order: {
+      title: 'Order Saya',
+      empty: 'Belum ada order',
+      emptyHint: 'Order Anda akan muncul di sini',
+      list: 'orders',
+    },
+    quote: {
+      title: 'Penawaran Harga',
+      empty: 'Belum ada permintaan penawaran',
+      emptyHint: 'Ajukan penawaran untuk produk yang belum pernah Anda beli',
+      list: 'inquiries',
+    },
+  }
 
 const OrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const { orders, loading, error } = useOrders()
@@ -56,15 +54,15 @@ const OrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
               onClick={() => navigate(`/${copy.list}/${order.id}`)}
               className="bg-white rounded-2xl border border-border p-4 text-left hover:border-accent/50 active:scale-[0.99] transition-all"
             >
-<div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-bold">{order.id}</span>
-                  <StatusBadge status={order.status} kind={order.kind} />
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-mono font-bold">{order.id}</span>
+                <StatusBadge status={order.status} kind={order.kind} />
+              </div>
+              {order.sap?.docEntry && (
+                <div className="mb-2">
+                  <SapStatusBadge sap={order.sap} />
                 </div>
-                {order.sap?.docEntry && (
-                  <div className="mb-2">
-                    <SapStatusBadge sap={order.sap} />
-                  </div>
-                )}
+              )}
               <p className="text-xs text-muted-foreground mb-2">{fmtDate(order.createdAt)}</p>
               <p className="text-sm font-semibold mb-2">
                 {kind === 'quote' ? 'Permintaan Penawaran Harga' : 'Pesanan'}

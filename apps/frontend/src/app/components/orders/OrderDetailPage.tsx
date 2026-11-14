@@ -12,7 +12,6 @@ import { formatRupiah } from '@/lib/formatCurrency'
 import OrderKindMismatch from './OrderKindMismatch'
 import FollowUpThread from './FollowUpThread'
 
-
 const LIST_PATH: Record<RequestKind, string> = { order: '/orders', quote: '/inquiries' }
 
 const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {

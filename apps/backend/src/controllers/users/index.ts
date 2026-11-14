@@ -4,15 +4,13 @@ import * as bcrypt from 'bcrypt'
 import { RoleType, User } from '@repo/shared'
 import { UserWhereInput } from '@/generated/prisma/models'
 
-function serializeUser<T extends {
-  password: string
-  encryptedPassword: string | null
-}>(user: T): Omit<T, 'password' | 'encryptedPassword'> {
-  const {
-    password: _password,
-    encryptedPassword: _encryptedPassword,
-    ...rest
-  } = user
+function serializeUser<
+  T extends {
+    password: string
+    encryptedPassword: string | null
+  },
+>(user: T): Omit<T, 'password' | 'encryptedPassword'> {
+  const { password: _password, encryptedPassword: _encryptedPassword, ...rest } = user
 
   return rest
 }
@@ -135,9 +133,10 @@ const resolveUpdateSlpCode = async (
     return {}
   }
 
-  const role = roleId !== undefined && roleId !== currentRole.id
-    ? await prisma.role.findUnique({ where: { id: roleId } })
-    : currentRole
+  const role =
+    roleId !== undefined && roleId !== currentRole.id
+      ? await prisma.role.findUnique({ where: { id: roleId } })
+      : currentRole
 
   if (!role) return { error: 'Role tidak valid' }
 
@@ -147,7 +146,6 @@ const resolveUpdateSlpCode = async (
 
   return resolveSlpCode(role.name, slpCode)
 }
-
 
 export const createUser = async (
   req: Request<{}, {}, CreateUserRequest>,

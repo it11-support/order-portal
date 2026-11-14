@@ -8,10 +8,7 @@ import { AlertTriangle, CheckCircle2, CircleDot, XCircle } from 'lucide-react'
  * document is still being worked on, Closed means it is finished, Canceled means
  * it will not happen.
  */
-const CONFIG: Record<
-  SapLink['status'],
-  { label: string; icon: JSX.Element; className: string }
-> = {
+const CONFIG: Record<SapLink['status'], { label: string; icon: JSX.Element; className: string }> = {
   open: {
     label: 'Open di sistem',
     icon: <CircleDot size={13} />,

@@ -2,20 +2,10 @@ import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { currentCustomer } from '@/services/customer-catalog'
-import {
-  actorOf,
-  deniedMessage,
-  customerSelect,
-} from '@/services/requests/access'
+import { actorOf, deniedMessage, customerSelect } from '@/services/requests/access'
 import type { Actor } from '@/services/requests/access'
-import {
-  FLOW,
-  actorRoleName,
-} from '@/services/requests/status-flow'
-import {
-  prepareDraftItems,
-  prepareDraftSubmission,
-} from '@/services/requests/draft'
+import { FLOW, actorRoleName } from '@/services/requests/status-flow'
+import { prepareDraftItems, prepareDraftSubmission } from '@/services/requests/draft'
 import { publishRequestStatusChange } from '@/services/requests/notifications'
 import type { PortalRequestUpdateManyMutationInput } from '@/generated/prisma/models'
 
@@ -33,16 +23,10 @@ type UpdateRequestBody = {
   priceAccepted: boolean
 }
 
-type ValidationResult =
-  | { ok: true; body: UpdateRequestBody }
-  | { ok: false; message: string }
+type ValidationResult = { ok: true; body: UpdateRequestBody } | { ok: false; message: string }
 
-const isRecord = (
-  value: unknown,
-): value is Record<string, unknown> =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const invalid = (message: string): ValidationResult => ({
   ok: false,
@@ -61,17 +45,11 @@ const parseItems = (value: unknown): DraftItemInput[] | null => {
 
     const rawId = entry.productId
 
-    if (
-      typeof rawId !== 'string' &&
-      typeof rawId !== 'number'
-    ) {
+    if (typeof rawId !== 'string' && typeof rawId !== 'number') {
       return null
     }
 
-    if (
-      typeof rawId === 'number' &&
-      !Number.isSafeInteger(rawId)
-    ) {
+    if (typeof rawId === 'number' && !Number.isSafeInteger(rawId)) {
       return null
     }
 
@@ -101,36 +79,19 @@ const validateBody = (value: unknown): ValidationResult => {
     return invalid('Body request tidak valid.')
   }
 
-  const {
-    status,
-    salesNotes,
-    items,
-    notes,
-    updatedAt,
-    priceAccepted = false,
-  } = value
+  const { status, salesNotes, items, notes, updatedAt, priceAccepted = false } = value
 
-  if (
-    salesNotes !== undefined &&
-    (typeof salesNotes !== 'string' || salesNotes.length > 5000)
-  ) {
+  if (salesNotes !== undefined && (typeof salesNotes !== 'string' || salesNotes.length > 5000)) {
     return invalid('Catatan sales tidak valid.')
   }
 
-  if (
-    notes !== undefined &&
-    (typeof notes !== 'string' || notes.length > 5000)
-  ) {
+  if (notes !== undefined && (typeof notes !== 'string' || notes.length > 5000)) {
     return invalid('Catatan tidak valid.')
   }
 
   if (
     updatedAt !== undefined &&
-    (
-      typeof updatedAt !== 'string' ||
-      !updatedAt.trim() ||
-      Number.isNaN(Date.parse(updatedAt))
-    )
+    (typeof updatedAt !== 'string' || !updatedAt.trim() || Number.isNaN(Date.parse(updatedAt)))
   ) {
     return invalid('Versi draft tidak valid.')
   }
@@ -143,8 +104,7 @@ const validateBody = (value: unknown): ValidationResult => {
     return invalid('Status tidak valid.')
   }
 
-  const parsedItems =
-    items === undefined ? undefined : parseItems(items)
+  const parsedItems = items === undefined ? undefined : parseItems(items)
 
   if (items !== undefined && parsedItems === null) {
     return invalid('Item pesanan tidak valid atau duplikat.')
@@ -173,35 +133,22 @@ const canAccessRequest = (
     customer: { SlpCode: number | null }
   },
 ): string | null => {
-  if (
-    actor.role === 'customer' &&
-    String(row.customerId) !== String(req.user?.customerId)
-  ) {
+  if (actor.role === 'customer' && String(row.customerId) !== String(req.user?.customerId)) {
     return 'Akses ditolak.'
   }
 
-  if (
-    actor.role === 'sales_admin' &&
-    String(row.customer.SlpCode) !== String(actor.slpCode)
-  ) {
+  if (actor.role === 'sales_admin' && String(row.customer.SlpCode) !== String(actor.slpCode)) {
     return 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.'
   }
 
-  if (
-    row.kind === 'order' &&
-    actor.role !== 'admin' &&
-    row.status !== 'draft'
-  ) {
+  if (row.kind === 'order' && actor.role !== 'admin' && row.status !== 'draft') {
     return 'Hanya admin yang dapat memperbarui pesanan.'
   }
 
   return null
 }
 
-export const updateRequest = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const updateRequest = async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBody(req.body)
 
   if (!validation.ok) {
@@ -210,14 +157,7 @@ export const updateRequest = async (
     })
   }
 
-  const {
-    status,
-    salesNotes,
-    items,
-    notes,
-    updatedAt,
-    priceAccepted,
-  } = validation.body
+  const { status, salesNotes, items, notes, updatedAt, priceAccepted } = validation.body
 
   const actor = actorOf(req)
 
@@ -227,10 +167,7 @@ export const updateRequest = async (
     })
   }
 
-  if (
-    actor.role === 'customer' &&
-    !(await currentCustomer(req))
-  ) {
+  if (actor.role === 'customer' && !(await currentCustomer(req))) {
     return res.status(403).json({
       message: 'Akun pelanggan tidak aktif.',
     })
@@ -257,10 +194,7 @@ export const updateRequest = async (
     })
   }
 
-  if (
-    (items !== undefined || notes !== undefined) &&
-    row.status !== 'draft'
-  ) {
+  if ((items !== undefined || notes !== undefined) && row.status !== 'draft') {
     return res.status(409).json({
       message: 'Hanya draft yang dapat diedit.',
     })
@@ -284,8 +218,7 @@ export const updateRequest = async (
   const sameStatus = effectiveStatus === row.status
 
   if (!sameStatus) {
-    const allowedRoles: readonly string[] =
-      flow.next[effectiveStatus] ?? []
+    const allowedRoles: readonly string[] = flow.next[effectiveStatus] ?? []
 
     if (!allowedRoles.includes(actorRoleName(actor))) {
       return res.status(400).json({
@@ -310,12 +243,7 @@ export const updateRequest = async (
     data.status = effectiveStatus
   }
 
-  const draftResult = await prepareDraftItems(
-    row,
-    items,
-    data,
-    res,
-  )
+  const draftResult = await prepareDraftItems(row, items, data, res)
 
   if (!draftResult.ok) return
 
@@ -336,9 +264,7 @@ export const updateRequest = async (
     where: {
       id: row.id,
       status: row.status,
-      ...(updatedAt
-        ? { updatedAt: new Date(updatedAt) }
-        : {}),
+      ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
     },
     data,
   })

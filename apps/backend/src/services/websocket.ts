@@ -173,7 +173,7 @@ class WebSocketService {
     this.emitToCustomer(customerId, 'notification', payload)
   }
 
-emitFollowUpAdded(
+  emitFollowUpAdded(
     orderId: string,
     customerId: string,
     followUpNote: string,
@@ -193,11 +193,7 @@ emitFollowUpAdded(
    * but the event is sent even when only the document reference was filled in,
    * so the UI never has to guess whether its copy is current.
    */
-  emitOrderSapSynced(
-    orderId: string,
-    customerId: string,
-    sap: { [key: string]: unknown },
-  ) {
+  emitOrderSapSynced(orderId: string, customerId: string, sap: { [key: string]: unknown }) {
     const payload: WSEventPayload = {
       type: 'order.sap_synced',
       data: { orderId, customerId, sap },
@@ -212,11 +208,7 @@ emitFollowUpAdded(
    * member only when the customer has no SlpCode, matching the read scope used
    * by the requests controller.
    */
-  private async emitToCustomerSales(
-    customerId: string,
-    event: string,
-    payload: WSEventPayload,
-  ) {
+  private async emitToCustomerSales(customerId: string, event: string, payload: WSEventPayload) {
     if (!this.io) return
     const customer = await prisma.customers.findUnique({
       where: { id: BigInt(customerId) },

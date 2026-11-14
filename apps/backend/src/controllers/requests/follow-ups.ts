@@ -34,13 +34,21 @@ const notifyFollowUp = async (
     id: string
     kind: string
     customerId: bigint
-    customer: { CardCode: string | null; CardName: string | null; CntctPrsn: string | null; SlpCode: number | null }
+    customer: {
+      CardCode: string | null
+      CardName: string | null
+      CntctPrsn: string | null
+      SlpCode: number | null
+    }
   },
   note: { message: string },
   author: { id: number; name: string; staff: boolean },
 ) => {
   const customerLabel =
-    request.customer.CardName || request.customer.CntctPrsn || request.customer.CardCode || 'pelanggan'
+    request.customer.CardName ||
+    request.customer.CntctPrsn ||
+    request.customer.CardCode ||
+    'pelanggan'
   const kindLabel = request.kind === 'quote' ? 'Penawaran' : 'Pesanan'
 
   let recipients: Array<{ id: number }>
@@ -85,9 +93,7 @@ export const listFollowUps = async (req: AuthenticatedRequest, res: Response) =>
   if (actor.role === 'customer' && String(row.customerId) !== String(req.user!.customerId))
     return res.status(403).json({ message: 'Akses ditolak.' })
   if (actor.role === 'sales_admin' && String(row.customer.SlpCode) !== String(actor.slpCode))
-    return res
-      .status(403)
-      .json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
+    return res.status(403).json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
 
   // Internal notes are the staff side of the conversation. A customer asking for
   // them would see margin talk they must never read.
@@ -121,9 +127,7 @@ export const createFollowUp = async (req: AuthenticatedRequest, res: Response) =
   if (actor.role === 'customer' && String(row.customerId) !== String(req.user!.customerId))
     return res.status(403).json({ message: 'Akses ditolak.' })
   if (actor.role === 'sales_admin' && String(row.customer.SlpCode) !== String(actor.slpCode))
-    return res
-      .status(403)
-      .json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
+    return res.status(403).json({ message: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.' })
 
   // Only staff may keep a note internal, and the customer's own notes are always
   // visible to both sides.
@@ -159,11 +163,6 @@ export const createFollowUp = async (req: AuthenticatedRequest, res: Response) =
     { message: trimmed },
     { id: authorId, name: authorName, staff: actor.role !== 'customer' },
   )
-  ws.emitFollowUpAdded(
-    row.id,
-    String(row.customerId),
-    trimmed,
-    row.kind as 'order' | 'quote',
-  )
+  ws.emitFollowUpAdded(row.id, String(row.customerId), trimmed, row.kind as 'order' | 'quote')
   return res.status(201).json({ data: serializeFollowUp(note) })
 }

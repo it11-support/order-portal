@@ -15,19 +15,13 @@ import type { AuthenticatedRequest } from '@auth'
  * tersimpan di products.item_code, karena `in`/`notIn` membandingkan
  * kolom mentah dan tidak tahan trailing space.
  */
-export const normalizeItemCode = (value: string): string =>
-  value.trim().toUpperCase()
+export const normalizeItemCode = (value: string): string => value.trim().toUpperCase()
 
 /**
  * Mengambil customer yang sedang login.
  */
-export const currentCustomer = async (
-  req: AuthenticatedRequest,
-) => {
-  if (
-    req.user?.role.name !== 'customer' ||
-    req.user.customerId == null
-  ) {
+export const currentCustomer = async (req: AuthenticatedRequest) => {
+  if (req.user?.role.name !== 'customer' || req.user.customerId == null) {
     return null
   }
 
@@ -51,10 +45,7 @@ export const currentCustomer = async (
     },
   })
 
-  if (
-    !customer?.CardCode ||
-    customer.NonActive === 'Y'
-  ) {
+  if (!customer?.CardCode || customer.NonActive === 'Y') {
     return null
   }
 
@@ -89,20 +80,17 @@ export const currentCustomer = async (
  */
 export const customerItemCodes = async (
   cardCode: string,
-  industryCode: number | null, 
+  industryCode: number | null,
 ): Promise<string[]> => {
   // =========================================================
   // PURCHASED
   // =========================================================
 
-
   if (industryCode == null) {
     return []
   }
 
-  const rows = await prisma.$queryRaw<
-    { item_code: string }[]
-  >`
+  const rows = await prisma.$queryRaw<{ item_code: string }[]>`
     SELECT DISTINCT TRIM(si.item_code) AS item_code
 
     FROM sales_invoices si
@@ -139,12 +127,7 @@ export const customerItemCodes = async (
       )
   `
 
-  return rows
-    .map((row) => row.item_code?.trim())
-    .filter(
-      (code): code is string =>
-        Boolean(code),
-    )
+  return rows.map((row) => row.item_code?.trim()).filter((code): code is string => Boolean(code))
 }
 
 /**
@@ -167,12 +150,8 @@ export const customerItemCodes = async (
  * sales_invoices.item_code sering berbeda dari products.item_code pada
  * whitespace atau kapitalisasi.
  */
-export const customerPurchasedItemCodes = async (
-  cardCode: string,
-): Promise<string[]> => {
-  const rows = await prisma.$queryRaw<
-    { item_code: string }[]
-  >`
+export const customerPurchasedItemCodes = async (cardCode: string): Promise<string[]> => {
+  const rows = await prisma.$queryRaw<{ item_code: string }[]>`
     SELECT DISTINCT TRIM(si.item_code) AS item_code
 
     FROM sales_invoices si
@@ -186,12 +165,7 @@ export const customerPurchasedItemCodes = async (
       AND TRIM(si.item_code) <> ''
   `
 
-  return rows
-    .map((row) => row.item_code?.trim())
-    .filter(
-      (code): code is string =>
-        Boolean(code),
-    )
+  return rows.map((row) => row.item_code?.trim()).filter((code): code is string => Boolean(code))
 }
 
 /**
@@ -203,10 +177,9 @@ export const customerPurchasedItemCodes = async (
  * CHEMICAL/SAUCE/TISSUE/OTHER.
  */
 export const customerPurchasedProductFilter = async (
-  req: AuthenticatedRequest
+  req: AuthenticatedRequest,
 ): Promise<ProductWhereInput> => {
-  const customer =
-    await currentCustomer(req)
+  const customer = await currentCustomer(req)
 
   if (!customer?.CardCode) {
     return {
@@ -218,10 +191,7 @@ export const customerPurchasedProductFilter = async (
     }
   }
 
-  const itemCodes =
-    await customerPurchasedItemCodes(
-      customer.CardCode,
-    )
+  const itemCodes = await customerPurchasedItemCodes(customer.CardCode)
 
   // Dicocokkan per item code, bukan sebagai satu daftar, supaya beda
   // kapitalisasi antara sales_invoices dan products tidak membuat pembelian
@@ -249,10 +219,9 @@ export const customerPurchasedProductFilter = async (
  * productCategory biasa seperti CHEMICAL/SAUCE/TISSUE/OTHER.
  */
 export const customerSuggestedProductFilter = async (
-  req: AuthenticatedRequest
+  req: AuthenticatedRequest,
 ): Promise<ProductWhereInput> => {
-  const customer =
-    await currentCustomer(req)
+  const customer = await currentCustomer(req)
 
   if (!customer?.CardCode) {
     return {
@@ -264,11 +233,7 @@ export const customerSuggestedProductFilter = async (
     }
   }
 
-  const itemCodes =
-    await customerItemCodes(
-      customer.CardCode,
-      customer.IndustryC ?? null,
-    )
+  const itemCodes = await customerItemCodes(customer.CardCode, customer.IndustryC ?? null)
 
   // Dicocokkan per item code, bukan sebagai satu daftar, supaya beda
   // kapitalisasi antara sales_invoices dan products tidak membuat pembelian
@@ -294,7 +259,7 @@ export const customerSuggestedProductFilter = async (
  * atau customerSuggestedProductFilter untuk saran (quote).
  */
 export const customerProductFilter = async (
-  req: AuthenticatedRequest
+  req: AuthenticatedRequest,
 ): Promise<ProductWhereInput> => {
   return customerSuggestedProductFilter(req)
 }

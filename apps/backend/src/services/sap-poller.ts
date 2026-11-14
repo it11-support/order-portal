@@ -45,7 +45,7 @@ export const settleOpenInquiryPrices = async (): Promise<{
   let scanned = 0
   let opened = 0
 
-  for (; ;) {
+  for (;;) {
     const inquiries = await prisma.portalRequest.findMany({
       where: { kind: 'quote', status: { in: ['pending', 'processing'] } },
       select: { id: true },
@@ -74,7 +74,7 @@ export const pollSapOrderStatuses = async (): Promise<PollResult> => {
   // orders reconciled least recently, so a long queue is worked through in turn
   // instead of the same first page being scanned over and over while the rest
   // never gets looked at.
-  for (; ;) {
+  for (;;) {
     const requests = await prisma.portalRequest.findMany({
       where: { kind: 'order', status: { in: LIVE_STATUSES } },
       select: {
@@ -117,7 +117,9 @@ export const pollSapOrderStatuses = async (): Promise<PollResult> => {
  * one, and a failure is logged and left to the next tick: the watcher exists to
  * catch up, never to be the reason the API is down.
  */
-export const startSapStatusPoller = (intervalMinutes = Number(process.env.SAP_POLL_INTERVAL_MINUTES ?? 15)) => {
+export const startSapStatusPoller = (
+  intervalMinutes = Number(process.env.SAP_POLL_INTERVAL_MINUTES ?? 15),
+) => {
   const minutes = Number.isFinite(intervalMinutes) && intervalMinutes > 0 ? intervalMinutes : 15
   const periodMs = minutes * 60_000
   let running = false

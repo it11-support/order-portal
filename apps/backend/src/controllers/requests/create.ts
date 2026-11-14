@@ -1,8 +1,17 @@
 import type { Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
-import { customerPurchasedProductFilter, customerSuggestedProductFilter } from '@/services/customer-catalog'
-import { priceIncreaseCheck, priceableCustomer, pricesForItems, refreshCustomerPrices, round6 } from '@/services/pricing'
+import {
+  customerPurchasedProductFilter,
+  customerSuggestedProductFilter,
+} from '@/services/customer-catalog'
+import {
+  priceIncreaseCheck,
+  priceableCustomer,
+  pricesForItems,
+  refreshCustomerPrices,
+  round6,
+} from '@/services/pricing'
 import { settleInquiryOrderability } from '@/services/price-alerts'
 import { adminRecipients, customerRecipientFor, staffRecipientsFor } from '@/services/audience'
 import { generateRequestNumber } from '@/services/order-number'
@@ -11,7 +20,6 @@ import { actorOf, deniedMessage, targetCustomer, customerSelect } from '@/servic
 import { serialize } from '@/services/requests/serializer'
 import { PortalRequest } from '@/generated/prisma/client'
 import { ProductWhereInput } from '@/generated/prisma/models'
-
 
 type SnapshotItem = {
   productId: string | number
@@ -89,9 +97,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
   // price for, which is the deal path in requirement four.
   let productWhere: ProductWhereInput = { isActive: true }
   if (parentInquiry) {
-    const inquiryItems: unknown[] = Array.isArray(parentInquiry.items)
-      ? parentInquiry.items
-      : []
+    const inquiryItems: unknown[] = Array.isArray(parentInquiry.items) ? parentInquiry.items : []
 
     const itemCodes = [
       ...new Set(
@@ -147,18 +153,13 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     const customerForPrices = await priceableCustomer(customerId)
 
     if (customerForPrices) {
-      await refreshCustomerPrices(
-        customerForPrices,
-        [...new Set(products.map((p) => p.itemCode))],
-      )
+      await refreshCustomerPrices(customerForPrices, [...new Set(products.map((p) => p.itemCode))])
     }
 
     const linePrices = await pricesForItems(customerId, items)
 
     const snapshot = items.map((item: SnapshotItem) => {
-      const product = products.find(
-        (p) => String(p.id) === String(item.productId),
-      )!
+      const product = products.find((p) => String(p.id) === String(item.productId))!
 
       const price = linePrices.get(product.itemCode)
 
@@ -167,11 +168,11 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
         qty: item.qty,
         ...(price
           ? {
-            price: price.price,
-            currency: price.currency,
-            priceSource: price.source,
-            lineTotal: round6(item.qty * price.price),
-          }
+              price: price.price,
+              currency: price.currency,
+              priceSource: price.source,
+              lineTotal: round6(item.qty * price.price),
+            }
           : {}),
       }
     })
@@ -240,11 +241,11 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
       qty: item.qty ?? 1,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          lineTotal: kind === 'order' ? round6((item.qty ?? 1) * price.price) : null,
-          priceSource: price.source,
-        }
+            price: price.price,
+            currency: price.currency,
+            lineTotal: kind === 'order' ? round6((item.qty ?? 1) * price.price) : null,
+            priceSource: price.source,
+          }
         : {}),
     }
   })

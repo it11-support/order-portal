@@ -1,4 +1,10 @@
-import { getCustomers, enableCustomerLogin, disableCustomerLogin, resetCustomerPassword, getCustomerStats } from '@controllers'
+import {
+  getCustomers,
+  enableCustomerLogin,
+  disableCustomerLogin,
+  resetCustomerPassword,
+  getCustomerStats,
+} from '@controllers'
 import { requireAuth, requireAdmin } from '@auth'
 import { Router } from 'express'
 

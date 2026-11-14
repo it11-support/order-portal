@@ -9,7 +9,13 @@ import {
   generateCustomerPassword,
   hashCustomerPassword,
 } from '@/utils/customer-password'
-import { getCustomerAccount, getCustomerRole, getEligibleCustomer, prepareCustomerCredentials, saveCustomerLogin } from '@/services/customer-login'
+import {
+  getCustomerAccount,
+  getCustomerRole,
+  getEligibleCustomer,
+  prepareCustomerCredentials,
+  saveCustomerLogin,
+} from '@/services/customer-login'
 import { CustomerLoginError } from '@/services/customer-login/validation'
 
 export const disableCustomerLogin = async (req: Request, res: Response): Promise<void> => {
@@ -36,10 +42,7 @@ export const disableCustomerLogin = async (req: Request, res: Response): Promise
   res.status(200).json({ data: { hasLogin: false } })
 }
 
-export const enableCustomerLogin = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const enableCustomerLogin = async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id)
 
   if (!/^\d+$/.test(id)) {
@@ -54,9 +57,7 @@ export const enableCustomerLogin = async (
     const account = await getCustomerAccount(customer)
     const role = await getCustomerRole()
 
-    const credentials = prepareCustomerCredentials(
-      account.existingUser,
-    )
+    const credentials = prepareCustomerCredentials(account.existingUser)
 
     await saveCustomerLogin({
       customer,
@@ -84,10 +85,7 @@ export const enableCustomerLogin = async (
   }
 }
 
-export const resetCustomerPassword = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const resetCustomerPassword = async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id)
   if (!/^\d+$/.test(id)) {
     res.status(400).json({ message: 'ID pelanggan tidak valid.' })
@@ -163,16 +161,16 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
       : {}),
     ...(search
       ? {
-        OR: [
-          { CardCode: { contains: search, mode: 'insensitive' } },
-          { CardName: { contains: search, mode: 'insensitive' } },
-          { CntctPrsn: { contains: search, mode: 'insensitive' } },
-          { Phone1: { contains: search, mode: 'insensitive' } },
-          { Cellular: { contains: search, mode: 'insensitive' } },
-          { Address: { contains: search, mode: 'insensitive' } },
-          { City: { contains: search, mode: 'insensitive' } },
-        ],
-      }
+          OR: [
+            { CardCode: { contains: search, mode: 'insensitive' } },
+            { CardName: { contains: search, mode: 'insensitive' } },
+            { CntctPrsn: { contains: search, mode: 'insensitive' } },
+            { Phone1: { contains: search, mode: 'insensitive' } },
+            { Cellular: { contains: search, mode: 'insensitive' } },
+            { Address: { contains: search, mode: 'insensitive' } },
+            { City: { contains: search, mode: 'insensitive' } },
+          ],
+        }
       : {}),
     ...(showInactive ? {} : { NonActive: { not: 'Y' } }),
   }
@@ -198,9 +196,9 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
       hasLogin: Boolean(user?.isActive && user.encryptedPassword),
       ...(isAdmin
         ? {
-          loginUsername: user?.username ?? null,
-          loginPassword: user?.isActive ? decryptCustomerPassword(user.encryptedPassword) : null,
-        }
+            loginUsername: user?.username ?? null,
+            loginPassword: user?.isActive ? decryptCustomerPassword(user.encryptedPassword) : null,
+          }
         : {}),
     })),
     pagination: {
@@ -212,10 +210,7 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
   })
 }
 
-export const getCustomerStats = async (
-  req: AuthenticatedRequest,
-  res: Response,
-): Promise<void> => {
+export const getCustomerStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const role = req.user?.role.name
   const slpCode = req.user?.slpCode
 

@@ -39,14 +39,10 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   const { user } = useAuth()
   const identity = user ? `${user.role.name}:${user.id}` : ''
   const key = identity ? `/notifications?viewer=${encodeURIComponent(identity)}` : null
-  const { data, isLoading, isValidating, mutate } = useSWR<NotificationResponse>(
-    key,
-    swrFetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    },
-  )
+  const { data, isLoading, isValidating, mutate } = useSWR<NotificationResponse>(key, swrFetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  })
 
   const notifications = data?.data ?? []
   const unreadCount = notifications.filter((n) => !n.read && !n.dismissed).length

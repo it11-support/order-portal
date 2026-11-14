@@ -13,11 +13,13 @@ export type AuthContextType = {
   isAdmin: boolean
   isSalesAdmin: boolean
   isCustomer: boolean
-  setLoginError: Dispatch<SetStateAction<{
-    username?: string
-    password?: string
-    general?: string
-  }>>
+  setLoginError: Dispatch<
+    SetStateAction<{
+      username?: string
+      password?: string
+      general?: string
+    }>
+  >
   logout: () => void
   loading: boolean
 }

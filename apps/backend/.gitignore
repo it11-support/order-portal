@@ -7,7 +7,7 @@ node_modules
 /src/generated/
 dist
 
-.turbo
-.agents
-.claude
-.windsurf
+.turbo/
+.agents/
+.claude/
+.windsurf/

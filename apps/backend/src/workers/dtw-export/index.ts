@@ -1,18 +1,12 @@
-
 import 'dotenv/config'
 import { prisma } from '@/utils'
 import { exportDtwOrder } from '@/services/dtw-export'
 
 process.umask(0o002)
 
-const POLL_INTERVAL = Number(
-  process.env.DTW_POOL_INTERVAL ?? 30000,
-)
+const POLL_INTERVAL = Number(process.env.DTW_POOL_INTERVAL ?? 30000)
 
-if (
-  !Number.isSafeInteger(POLL_INTERVAL) ||
-  POLL_INTERVAL < 1000
-) {
+if (!Number.isSafeInteger(POLL_INTERVAL) || POLL_INTERVAL < 1000) {
   throw new Error('Invalid DTW_POOL_INTERVAL')
 }
 
@@ -20,8 +14,7 @@ const BATCH_SIZE = 50
 
 let stopping = false
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 const processPendingOrders = async (): Promise<void> => {
   const orders = await prisma.portalRequest.findMany({
@@ -65,15 +58,10 @@ const processPendingOrders = async (): Promise<void> => {
       if (result.count === 1) {
         console.log(`[DTW] Exported ${order.id}`)
       } else {
-        console.warn(
-          `[DTW] Status changed: ${order.id}`,
-        )
+        console.warn(`[DTW] Status changed: ${order.id}`)
       }
     } catch (error) {
-      console.error(
-        `[DTW] Failed to export ${order.id}`,
-        error,
-      )
+      console.error(`[DTW] Failed to export ${order.id}`, error)
 
       // Keep pending for retry.
     }
@@ -108,7 +96,7 @@ process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
 main()
-  .catch(error => {
+  .catch((error) => {
     console.error('[DTW] Fatal error:', error)
     process.exitCode = 1
   })

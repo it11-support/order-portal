@@ -1,9 +1,6 @@
 import { sapApi } from '@/utils/sap-api'
 
-export const getSapPrice = async (
-  cardcode: string,
-  itemcode: string,
-) => {
+export const getSapPrice = async (cardcode: string, itemcode: string) => {
   const { data } = await sapApi.get('/api/price', {
     params: { cardcode, itemcode },
   })

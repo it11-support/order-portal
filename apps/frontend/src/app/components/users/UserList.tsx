@@ -424,7 +424,9 @@ const UserList: React.FC = () => {
           >
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm text-muted-foreground">Username</Label>
+                <Label htmlFor="username" className="text-sm text-muted-foreground">
+                  Username
+                </Label>
                 <Input
                   id="username"
                   autoComplete="username"
@@ -434,7 +436,9 @@ const UserList: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm text-muted-foreground">Nama Lengkap</Label>
+                <Label htmlFor="name" className="text-sm text-muted-foreground">
+                  Nama Lengkap
+                </Label>
                 <Input
                   id="name"
                   autoComplete="name"
@@ -444,7 +448,9 @@ const UserList: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
+                <Label htmlFor="email" className="text-sm text-muted-foreground">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -482,32 +488,32 @@ const UserList: React.FC = () => {
                         {r.name}
                       </SelectItem>
                     ))}
-</SelectContent>
+                  </SelectContent>
+                </Select>
+              </div>
+              {isSalesRole && (
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">SLP Code</Label>
+                  <Select
+                    value={form.slpCode === null ? '' : String(form.slpCode)}
+                    onValueChange={(val) => setForm({ ...form, slpCode: parseInt(val) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih sales person" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {salesPersons.map((sp) => (
+                        <SelectItem key={sp.slpCode} value={String(sp.slpCode)}>
+                          {sp.slpCode} — {sp.slpName ?? 'Tanpa nama'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Sales hanya melihat pelanggan dengan SLP Code ini.
+                  </p>
                 </div>
-                {isSalesRole && (
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">SLP Code</Label>
-                    <Select
-                      value={form.slpCode === null ? '' : String(form.slpCode)}
-                      onValueChange={(val) => setForm({ ...form, slpCode: parseInt(val) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih sales person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {salesPersons.map((sp) => (
-                          <SelectItem key={sp.slpCode} value={String(sp.slpCode)}>
-                            {sp.slpCode} — {sp.slpName ?? 'Tanpa nama'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Sales hanya melihat pelanggan dengan SLP Code ini.
-                    </p>
-                  </div>
-                )}
+              )}
               <div className="flex items-center gap-3">
                 <Switch
                   id="isActive"

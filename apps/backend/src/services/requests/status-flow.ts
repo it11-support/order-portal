@@ -5,7 +5,9 @@ export const FLOW: Record<
   Record<string, { next: Record<string, Array<'admin' | 'sales' | 'customer' | 'system'>> }>
 > = {
   order: {
-    draft: { next: { pending: ['sales', 'admin', 'customer'], cancelled: ['sales', 'admin', 'customer'] } },
+    draft: {
+      next: { pending: ['sales', 'admin', 'customer'], cancelled: ['sales', 'admin', 'customer'] },
+    },
     pending: { next: { confirmed: ['admin'], cancelled: ['admin'] } },
     confirmed: { next: { processing: ['admin'], cancelled: ['admin'] } },
     processing: { next: { delivered: ['admin'], cancelled: ['admin'] } },

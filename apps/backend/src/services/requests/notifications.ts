@@ -6,15 +6,11 @@ import { PortalRequest } from '@/generated/prisma/client'
 
 type RequestKind = 'order' | 'quote'
 
-type RequestStatusRow = Pick<
-  PortalRequest,
-  'id' | 'customerId' | 'status' | 'kind'
-> & {
+type RequestStatusRow = Pick<PortalRequest, 'id' | 'customerId' | 'status' | 'kind'> & {
   customer: {
     SlpCode: number | null
   }
 }
-
 
 // Persisted notifications and realtime events for a successful status transition.
 export const publishRequestStatusChange = async (
@@ -28,8 +24,7 @@ export const publishRequestStatusChange = async (
   }
 
   const kind: RequestKind = row.kind
-  const kindLabel =
-    kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
+  const kindLabel = kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
 
   const [customerUser, staffRecipients] = await Promise.all([
     customerRecipientFor(row.customerId),
@@ -45,9 +40,7 @@ export const publishRequestStatusChange = async (
     ]),
   ].filter((userId) => userId !== senderId)
 
-  const chatMessage =
-    `${kindLabel} ${row.id} diperbarui. ` +
-    `Status sekarang: ${effectiveStatus}.`
+  const chatMessage = `${kindLabel} ${row.id} diperbarui. ` + `Status sekarang: ${effectiveStatus}.`
 
   await prisma.followUpNote.create({
     data: {
@@ -62,17 +55,16 @@ export const publishRequestStatusChange = async (
   })
 
   if (targets.length > 0) {
-    const notifications =
-      await prisma.notification.createManyAndReturn({
-        data: targets.map((userId) => ({
-          userId,
-          title: `${kindLabel} ${row.id} diperbarui`,
-          message: `Status sekarang: ${effectiveStatus}.`,
-          type: 'status_update',
-          relatedId: row.id,
-          kind,
-        })),
-      })
+    const notifications = await prisma.notification.createManyAndReturn({
+      data: targets.map((userId) => ({
+        userId,
+        title: `${kindLabel} ${row.id} diperbarui`,
+        message: `Status sekarang: ${effectiveStatus}.`,
+        type: 'status_update',
+        relatedId: row.id,
+        kind,
+      })),
+    })
 
     for (const notification of notifications) {
       ws.emitNotificationCreated(notification)
@@ -88,10 +80,5 @@ export const publishRequestStatusChange = async (
     salesNotes,
   )
 
-  ws.emitFollowUpAdded(
-    row.id,
-    String(row.customerId),
-    chatMessage,
-    kind,
-  )
+  ws.emitFollowUpAdded(row.id, String(row.customerId), chatMessage, kind)
 }

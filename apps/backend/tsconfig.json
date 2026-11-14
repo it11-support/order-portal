@@ -13,13 +13,6 @@
       "@utils": ["./src/utils/index.ts"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "tsup.config.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "prisma"
-  ]
+  "include": ["src/**/*.ts", "tsup.config.ts"],
+  "exclude": ["node_modules", "dist", "prisma"]
 }

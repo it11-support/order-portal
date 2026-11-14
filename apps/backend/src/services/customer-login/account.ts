@@ -1,4 +1,3 @@
-
 import { prisma } from '@/utils'
 import { CustomerLoginError } from './validation'
 import { getEligibleCustomer } from './validation'
@@ -9,15 +8,11 @@ type EligibleCustomer = Awaited<ReturnType<typeof getEligibleCustomer>>
 type SaveCustomerLoginParams = {
   customer: Awaited<ReturnType<typeof getEligibleCustomer>>
   roleId: number
-  existingUser: Awaited<
-    ReturnType<typeof getCustomerAccount>
-  >['existingUser']
+  existingUser: Awaited<ReturnType<typeof getCustomerAccount>>['existingUser']
   credentials: ReturnType<typeof prepareCustomerCredentials>
 }
 
-export const getCustomerAccount = async (
-  customer: EligibleCustomer,
-) => {
+export const getCustomerAccount = async (customer: EligibleCustomer) => {
   const existingUser = await prisma.user.findUnique({
     where: { username: customer.CardCode },
     select: {
@@ -29,22 +24,13 @@ export const getCustomerAccount = async (
   })
 
   // Username digunakan oleh customer lain
-  if (
-    existingUser &&
-    String(existingUser.customerId) !== String(customer.id)
-  ) {
-    throw new CustomerLoginError(
-      409,
-      'CardCode sudah digunakan sebagai username akun lain.',
-    )
+  if (existingUser && String(existingUser.customerId) !== String(customer.id)) {
+    throw new CustomerLoginError(409, 'CardCode sudah digunakan sebagai username akun lain.')
   }
 
   // Login sudah aktif
   if (existingUser?.isActive) {
-    throw new CustomerLoginError(
-      409,
-      'Login pelanggan sudah diaktifkan.',
-    )
+    throw new CustomerLoginError(409, 'Login pelanggan sudah diaktifkan.')
   }
 
   // Customer sudah terhubung ke akun lain
@@ -56,14 +42,8 @@ export const getCustomerAccount = async (
     },
   })
 
-  if (
-    existingLinkedUser &&
-    (!existingUser || existingLinkedUser.id !== existingUser.id)
-  ) {
-    throw new CustomerLoginError(
-      409,
-      'Pelanggan ini sudah memiliki akun user.',
-    )
+  if (existingLinkedUser && (!existingUser || existingLinkedUser.id !== existingUser.id)) {
+    throw new CustomerLoginError(409, 'Pelanggan ini sudah memiliki akun user.')
   }
 
   return {
@@ -79,10 +59,7 @@ export const saveCustomerLogin = async ({
 }: SaveCustomerLoginParams): Promise<void> => {
   const userData = {
     username: customer.CardCode,
-    name:
-      customer.CardName ||
-      customer.CntctPrsn ||
-      customer.CardCode,
+    name: customer.CardName || customer.CntctPrsn || customer.CardCode,
     roleId,
     customerId: customer.id,
     isActive: true,
@@ -95,11 +72,9 @@ export const saveCustomerLogin = async ({
         ...userData,
         ...(credentials.needsPasswordUpdate
           ? {
-            password: await hashCustomerPassword(
-              credentials.password,
-            ),
-            encryptedPassword: credentials.encryptedPassword,
-          }
+              password: await hashCustomerPassword(credentials.password),
+              encryptedPassword: credentials.encryptedPassword,
+            }
           : {}),
       },
     })
@@ -110,9 +85,7 @@ export const saveCustomerLogin = async ({
   await prisma.user.create({
     data: {
       ...userData,
-      password: await hashCustomerPassword(
-        credentials.password,
-      ),
+      password: await hashCustomerPassword(credentials.password),
       encryptedPassword: credentials.encryptedPassword,
     },
   })

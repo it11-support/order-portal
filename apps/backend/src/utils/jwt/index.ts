@@ -24,10 +24,7 @@ export const verifyAccessToken = (token: string): { userId: number } | null => {
   }
 }
 
-export const createSapToken = (user: {
-  id: number
-  role: string
-}) => {
+export const createSapToken = (user: { id: number; role: string }) => {
   return jwt.sign(
     {
       sub: String(user.id),

@@ -20,10 +20,5 @@ export default defineConfig({
   skipNodeModulesBundle: true,
 
   // Pastikan dotenv tetap dijalankan sebagai package eksternal
-  external: [
-    'dotenv',
-    'dotenv/config',
-    '@prisma/client',
-    '@repo/shared',
-  ],
+  external: ['dotenv', 'dotenv/config', '@prisma/client', '@repo/shared'],
 })

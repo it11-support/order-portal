@@ -315,7 +315,10 @@ export const settleInquiryOrderability = async (requestId: string): Promise<bool
   await systemNote(inquiry.id, message)
 
   const customerLabel =
-    inquiry.customer.CardName || inquiry.customer.CntctPrsn || inquiry.customer.CardCode || 'pelanggan'
+    inquiry.customer.CardName ||
+    inquiry.customer.CntctPrsn ||
+    inquiry.customer.CardCode ||
+    'pelanggan'
   const customerUser = await prisma.user.findFirst({
     where: { customerId: cid, isActive: true },
     select: { id: true },

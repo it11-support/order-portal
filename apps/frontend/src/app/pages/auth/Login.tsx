@@ -1,4 +1,4 @@
-import { Package, User } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { useAuth } from '@contexts'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -17,28 +17,6 @@ const Login = () => {
       await login(loginForm.username, loginForm.password)
 
       if (user?.role.name === 'customer') {
-        navigate('/customer-dashboard', { replace: true })
-      } else {
-        navigate('/', { replace: true })
-      }
-    } catch {
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleQuickLogin = async (
-    username: string,
-    password: string,
-    role: 'customer' | 'admin',
-  ) => {
-    setLoginForm({ username, password })
-    setLoginError({})
-    setSubmitting(true)
-    try {
-      await login(username, password)
-
-      if (role === 'customer') {
         navigate('/customer-dashboard', { replace: true })
       } else {
         navigate('/', { replace: true })
@@ -138,23 +116,6 @@ const Login = () => {
           >
             {submitting ? 'Memproses...' : 'Masuk'}
           </button>
-
-          {/* Admin demo */}
-          <div className="pt-2 border-t border-border space-y-2">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Login Admin (Satu Klik)
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'AdminPortal2026!', 'admin')}
-                className="flex-1 text-xs bg-secondary hover:bg-border text-foreground px-3 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-1"
-              >
-                <User size={14} />
-                Admin Portal
-              </button>
-            </div>
-          </div>
         </form>
       </div>
     </div>

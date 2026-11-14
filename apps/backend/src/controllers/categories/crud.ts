@@ -12,18 +12,16 @@ export const getCategories = async (req: AuthenticatedRequest, res: Response): P
   // minimal satu produk aktif.
   const availableCodes = isCustomer
     ? (
-      await prisma.product.findMany({
-        where: { isActive: true },
-        select: { productCategory: true },
-        distinct: ['productCategory'],
-      })
-    ).map((product) => product.productCategory)
+        await prisma.product.findMany({
+          where: { isActive: true },
+          select: { productCategory: true },
+          distinct: ['productCategory'],
+        })
+      ).map((product) => product.productCategory)
     : []
 
   const categories = await prisma.category.findMany({
-    where: isCustomer
-      ? { isActive: true, code: { in: availableCodes } }
-      : {},
+    where: isCustomer ? { isActive: true, code: { in: availableCodes } } : {},
     orderBy: { sortOrder: 'asc' },
   })
 
@@ -105,5 +103,3 @@ export const reorderCategories = async (req: Request, res: Response): Promise<vo
 
   res.status(200).json({ data: categories })
 }
-
-

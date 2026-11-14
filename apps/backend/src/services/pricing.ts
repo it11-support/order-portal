@@ -70,9 +70,7 @@ const toNumber = (value: unknown): number | null => {
     return Number.isFinite(result) ? result : null
   }
 
-  throw new TypeError(
-    `Invalid price value: ${Object.prototype.toString.call(value)}`,
-  )
+  throw new TypeError(`Invalid price value: ${Object.prototype.toString.call(value)}`)
 }
 
 const round6 = (value: number) => new Decimal(value).toDecimalPlaces(6).toNumber()
@@ -99,7 +97,9 @@ interface PriceableCustomer {
  * The Prisma client extension stringifies BigInt on every read, so the id is
  * normalised back to BigInt here. Callers may pass a string or a BigInt.
  */
-export const priceableCustomer = async (customerId: bigint | string): Promise<PriceableCustomer | null> => {
+export const priceableCustomer = async (
+  customerId: bigint | string,
+): Promise<PriceableCustomer | null> => {
   const row = await prisma.customers.findUnique({
     where: { id: BigInt(String(customerId)) },
     select: { id: true, CardCode: true, priceListNum: true, discountLevel: true },
@@ -234,9 +234,7 @@ const removeStaleCustomerPrices = async (
   existing: CachedPriceRow[],
   invoice: InvoicePriceMap,
 ): Promise<Map<string, number | null>> => {
-  const stale = existing
-    .filter((row) => !invoice.has(row.itemCode))
-    .map((row) => row.itemCode)
+  const stale = existing.filter((row) => !invoice.has(row.itemCode)).map((row) => row.itemCode)
 
   if (stale.length) {
     await prisma.customerItemPrice.deleteMany({
@@ -297,9 +295,7 @@ const recordCustomerPriceMovement = async (
   newPrice: number,
   itemName?: string,
 ): Promise<PriceMovement> => {
-  const changePct = oldPrice === 0
-    ? 0
-    : round6(((newPrice - oldPrice) / oldPrice) * 100)
+  const changePct = oldPrice === 0 ? 0 : round6(((newPrice - oldPrice) / oldPrice) * 100)
   const direction: PriceMovement['direction'] = changePct > 0 ? 'up' : 'down'
 
   await prisma.priceChangeLog.create({
@@ -334,7 +330,7 @@ const refreshOneCustomerPrice = async (
   now: Date,
 ): Promise<PriceMovement | null> => {
   const value = round6(row.unitPrice)
-  const oldPrice = previous.has(itemCode) ? previous.get(itemCode) ?? null : null
+  const oldPrice = previous.has(itemCode) ? (previous.get(itemCode) ?? null) : null
 
   // Unchanged prices must not write on catalog reads.
   if (oldPrice !== null && oldPrice === value) return null
@@ -345,7 +341,12 @@ const refreshOneCustomerPrice = async (
   if (oldPrice === null) return null
 
   return recordCustomerPriceMovement(
-    customerId, itemCode, row, oldPrice, value, names.get(itemCode),
+    customerId,
+    itemCode,
+    row,
+    oldPrice,
+    value,
+    names.get(itemCode),
   )
 }
 
@@ -368,9 +369,7 @@ export const refreshCustomerPrices = async (
   const movements: PriceMovement[] = []
 
   for (const [itemCode, row] of invoice) {
-    const movement = await refreshOneCustomerPrice(
-      customer.id, itemCode, row, previous, names, now,
-    )
+    const movement = await refreshOneCustomerPrice(customer.id, itemCode, row, previous, names, now)
     if (movement) movements.push(movement)
   }
 
@@ -593,10 +592,7 @@ export const pricesForItems = async (
   })
   if (!products.length) return new Map()
 
-  return effectivePrices(
-    cid,
-    [...new Set(products.map((product) => product.itemCode))],
-  )
+  return effectivePrices(cid, [...new Set(products.map((product) => product.itemCode))])
 }
 
 export { formatPrice, round6, toNumber, productNames }

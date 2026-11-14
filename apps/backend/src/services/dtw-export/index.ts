@@ -1,7 +1,7 @@
-import { prisma } from "@/utils"
-import { randomUUID } from "node:crypto"
-import { mkdir, rename, rm, writeFile } from "node:fs/promises"
-import path from "node:path"
+import { prisma } from '@/utils'
+import { randomUUID } from 'node:crypto'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 
 const DTW_DIR = process.env.DTW_DIR ?? '/home/dtw'
 
@@ -23,7 +23,6 @@ type DtwOrder = {
   createdAt: Date
 }
 
-
 const csvValue = (value: unknown): string => {
   const text = String(value ?? '')
   if (/[",\r\n]/.test(text)) {
@@ -33,15 +32,14 @@ const csvValue = (value: unknown): string => {
   return text
 }
 
-const createCsv = (
-  columns: string[],
-  rows: unknown[][],
-): string => {
-  return [
-    columns.map(csvValue).join(','),
-    columns.map(csvValue).join(','),
-    ...rows.map((row) => row.map(csvValue).join(',')),
-  ].join('\r\n') + '\r\n'
+const createCsv = (columns: string[], rows: unknown[][]): string => {
+  return (
+    [
+      columns.map(csvValue).join(','),
+      columns.map(csvValue).join(','),
+      ...rows.map((row) => row.map(csvValue).join(',')),
+    ].join('\r\n') + '\r\n'
+  )
 }
 
 const parseItems = (value: unknown): DtwItem[] => {
@@ -82,9 +80,7 @@ const safeOrderId = (id: string): string => {
   return id
 }
 
-export const exportDtwOrder = async (
-  order: DtwOrder,
-): Promise<string> => {
+export const exportDtwOrder = async (order: DtwOrder): Promise<string> => {
   const orderId = safeOrderId(order.id)
   const items = parseItems(order.items)
 
@@ -95,9 +91,7 @@ export const exportDtwOrder = async (
   })
 
   if (!customer?.CardCode) {
-    throw new Error(
-      `SAP CardCode not found for customer ${order.customerId}`,
-    )
+    throw new Error(`SAP CardCode not found for customer ${order.customerId}`)
   }
 
   const docDate = formatDate(order.createdAt)
@@ -123,58 +117,38 @@ export const exportDtwOrder = async (
       'Comments',
       'U_PortalRef',
     ],
-    [[
-      docNum,
-      'dDocument_Items',
-      docDate,
-      docDueDate,
-      customer.CardCode,
-      customer.TrnspName ?? '',
-      comments,
-      orderId,
-    ]],
+    [
+      [
+        docNum,
+        'dDocument_Items',
+        docDate,
+        docDueDate,
+        customer.CardCode,
+        customer.TrnspName ?? '',
+        comments,
+        orderId,
+      ],
+    ],
   )
 
   // Template RDR1 ini masih perlu diverifikasi terhadap
   // export template DTW SAP B1 yang digunakan.
   const detailCsv = createCsv(
-    [
-      'ParentKey',
-      'LineNum',
-      'ItemCode',
-      'Quantity',
-    ],
-    items.map((item, index) => [
-      docNum,
-      index,
-      item.product.itemCode,
-      item.qty,
-    ]),
+    ['ParentKey', 'LineNum', 'ItemCode', 'Quantity'],
+    items.map((item, index) => [docNum, index, item.product.itemCode, item.qty]),
   )
 
   const pendingDir = path.join(DTW_DIR, 'pending')
   const finalDir = path.join(pendingDir, orderId)
-  const tempDir = path.join(
-    DTW_DIR,
-    '.staging',
-    `${orderId}-${randomUUID()}`,
-  )
+  const tempDir = path.join(DTW_DIR, '.staging', `${orderId}-${randomUUID()}`)
 
   await mkdir(tempDir, { recursive: true })
   await mkdir(pendingDir, { recursive: true })
 
   try {
-    await writeFile(
-      path.join(tempDir, 'ORDR.csv'),
-      headerCsv,
-      { encoding: 'utf8', flag: 'wx' },
-    )
+    await writeFile(path.join(tempDir, 'ORDR.csv'), headerCsv, { encoding: 'utf8', flag: 'wx' })
 
-    await writeFile(
-      path.join(tempDir, 'RDR1.csv'),
-      detailCsv,
-      { encoding: 'utf8', flag: 'wx' },
-    )
+    await writeFile(path.join(tempDir, 'RDR1.csv'), detailCsv, { encoding: 'utf8', flag: 'wx' })
 
     // Atomic rename jika staging dan pending
     // berada pada filesystem yang sama.

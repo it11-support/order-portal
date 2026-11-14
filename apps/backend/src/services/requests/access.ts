@@ -2,9 +2,7 @@ import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { currentCustomer } from '@/services/customer-catalog'
 
-type TargetCustomerResult =
-  | { id: bigint; CardCode: string | null }
-  | { error: string }
+type TargetCustomerResult = { id: bigint; CardCode: string | null } | { error: string }
 
 export const customerSelect = {
   id: true,
@@ -17,7 +15,6 @@ export const customerSelect = {
   SlpCode: true,
 }
 
-
 /**
  * Who is asking, and what are they allowed to reach.
  *
@@ -26,9 +23,7 @@ export const customerSelect = {
  * instead of silently widened.
  */
 export type Actor =
-  | { role: 'admin' }
-  | { role: 'sales_admin'; slpCode: number }
-  | { role: 'customer' }
+  { role: 'admin' } | { role: 'sales_admin'; slpCode: number } | { role: 'customer' }
 
 export const actorOf = (req: AuthenticatedRequest): Actor | null => {
   const role = req.user?.role.name
@@ -43,13 +38,9 @@ export const actorOf = (req: AuthenticatedRequest): Actor | null => {
 
 const TERRITORY_ERROR = 'Akun sales belum memiliki SlpCode. Hubungi admin.'
 
-
 export const deniedMessage = (req: AuthenticatedRequest) => {
-  return req.user?.role.name === 'sales_admin'
-    ? TERRITORY_ERROR
-    : 'Akun pelanggan tidak aktif.'
+  return req.user?.role.name === 'sales_admin' ? TERRITORY_ERROR : 'Akun pelanggan tidak aktif.'
 }
-
 
 /**
  * The customer a request is being written for.
@@ -78,11 +69,7 @@ export const targetCustomer = async (
   }
 
   const raw =
-    body !== null &&
-      typeof body === 'object' &&
-      'customerId' in body
-      ? body.customerId
-      : undefined
+    body !== null && typeof body === 'object' && 'customerId' in body ? body.customerId : undefined
 
   if (
     (typeof raw !== 'string' && typeof raw !== 'number') ||
@@ -112,10 +99,7 @@ export const targetCustomer = async (
     }
   }
 
-  if (
-    actor.role === 'sales_admin' &&
-    customer.SlpCode !== actor.slpCode
-  ) {
+  if (actor.role === 'sales_admin' && customer.SlpCode !== actor.slpCode) {
     return {
       error: 'Akses ditolak. Hanya pelanggan dengan SlpCode Anda.',
     }

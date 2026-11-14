@@ -1,12 +1,11 @@
-
 version: 2
 
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
 
     schedule:
-      interval: "daily"
+      interval: 'daily'
 
     open-pull-requests-limit: 10
 
@@ -16,29 +15,29 @@ updates:
       nextjs:
         applies-to: version-updates
         patterns:
-          - "next"
-          - "eslint-config-next"
+          - 'next'
+          - 'eslint-config-next'
 
       react:
         applies-to: version-updates
         patterns:
-          - "react"
-          - "react-dom"
-          - "@types/react"
-          - "@types/react-dom"
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
 
       turbo:
         applies-to: version-updates
         patterns:
-          - "turbo"
-          - "@turbo/*"
+          - 'turbo'
+          - '@turbo/*'
 
       security-fixes:
         applies-to: security-updates
         patterns:
-          - "*"
+          - '*'
 
     ignore:
-      - dependency-name: "*"
+      - dependency-name: '*'
         update-types:
-          - "version-update:semver-major"
+          - 'version-update:semver-major'

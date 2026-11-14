@@ -33,7 +33,9 @@ export const staffRecipientsFor = async (customer: {
   })
 }
 
-export const customerRecipientFor = async (customerId: bigint | string): Promise<{ id: number } | null> => {
+export const customerRecipientFor = async (
+  customerId: bigint | string,
+): Promise<{ id: number } | null> => {
   return prisma.user.findFirst({
     where: { customerId: BigInt(String(customerId)), isActive: true },
     select: { id: true },
