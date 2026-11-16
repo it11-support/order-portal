@@ -4,7 +4,6 @@ export type RoleType = 'customer' | 'admin' | 'sales_admin'
 export interface User {
   id: number | bigint | null
   username: string
-  email?: string
   name: string
   roleId: number | bigint | null
   isActive: boolean

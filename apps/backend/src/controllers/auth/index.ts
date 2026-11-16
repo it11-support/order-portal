@@ -18,7 +18,6 @@ const serializeDecimal = (value: Decimal | null) => value?.toString() ?? null
 const toUserPayload = (user: UserWithRelations): User => ({
   id: user.id,
   username: user.username,
-  email: user.email ?? undefined,
   name: user.name,
   roleId: user.roleId,
   isActive: user.isActive,

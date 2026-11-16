@@ -42,7 +42,6 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     where.OR = [
       { username: { contains: search, mode: 'insensitive' as const } },
       { name: { contains: search, mode: 'insensitive' as const } },
-      { email: { contains: search, mode: 'insensitive' as const } },
     ]
   }
 
@@ -95,7 +94,6 @@ export interface CreateUserRequest {
   username: string
   password: string
   name: string
-  email?: string
   roleId: number
   isActive?: boolean
   slpCode?: number | null
@@ -151,7 +149,7 @@ export const createUser = async (
   req: Request<{}, {}, CreateUserRequest>,
   res: Response,
 ): Promise<void> => {
-  const { username, password, name, email, roleId, isActive = true, slpCode } = req.body
+  const { username, password, name, roleId, isActive = true, slpCode } = req.body
 
   if (!username || !password || !name || !roleId) {
     res.status(400).json({
@@ -195,17 +193,6 @@ export const createUser = async (
     return
   }
 
-  if (email) {
-    const existingEmail = await prisma.user.findUnique({ where: { email } })
-    if (existingEmail) {
-      res.status(409).json({
-        message: 'Email sudah digunakan',
-        errors: { email: 'Email sudah digunakan' },
-      })
-      return
-    }
-  }
-
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const user = await prisma.user.create({
@@ -214,7 +201,6 @@ export const createUser = async (
       password: hashedPassword,
       encryptedPassword: password,
       name,
-      email: email || null,
       roleId,
       isActive,
       ...(slp.slpCode !== undefined ? { slpCode: slp.slpCode } : {}),
@@ -229,7 +215,6 @@ export interface UpdateUserRequest {
   username?: string
   password?: string
   name?: string
-  email?: string | null
   roleId?: number
   isActive?: boolean
   slpCode?: number | null
@@ -271,7 +256,6 @@ export const updateUser = async (
   const data = {
     ...(fields.username && { username: fields.username }),
     ...(fields.name && { name: fields.name }),
-    ...(fields.email !== undefined && { email: fields.email || null }),
     ...(fields.isActive !== undefined && { isActive: fields.isActive }),
     ...(roleId !== undefined && { roleId }),
     ...(slp.slpCode !== undefined && { slpCode: slp.slpCode }),
