@@ -1,39 +1,151 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'node:crypto'
+
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  hkdfSync,
+  randomBytes,
+  randomInt,
+} from 'node:crypto'
 import * as bcrypt from 'bcrypt'
 
-const key = () => {
-  const secret = process.env.CUSTOMER_PASSWORD_SECRET || process.env.JWT_SECRET
-  if (!secret) throw new Error('Customer password encryption secret is missing')
-  return createHash('sha256').update(`customer-password:v1:${secret}`).digest()
+const ALGORITHM = 'aes-256-gcm'
+const VERSION = 'v2'
+
+const getSecret = (): string => {
+  const secret =
+    process.env.CUSTOMER_PASSWORD_SECRET ||
+    process.env.JWT_SECRET
+
+  if (!secret) {
+    throw new Error(
+      'Customer password encryption secret is missing',
+    )
+  }
+
+  return secret
+}
+
+// Key baru: HKDF-SHA256.
+// Gunakan secret acak berkekuatan tinggi.
+const key = (): Buffer => {
+  const secret = getSecret()
+
+  return Buffer.from(
+    hkdfSync(
+      'sha256',
+      Buffer.from(secret, 'utf8'),
+      Buffer.from('customer-password:hkdf:v2'),
+      Buffer.from('aes-256-gcm:key'),
+      32,
+    ),
+  )
+}
+
+// Key lama untuk membaca ciphertext sebelum migrasi.
+const legacyKey = (): Buffer => {
+  const secret = getSecret()
+
+  return createHash('sha256')
+    .update(`customer-password:v1:${secret}`)
+    .digest()
 }
 
 export const generateCustomerPassword = (): string => {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+
   let password: string
+
   do {
-    password = Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('')
-  } while (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password))
+    password = Array.from(
+      { length: 6 },
+      () => alphabet[randomInt(alphabet.length)],
+    ).join('')
+  } while (
+    !/[A-Za-z]/.test(password) ||
+    !/[0-9]/.test(password)
+  )
+
   return password
 }
 
-export const hashCustomerPassword = async (password: string): Promise<string> => {
+export const hashCustomerPassword = async (
+  password: string,
+): Promise<string> => {
   return bcrypt.hash(password, 10)
 }
 
-export const encryptCustomerPassword = (password: string): string => {
+export const encryptCustomerPassword = (
+  password: string,
+): string => {
   const iv = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', key(), iv)
-  const encrypted = Buffer.concat([cipher.update(password, 'utf8'), cipher.final()])
-  return [iv, cipher.getAuthTag(), encrypted].map((value) => value.toString('base64url')).join('.')
+
+  const cipher = createCipheriv(
+    ALGORITHM,
+    key(),
+    iv,
+  )
+
+  const encrypted = Buffer.concat([
+    cipher.update(password, 'utf8'),
+    cipher.final(),
+  ])
+
+  return [
+    VERSION,
+    iv.toString('base64url'),
+    cipher.getAuthTag().toString('base64url'),
+    encrypted.toString('base64url'),
+  ].join('.')
 }
 
-export const decryptCustomerPassword = (value: string | null): string | null => {
+export const decryptCustomerPassword = (
+  value: string | null,
+): string | null => {
   if (!value) return null
+
   try {
-    const [iv, tag, encrypted] = value.split('.').map((part) => Buffer.from(part, 'base64url'))
-    const decipher = createDecipheriv('aes-256-gcm', key(), iv)
+    const parts = value.split('.')
+
+    const isV2 = parts[0] === VERSION
+
+    if (
+      (isV2 && parts.length !== 4) ||
+      (!isV2 && parts.length !== 3)
+    ) {
+      return null
+    }
+
+    const payload = isV2
+      ? parts.slice(1)
+      : parts
+
+    const [ivPart, tagPart, encryptedPart] = payload
+
+    const iv = Buffer.from(ivPart, 'base64url')
+    const tag = Buffer.from(tagPart, 'base64url')
+    const encrypted = Buffer.from(
+      encryptedPart,
+      'base64url',
+    )
+
+    if (iv.length !== 12 || tag.length !== 16) {
+      return null
+    }
+
+    const decipher = createDecipheriv(
+      ALGORITHM,
+      isV2 ? key() : legacyKey(),
+      iv,
+    )
+
     decipher.setAuthTag(tag)
-    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
+
+    return Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]).toString('utf8')
   } catch {
     return null
   }
