@@ -19,7 +19,6 @@ model Role {
 model User {
   id                Int      @id @default(autoincrement())
   username          String   @unique
-  email             String?  @unique
   password          String   @map("password")
   encryptedPassword String?  @map("encrypted_password") @db.Text
   name              String
@@ -38,7 +37,6 @@ model User {
   requestsCreated PortalRequest[] @relation("PortalRequestCreator")
 
   @@index([username])
-  @@index([email])
   @@index([roleId])
   @@index([slpCode])
   @@map("users")

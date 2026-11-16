@@ -29,7 +29,6 @@ import { toast } from 'sonner'
 interface UserForm {
   username: string
   name: string
-  email: string
   password: string
   roleId: number
   isActive: boolean
@@ -39,7 +38,6 @@ interface UserForm {
 const EMPTY_FORM: UserForm = {
   username: '',
   name: '',
-  email: '',
   password: '',
   roleId: 0,
   isActive: true,
@@ -110,7 +108,6 @@ const UserList: React.FC = () => {
     setForm({
       username: user.username,
       name: user.name,
-      email: user.email ?? '',
       password: '',
       roleId: Number(user.roleId ?? 0),
       isActive: user.isActive,
@@ -130,7 +127,6 @@ const UserList: React.FC = () => {
       const payload: any = {
         username: form.username,
         name: form.name,
-        email: form.email || null,
         roleId: form.roleId,
         isActive: form.isActive,
         slpCode: isSalesRole ? form.slpCode : null,
@@ -255,8 +251,7 @@ const UserList: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="font-medium text-sm">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email ?? '-'}</p>
+              <p className="font-medium text-sm">{user.name}</p>            
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-medium">
                 {roleLabel(Number(user.roleId ?? 0))}
               </span>
@@ -288,8 +283,7 @@ const UserList: React.FC = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
                 <th className="p-4">Username</th>
-                <th className="p-4">Nama</th>
-                <th className="p-4">Email</th>
+                <th className="p-4">Nama</th>              
                 <th className="p-4 w-40">Password</th>
                 <th className="p-4 w-32">Role</th>
                 <th className="p-4 w-24 text-center">Status</th>
@@ -305,8 +299,7 @@ const UserList: React.FC = () => {
                         {user.username}
                       </span>
                     </td>
-                    <td className="p-4 font-medium">{user.name}</td>
-                    <td className="p-4 text-gray-500">{user.email ?? '-'}</td>
+                    <td className="p-4 font-medium">{user.name}</td>                  
                     <td className="p-4 w-40">
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-sm text-gray-800 break-all">
@@ -446,20 +439,7 @@ const UserList: React.FC = () => {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Nama lengkap"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm text-muted-foreground">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="email@contoh.com"
-                />
-              </div>
+              </div>             
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm text-muted-foreground">
                   {editing ? 'Password Baru (opsional)' : 'Password'}
