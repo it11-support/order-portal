@@ -2,7 +2,6 @@
 import {
   createCipheriv,
   createDecipheriv,
-  createHash,
   hkdfSync,
   randomBytes,
   randomInt,
@@ -42,14 +41,6 @@ const key = (): Buffer => {
   )
 }
 
-// Key lama untuk membaca ciphertext sebelum migrasi.
-const legacyKey = (): Buffer => {
-  const secret = getSecret()
-
-  return createHash('sha256')
-    .update(`customer-password:v1:${secret}`)
-    .digest()
-}
 
 export const generateCustomerPassword = (): string => {
   const alphabet =
@@ -106,37 +97,22 @@ export const decryptCustomerPassword = (
   if (!value) return null
 
   try {
-    const parts = value.split('.')
+    const [version, ivPart, tagPart, encryptedPart] =
+      value.split('.')
 
-    const isV2 = parts[0] === VERSION
-
-    if (
-      (isV2 && parts.length !== 4) ||
-      (!isV2 && parts.length !== 3)
-    ) {
-      return null
-    }
-
-    const payload = isV2
-      ? parts.slice(1)
-      : parts
-
-    const [ivPart, tagPart, encryptedPart] = payload
+    if (version !== 'v2') return null
 
     const iv = Buffer.from(ivPart, 'base64url')
     const tag = Buffer.from(tagPart, 'base64url')
-    const encrypted = Buffer.from(
-      encryptedPart,
-      'base64url',
-    )
+    const encrypted = Buffer.from(encryptedPart, 'base64url')
 
     if (iv.length !== 12 || tag.length !== 16) {
       return null
     }
 
     const decipher = createDecipheriv(
-      ALGORITHM,
-      isV2 ? key() : legacyKey(),
+      'aes-256-gcm',
+      key(),
       iv,
     )
 
