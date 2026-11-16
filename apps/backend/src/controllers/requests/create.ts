@@ -3,7 +3,7 @@ import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import {
   customerPurchasedProductFilter,
-  customerSuggestedProductFilter,
+  customerUnpurchasedProductFilter
 } from '@/services/customer-catalog'
 import {
   priceIncreaseCheck,
@@ -131,10 +131,16 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     productWhere =
       kind === 'order'
         ? await customerPurchasedProductFilter(req)
-        : await customerSuggestedProductFilter(req)
+        : await customerUnpurchasedProductFilter(req)
   }
   const products = await prisma.product.findMany({
-    where: { ...productWhere, id: { in: ids } },
+    where: {
+      AND: [
+        { isActive: true },
+        productWhere,
+        { id: { in: ids } },
+      ],
+    },
   })
   if (products.length !== ids.length)
     return res.status(400).json({
@@ -168,11 +174,11 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
         qty: item.qty,
         ...(price
           ? {
-              price: price.price,
-              currency: price.currency,
-              priceSource: price.source,
-              lineTotal: round6(item.qty * price.price),
-            }
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: round6(item.qty * price.price),
+          }
           : {}),
       }
     })
@@ -241,11 +247,11 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
       qty: item.qty ?? 1,
       ...(price
         ? {
-            price: price.price,
-            currency: price.currency,
-            lineTotal: kind === 'order' ? round6((item.qty ?? 1) * price.price) : null,
-            priceSource: price.source,
-          }
+          price: price.price,
+          currency: price.currency,
+          lineTotal: kind === 'order' ? round6((item.qty ?? 1) * price.price) : null,
+          priceSource: price.source,
+        }
         : {}),
     }
   })

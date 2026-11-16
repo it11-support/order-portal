@@ -263,3 +263,34 @@ export const customerProductFilter = async (
 ): Promise<ProductWhereInput> => {
   return customerSuggestedProductFilter(req)
 }
+
+export const customerUnpurchasedProductFilter = async (
+  req: AuthenticatedRequest,
+): Promise<ProductWhereInput> => {
+  const customer = await currentCustomer(req)
+
+  if (!customer?.CardCode) {
+    return {
+      isActive: true,
+      itemCode: { in: [] },
+    }
+  }
+
+  const purchasedCodes = await customerPurchasedItemCodes(customer.CardCode)
+
+  return {
+    isActive: true,
+    ...(purchasedCodes.length > 0
+      ? {
+        NOT: {
+          OR: purchasedCodes.map((itemCode) => ({
+            itemCode: {
+              equals: itemCode,
+              mode: 'insensitive' as const,
+            },
+          })),
+        },
+      }
+      : {}),
+  }
+}

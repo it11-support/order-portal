@@ -239,7 +239,7 @@ const CatalogPage = () => {
     setSendingInquiry(true)
     try {
       await api.post('/requests', {
-        kind: 'inquiry',
+        kind: 'quote',
         status: 'pending',
         items: inquiryItems.map(({ productId }) => ({ productId, qty: 1 })),
       })

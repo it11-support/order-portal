@@ -251,7 +251,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
                   <p className="text-xs text-muted-foreground">{item.product.salesUnit}</p>
                 </div>
                 <span className="text-sm font-bold tabular-nums">
-                  {isQuote ? '-' : `×${item.qty}`}
+                  {isQuote ? '' : `×${item.qty}`}
                 </span>
               </div>
             ))}
