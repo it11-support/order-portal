@@ -6,6 +6,7 @@ import {
   Search,
   ShoppingCart,
   Users,
+  PlusSquare,
   type LucideIcon,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
@@ -76,6 +77,11 @@ const BottomNav = () => {
       label: 'Users',
       icon: Users,
       path: '/users',
+    },
+    {
+      label: 'Input Order',
+      icon: PlusSquare,
+      path: '/admin/sales-order',
     },
     {
       label: 'Kategori',
