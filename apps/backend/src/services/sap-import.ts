@@ -72,29 +72,29 @@ export const buildItems = async (order: SapOrderWithLines) => {
     return {
       product: product
         ? {
-            id: String(product.id),
-            itemCode: product.itemCode,
-            itemName: product.itemName,
-            salesUnit: product.salesUnit,
-            productCategory: product.productCategory,
-          }
+          id: String(product.id),
+          itemCode: product.itemCode,
+          itemName: product.itemName,
+          salesUnit: product.salesUnit,
+          productCategory: product.productCategory,
+        }
         : {
-            id: null,
-            itemCode: line.itemCode ?? null,
-            itemName: line.description,
-            salesUnit: null,
-            productCategory: null,
-          },
+          id: null,
+          itemCode: line.itemCode ?? null,
+          itemName: line.description,
+          salesUnit: null,
+          productCategory: null,
+        },
       qty,
       ...(price != null
         ? {
-            price: round6(price),
-            currency: order.currency ?? null,
-            lineTotal: round6(qty * price),
-            // The figure on the ORDR is what was agreed in SAP, not a catalogue
-            // guess, so it is labelled as an actual price.
-            priceSource: 'actual',
-          }
+          price: round6(price),
+          currency: order.currency ?? null,
+          lineTotal: round6(qty * price),
+          // The figure on the ORDR is what was agreed in SAP, not a catalogue
+          // guess, so it is labelled as an actual price.
+          priceSource: 'actual',
+        }
         : {}),
     }
   })
@@ -251,9 +251,17 @@ export const importSapOrder = async (
   // "selesai", not at "dikonfirmasi" for the next fifteen minutes and then move
   // on its own: a customer looking at a finished order and reading it as unfinished
   // is the exact mistake this avoids.
-  const coverage = await deliveryCoverage([order.docEntry])
+  const coverage = await deliveryCoverage([
+    {
+      companyId: order.companyId,
+      docEntry: order.docEntry,
+    },
+  ])
+
+  const key = JSON.stringify([order.companyId, order.docEntry])
+
   const status =
-    portalStatusFromSap(order, 'confirmed', coverage.get(order.docEntry) ?? null) ?? 'confirmed'
+    portalStatusFromSap(order, 'confirmed', coverage.get(key) ?? null) ?? 'confirmed'
 
   // Nothing is written into the customer note: that field is what the customer
   // themselves typed, and filling it with import metadata reads on the order
