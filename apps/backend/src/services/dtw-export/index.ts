@@ -32,6 +32,9 @@ const csvValue = (value: unknown): string => {
   return text
 }
 
+const isMissing = (value: unknown): boolean =>
+  value == null || value === ''
+
 const createCsv = (columns: string[], rows: unknown[][]): string => {
   return (
     [
@@ -48,25 +51,35 @@ const parseItems = (value: unknown): DtwItem[] => {
   }
 
   return value.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`Invalid item at index ${index}`)
+    }
+
     const row = item as Partial<DtwItem>
 
+    const qty = Number(row.qty)
+    const price = Number(row.price)
+    const itemCode = row.product?.itemCode?.trim()
+
     if (
-      !row.product?.itemCode ||
-      !Number.isFinite(Number(row.qty)) ||
-      Number(row.qty) <= 0 ||
-      !Number.isFinite(Number(row.price)) ||
-      Number(row.price) < 0
+      !itemCode ||
+      isMissing(row.qty) ||
+      isMissing(row.price) ||
+      !Number.isFinite(qty) ||
+      qty <= 0 ||
+      !Number.isFinite(price) ||
+      price < 0
     ) {
       throw new Error(`Invalid item at index ${index}`)
     }
 
     return {
-      qty: Number(row.qty),
-      price: Number(row.price),
+      qty,
+      price,
       product: {
-        itemCode: String(row.product.itemCode),
-        salesUnit: row.product.salesUnit,
-        vatGroup: row.product.vatGroup,
+        itemCode,
+        salesUnit: row.product?.salesUnit,
+        vatGroup: row.product?.vatGroup,
       },
     }
   })
@@ -83,6 +96,13 @@ const safeOrderId = (id: string): string => {
 export const exportDtwOrder = async (order: DtwOrder): Promise<string> => {
   const orderId = safeOrderId(order.id)
   const items = parseItems(order.items)
+
+  if (
+    !(order.createdAt instanceof Date) ||
+    Number.isNaN(order.createdAt.getTime())
+  ) {
+    throw new Error(`Invalid order date: ${orderId}`)
+  }
 
   // Sesuaikan field cardCode dengan Prisma schema.
   const customer = await prisma.customers.findUnique({
@@ -142,26 +162,34 @@ export const exportDtwOrder = async (order: DtwOrder): Promise<string> => {
   const finalDir = path.join(pendingDir, orderId)
   const tempDir = path.join(DTW_DIR, '.staging', `${orderId}-${randomUUID()}`)
 
-  await mkdir(tempDir, { recursive: true })
-  await mkdir(pendingDir, { recursive: true })
-
   try {
-    await writeFile(path.join(tempDir, 'ORDR.csv'), headerCsv, { encoding: 'utf8', flag: 'wx' })
+    await mkdir(pendingDir, { recursive: true })
+    await mkdir(tempDir, { recursive: true })
 
-    await writeFile(path.join(tempDir, 'RDR1.csv'), detailCsv, { encoding: 'utf8', flag: 'wx' })
+    await writeFile(path.join(tempDir, 'ORDR.csv'), headerCsv, {
+      encoding: 'utf8',
+      flag: 'wx',
+    })
 
-    // Atomic rename jika staging dan pending
-    // berada pada filesystem yang sama.
+    await writeFile(path.join(tempDir, 'RDR1.csv'), detailCsv, {
+      encoding: 'utf8',
+      flag: 'wx',
+    })
+
     await rename(tempDir, finalDir)
 
     console.log(`[DTW] Exported ${orderId}`)
 
     return finalDir
   } catch (error) {
-    await rm(tempDir, {
-      recursive: true,
-      force: true,
-    })
+    try {
+      await rm(tempDir, {
+        recursive: true,
+        force: true,
+      })
+    } catch (cleanupError) {
+      console.error(`[DTW] Cleanup failed for ${orderId}`, cleanupError)
+    }
 
     throw error
   }

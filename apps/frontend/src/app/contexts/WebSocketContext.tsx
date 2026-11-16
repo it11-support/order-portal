@@ -15,8 +15,6 @@ type WebSocketContextType = {
   connected: boolean
   connect: () => void
   disconnect: () => void
-  subscribe: (channels: string[]) => void
-  unsubscribe: (channels: string[]) => void
   onEvent: (type: string, handler: (event: WSEvent) => void) => () => void
 }
 
@@ -29,6 +27,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   const { user, accessToken, loading: authLoading } = useAuth()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [connected, setConnected] = useState(false)
+
   const handlersRef = useRef<Map<string, Set<(event: WSEvent) => void>>>(new Map())
   const socketRef = useRef<Socket | null>(null)
 
@@ -54,19 +53,14 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
       console.log('[WS] Disconnected:', reason)
     })
 
-    newSocket.on('connect_error', (error: Error & { description?: string; context?: unknown }) => {
-      console.error('[WS] Connection error:', error.message, error.description, error.context)
+    newSocket.on('connect_error', (error: Error) => {
+      setConnected(false)
+      console.error('[WS] Connection error:', error.message)
     })
 
     newSocket.on('notification', (event: WSEvent) => {
-      const handlers = handlersRef.current.get(event.type)
-      if (handlers) {
-        handlers.forEach((handler) => handler(event))
-      }
-      const allHandlers = handlersRef.current.get('*')
-      if (allHandlers) {
-        allHandlers.forEach((handler) => handler(event))
-      }
+      handlersRef.current.get(event.type)?.forEach((handler) => handler(event))
+      handlersRef.current.get('*')?.forEach((handler) => handler(event))
     })
 
     socketRef.current = newSocket
@@ -74,41 +68,39 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   }, [authLoading, user, accessToken])
 
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect()
+    const currentSocket = socketRef.current
+
+    if (currentSocket) {
+      currentSocket.removeAllListeners()
+      currentSocket.disconnect()
       socketRef.current = null
-      setSocket(null)
-      setConnected(false)
     }
-  }, [])
 
-  const subscribe = useCallback((channels: string[]) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('subscribe', channels)
-    }
-  }, [])
-
-  const unsubscribe = useCallback((channels: string[]) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('unsubscribe', channels)
-    }
+    setSocket(null)
+    setConnected(false)
   }, [])
 
   const onEvent = useCallback((type: string, handler: (event: WSEvent) => void) => {
     if (!handlersRef.current.has(type)) {
       handlersRef.current.set(type, new Set())
     }
+
     handlersRef.current.get(type)!.add(handler)
 
     return () => {
-      handlersRef.current.get(type)?.delete(handler)
+      const handlers = handlersRef.current.get(type)
+      handlers?.delete(handler)
+
+      if (handlers?.size === 0) {
+        handlersRef.current.delete(type)
+      }
     }
   }, [])
 
   useEffect(() => {
     if (user && accessToken && !authLoading) {
       connect()
-    } else if (!user) {
+    } else {
       disconnect()
     }
 
@@ -118,9 +110,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   }, [user, accessToken, authLoading, connect, disconnect])
 
   return (
-    <WebSocketContext.Provider
-      value={{ socket, connected, connect, disconnect, subscribe, unsubscribe, onEvent }}
-    >
+    <WebSocketContext.Provider value={{ socket, connected, connect, disconnect, onEvent }}>
       {children}
     </WebSocketContext.Provider>
   )
@@ -135,9 +125,11 @@ export const useWebSocket = () => {
 export const useWSEvent = (type: string, handler: (event: WSEvent) => void) => {
   const { onEvent } = useWebSocket()
   const handlerRef = useRef(handler)
+
   useEffect(() => {
     handlerRef.current = handler
   }, [handler])
+
   useEffect(() => onEvent(type, (event) => handlerRef.current(event)), [onEvent, type])
 }
 

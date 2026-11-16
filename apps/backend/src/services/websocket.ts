@@ -68,18 +68,17 @@ class WebSocketService {
     })
 
     this.io.on('connection', (socket: AuthenticatedSocket) => {
-      this.registerUserSocket(socket.userId!, socket.id)
+      const userId = socket.userId
+
+      if (userId === undefined) {
+        socket.disconnect(true)
+        return
+      }
+
+      this.registerUserSocket(userId, socket.id)
 
       socket.on('disconnect', () => {
-        this.unregisterUserSocket(socket.userId!, socket.id)
-      })
-
-      socket.on('subscribe', (channels: string[]) => {
-        channels.forEach((channel) => socket.join(channel))
-      })
-
-      socket.on('unsubscribe', (channels: string[]) => {
-        channels.forEach((channel) => socket.leave(channel))
+        this.unregisterUserSocket(userId, socket.id)
       })
     })
 

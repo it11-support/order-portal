@@ -1,7 +1,6 @@
 import { prisma } from '@/utils'
 import { ws } from '@/services/websocket'
 import { customerRecipientFor, staffRecipientsFor } from '@/services/audience'
-
 /**
  * Portal status versus SAP status.
  *
@@ -14,7 +13,8 @@ import { customerRecipientFor, staffRecipientsFor } from '@/services/audience'
  * portal status, a timeline note and a notification. It runs on read, so a
  * portal that is never touched still converges the next time anyone looks.
  */
-
+const sapOrderKey = (companyId: string, docEntry: number): string =>
+  JSON.stringify([companyId, docEntry])
 export interface SapOrderRow {
   companyId: string
   docEntry: number
@@ -26,7 +26,6 @@ export interface SapOrderRow {
   portalRef?: string | null
   remarks?: string | null
 }
-
 /**
  * How a portal order says its name inside SAP.
  *
@@ -41,9 +40,7 @@ export interface SapOrderRow {
 export const PORTAL_REF_MARKER = '[PORTAL:'
 export const portalRefMarker = (portalRequestId: string) =>
   `${PORTAL_REF_MARKER}${portalRequestId}]`
-
 const PORTAL_REF_PATTERN = /\[PORTAL:([A-Za-z0-9._:-]{1,64})\]/
-
 /**
  * The portal order id carried in a document's remarks, if any.
  *
@@ -56,7 +53,6 @@ export const portalRefFromRemarks = (remarks: string | null | undefined): string
   const match = PORTAL_REF_PATTERN.exec(remarks)
   return match ? match[1] : null
 }
-
 export interface SapStatusView {
   companyId: string
   docEntry: number
@@ -69,7 +65,6 @@ export interface SapStatusView {
   portalStatus?: string
   [key: string]: unknown
 }
-
 /**
  * The portal status a SAP document implies.
  *
@@ -90,9 +85,7 @@ export const portalStatusFromSap = (
 ): string | null => {
   const canceled = (row.canceled ?? 'N').trim().toUpperCase() === 'Y'
   if (canceled) return 'cancelled'
-
   const docStatus = (row.docStatus ?? '').trim().toUpperCase()
-
   // Lines are known: the invoices say how much of the order actually went out.
   if (coverage && coverage.orderedValue > 0) {
     // Nothing invoiced yet means nothing to announce, closed header or not.
@@ -100,13 +93,11 @@ export const portalStatusFromSap = (
     if (coverage.invoicedValue >= coverage.orderedValue) return 'delivered'
     return 'processing'
   }
-
   // No lines to compare against: the header is all there is, so a closed
   // document is the only thing that can claim anything.
   if (docStatus === 'C') return 'delivered'
   return null
 }
-
 /**
  * How much of an order the invoices account for.
  *
@@ -125,7 +116,6 @@ export interface DeliveryCoverage {
   /** Document numbers of the invoices counted above, newest last. */
   invoiceDocs: number[]
 }
-
 const view = (row: SapOrderRow): SapStatusView => ({
   companyId: row.companyId,
   docEntry: row.docEntry,
@@ -139,7 +129,6 @@ const view = (row: SapOrderRow): SapStatusView => ({
   canceled: (row.canceled ?? 'N').trim().toUpperCase() === 'Y',
   syncedAt: new Date().toISOString(),
 })
-
 /** The portal status as a customer reads it, rather than as the database stores it. */
 const label = (status: string) =>
   ({
@@ -149,7 +138,6 @@ const label = (status: string) =>
     delivered: 'Selesai',
     cancelled: 'Dibatalkan',
   })[status] ?? status
-
 /**
  * When the document last changed, in the words the note uses.
  *
@@ -170,7 +158,6 @@ const updatedInSystem = (row: SapOrderRow): string | null => {
   })
   return `diperbarui di sistem ${stamp}`
 }
-
 /**
  * The invoice clause, when there is one to state.
  *
@@ -187,7 +174,6 @@ const invoiceClause = (coverage?: DeliveryCoverage | null): string | null => {
   const rest = docs.length - 3
   return rest > 0 ? `Invoice ${shown}, dan ${rest} invoice lainnya.` : `Invoice ${shown}.`
 }
-
 interface RequestRow {
   id: string
   kind: string
@@ -202,7 +188,6 @@ interface RequestRow {
     SlpCode: number | null
   }
 }
-
 /**
  * Mirrors one SAP document onto its portal request.
  *
@@ -216,9 +201,13 @@ export const reconcileRequest = async (
   row: SapOrderRow,
   coverage?: DeliveryCoverage | null,
 ): Promise<{ view: SapStatusView; changed: boolean; status: string }> => {
+  // Never overwrite an existing SAP link with a different document.
+  if (request.sapDocEntry !== null && request.sapCompanyId !== null &&
+    (request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId)) {
+    throw new Error(`SAP link mismatch for portal request ${request.id}`)
+  }
   const next = portalStatusFromSap(row, request.status, coverage)
   const firstLink = request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId
-
   await prisma.portalRequest.update({
     where: { id: request.id },
     data: {
@@ -230,7 +219,6 @@ export const reconcileRequest = async (
       sapSyncedAt: new Date(),
     },
   })
-
   // Either SAP implies no step of its own, or the portal is already there. Only
   // the first link is news, and it is news about the link, not the status.
   if (next === null || next === request.status) {
@@ -244,7 +232,6 @@ export const reconcileRequest = async (
       status: request.status,
     }
   }
-
   const updated = await prisma.portalRequest.updateMany({
     where: { id: request.id, status: request.status },
     data: { status: next },
@@ -255,7 +242,6 @@ export const reconcileRequest = async (
       changed: false,
       status: request.status,
     }
-
   // What moved, when the source says it moved, and which invoice carries it.
   // The three belong in one sentence: the status alone says the portal reacted,
   // the timestamp says it reacted to a real document change, and the invoice
@@ -267,7 +253,6 @@ export const reconcileRequest = async (
     `Dokumen ${row.docNum}${stamp ? ` ${stamp}` : ''}.` +
     (invoice ? ` ${invoice}` : '')
   await systemNote(request.id, message)
-
   const customerUser = await customerRecipientFor(request.customerId)
   const staffRecipients = await staffRecipientsFor({ SlpCode: request.customer.SlpCode })
   const targets = [
@@ -287,7 +272,6 @@ export const reconcileRequest = async (
     })
     for (const notification of notifications) ws.emitNotificationCreated(notification)
   }
-
   ws.emitOrderStatusChanged(
     request.id,
     String(request.customerId),
@@ -299,10 +283,8 @@ export const reconcileRequest = async (
     ...view(row),
     portalStatus: next,
   })
-
   return { view: { ...view(row), portalStatus: next }, changed: true, status: next }
 }
-
 const systemNote = async (requestId: string, message: string) => {
   return prisma.followUpNote.create({
     data: {
@@ -316,7 +298,6 @@ const systemNote = async (requestId: string, message: string) => {
     },
   })
 }
-
 /** What the invoices say about this document, in one clause or none. */
 const linkNote = (row: SapOrderRow, coverage?: DeliveryCoverage | null) => {
   const open =
@@ -327,7 +308,6 @@ const linkNote = (row: SapOrderRow, coverage?: DeliveryCoverage | null) => {
     `${stamp ? `, ${stamp}` : ''}${invoiceClause(coverage) ? `. ${invoiceClause(coverage)}` : ''}).`
   )
 }
-
 /**
  * How much of each SAP document has been invoiced.
  *
@@ -337,69 +317,61 @@ const linkNote = (row: SapOrderRow, coverage?: DeliveryCoverage | null) => {
  * the coverage is left empty and the caller falls back to the document header.
  */
 export const deliveryCoverage = async (
-  docEntries: number[],
-): Promise<Map<number, DeliveryCoverage>> => {
-  const coverage = new Map<number, DeliveryCoverage>()
-  if (!docEntries.length) return coverage
-
+  documents: Array<{ companyId: string; docEntry: number }>,
+): Promise<Map<string, DeliveryCoverage>> => {
+  const coverage = new Map<string, DeliveryCoverage>()
+  if (!documents.length) return coverage
   const orders = await prisma.salesOrder.findMany({
-    where: { docEntry: { in: docEntries } },
-    select: { id: true, docEntry: true, companyId: true },
+    where: {
+      OR: documents.map(({ companyId, docEntry }) => ({ companyId, docEntry })),
+    },
+    select: { id: true, companyId: true, docEntry: true },
   })
   if (!orders.length) return coverage
-
-  const orderIdByEntry = new Map(orders.map((row) => [row.docEntry, row.id]))
-
   const [ordered, invoiced] = await Promise.all([
     prisma.salesOrderLine.groupBy({
       by: ['salesOrderId'],
-      where: { salesOrderId: { in: [...orderIdByEntry.values()] } },
+      where: { salesOrderId: { in: orders.map((row) => row.id) } },
       _sum: { lineTotal: true },
     }),
-    // Company is part of the identity: document numbers repeat between
-    // companies, and an invoice from another company is not a delivery of this
-    // order even when the numbers happen to line up.
     prisma.salesInvoice.groupBy({
-      by: ['baseEntry', 'docNum'],
+      by: ['companyId', 'baseEntry', 'docNum'],
       where: {
-        baseEntry: { in: docEntries },
-        companyId: { in: [...new Set(orders.map((row) => row.companyId))] },
+        OR: orders.map(({ companyId, docEntry }) => ({
+          companyId,
+          baseEntry: docEntry,
+        })),
         baseType: 17,
         canceled: { not: 'Y' },
       },
       _sum: { lineTotal: true },
-      _count: { _all: true },
     }),
   ])
-
-  const orderedValueByOrderId = new Map(
+  const orderedValues = new Map(
     ordered.map((row) => [row.salesOrderId, Number(row._sum.lineTotal ?? 0)]),
   )
-  // Grouped by document rather than summed flat, so the same invoice is named
-  // once in the note no matter how many of its lines belong to the order.
-  const invoicedByEntry = new Map<number, { value: number; count: number; docs: number[] }>()
+  const invoiceValues = new Map<string, { value: number; docs: Set<number> }>()
   for (const row of invoiced) {
-    const entry = row.baseEntry as number
-    const current = invoicedByEntry.get(entry) ?? { value: 0, count: 0, docs: [] }
+    if (row.baseEntry === null) continue
+    const key = sapOrderKey(row.companyId, row.baseEntry)
+    const current = invoiceValues.get(key) ?? { value: 0, docs: new Set<number>() }
     current.value += Number(row._sum.lineTotal ?? 0)
-    current.count += row._count._all
-    current.docs.push(row.docNum)
-    invoicedByEntry.set(entry, current)
+    current.docs.add(row.docNum)
+    invoiceValues.set(key, current)
   }
-
-  for (const [docEntry, orderId] of orderIdByEntry) {
-    const invoicedRow = invoicedByEntry.get(docEntry)
-    coverage.set(docEntry, {
-      orderedValue: orderedValueByOrderId.get(orderId) ?? 0,
-      invoicedValue: invoicedRow?.value ?? 0,
-      invoices: invoicedRow?.count ?? 0,
-      invoiceDocs: invoicedRow?.docs ?? [],
+  for (const order of orders) {
+    const key = sapOrderKey(order.companyId, order.docEntry)
+    const invoice = invoiceValues.get(key)
+    const invoiceDocs = invoice ? [...invoice.docs].sort((a, b) => a - b) : []
+    coverage.set(key, {
+      orderedValue: orderedValues.get(order.id) ?? 0,
+      invoicedValue: invoice?.value ?? 0,
+      invoices: invoiceDocs.length,
+      invoiceDocs,
     })
   }
-
   return coverage
 }
-
 /**
  * Brings a set of portal requests up to date with SAP.
  *
@@ -413,20 +385,18 @@ export const reconcileRequests = async (
 ): Promise<Map<string, SapStatusView>> => {
   const views = new Map<string, SapStatusView>()
   if (!requests.length) return views
-
   try {
-    const linked = requests.filter((request) => request.sapDocEntry !== null)
-    const unlinked = requests.filter((request) => request.sapDocEntry === null)
-
+    const linked = requests.filter(
+      (request) => request.sapDocEntry !== null && request.sapCompanyId !== null,
+    )
     const documents = await prisma.salesOrder.findMany({
       where: {
         OR: [
-          ...(linked.length
-            ? [{ docEntry: { in: linked.map((request) => request.sapDocEntry as number) } }]
-            : []),
-          ...(unlinked.length
-            ? [{ portalRef: { in: unlinked.map((request) => request.id) } }]
-            : []),
+          ...linked.map((request) => ({
+            companyId: request.sapCompanyId!,
+            docEntry: request.sapDocEntry!,
+          })),
+          { portalRef: { in: requests.map((request) => request.id) } },
         ],
       },
       select: {
@@ -440,12 +410,34 @@ export const reconcileRequests = async (
         remarks: true,
       },
     })
-
-    const byDocEntry = new Map(documents.map((row) => [row.docEntry, row]))
-    const byPortalRef = new Map(
-      documents.filter((row) => row.portalRef).map((row) => [row.portalRef as string, row]),
+    const byDocEntry = new Map(
+      documents.map((row) => [
+        sapOrderKey(row.companyId, row.docEntry),
+        row,
+      ]),
     )
-
+    const byPortalRef = new Map<string, (typeof documents)[number]>()
+    const requested = new Map(requests.map((request) => [request.id, request]))
+    const registerRef = (ref: string, row: (typeof documents)[number]): boolean => {
+      const request = requested.get(ref)
+      if (!request) return false
+      if (request.sapCompanyId !== null && request.sapDocEntry !== null &&
+        (request.sapCompanyId !== row.companyId || request.sapDocEntry !== row.docEntry)) {
+        return false
+      }
+      const existing = byPortalRef.get(ref)
+      if (existing && sapOrderKey(existing.companyId, existing.docEntry) !==
+        sapOrderKey(row.companyId, row.docEntry)) {
+        // Ambiguous reference: refuse to choose either SAP document.
+        byPortalRef.delete(ref)
+        return false
+      }
+      byPortalRef.set(ref, row)
+      return true
+    }
+    for (const row of documents) {
+      if (row.portalRef) registerRef(row.portalRef, row)
+    }
     // A document that has not named its portal order can still be recognised: the
     // sync copies the reference into the SAP remarks, and the id can be read out
     // of it here.
@@ -453,24 +445,27 @@ export const reconcileRequests = async (
       if (row.portalRef) continue
       const adopted = portalRefFromRemarks(row.remarks)
       if (adopted) {
-        byPortalRef.set(adopted, { ...row, portalRef: adopted })
-        await prisma.salesOrder
-          .update({
-            where: { companyId_docEntry: { companyId: row.companyId, docEntry: row.docEntry } },
-            data: { portalRef: adopted },
-          })
-          .catch(() => undefined)
+        if (!registerRef(adopted, { ...row, portalRef: adopted })) continue
+        const updated = await prisma.salesOrder.updateMany({
+          where: { companyId: row.companyId, docEntry: row.docEntry, portalRef: null },
+          data: { portalRef: adopted },
+        }).catch(() => ({ count: 0 }))
+        if (updated.count !== 1) byPortalRef.delete(adopted)
       }
     }
-
-    const coverage = await deliveryCoverage(documents.map((row) => row.docEntry))
-
+    const coverage = await deliveryCoverage(documents.map((row) => ({
+      companyId: row.companyId,
+      docEntry: row.docEntry,
+    })))
     for (const request of requests) {
       const row =
-        (request.sapDocEntry !== null ? byDocEntry.get(request.sapDocEntry) : undefined) ??
-        byPortalRef.get(request.id)
-      if (!row) continue
-      const result = await reconcileRequest(request, row, coverage.get(row.docEntry) ?? null)
+        (request.sapCompanyId !== null && request.sapDocEntry !== null
+          ? byDocEntry.get(sapOrderKey(request.sapCompanyId, request.sapDocEntry))
+          : undefined) ?? byPortalRef.get(request.id)
+      if (!row || (row.portalRef && row.portalRef !== request.id)) continue
+      if (request.sapCompanyId !== null && request.sapDocEntry !== null &&
+        (request.sapCompanyId !== row.companyId || request.sapDocEntry !== row.docEntry)) continue
+      const result = await reconcileRequest(request, row, coverage.get(sapOrderKey(row.companyId, row.docEntry)) ?? null)
       views.set(request.id, result.view)
     }
   } catch {
@@ -479,7 +474,6 @@ export const reconcileRequests = async (
   }
   return views
 }
-
 /**
  * Links a portal order to its SAP document on request from admin.
  *
@@ -494,10 +488,12 @@ export const linkSapDocument = async (
   const candidates = await prisma.salesOrder.findMany({
     where: {
       docEntry: input.docEntry,
-      ...(input.companyId ? { companyId: input.companyId } : {}),
+      ...((input.companyId ?? request.sapCompanyId)
+        ? { companyId: (input.companyId ?? request.sapCompanyId)! }
+        : {}),
     },
     orderBy: { updatedAt: 'desc' },
-    take: 1,
+    take: 2,
     select: {
       companyId: true,
       docEntry: true,
@@ -508,8 +504,14 @@ export const linkSapDocument = async (
       portalRef: true,
     },
   })
+  if (!input.companyId && !request.sapCompanyId && candidates.length > 1) {
+    return {
+      linked: false,
+      view: null,
+      message: 'DocEntry ditemukan di beberapa company. Pilih company SAP terlebih dahulu.',
+    }
+  }
   const row = candidates[0]
-
   if (!row) {
     await prisma.portalRequest.update({
       where: { id: request.id },
@@ -525,7 +527,6 @@ export const linkSapDocument = async (
         'Dokumen belum ada di data sinkron. Status akan otomatis mengikuti begitu dokumen masuk.',
     }
   }
-
   if (row.portalRef && row.portalRef !== request.id) {
     return {
       linked: false,
@@ -533,19 +534,24 @@ export const linkSapDocument = async (
       message: `Dokumen ${row.docNum} sudah terhubung ke permintaan lain (${row.portalRef}).`,
     }
   }
-
-  // The reference is written back so the sync's next pass recognises the same
-  // document as belonging to this order. A document number is unique, so the only
-  // way this can fail is another document already claiming this portal order,
-  // which the unique index refuses and which is worth saying out loud.
+  // Claim only this company's document, and never overwrite another portal reference.
   try {
-    await prisma.salesOrder.updateMany({
-      where: { docEntry: row.docEntry, portalRef: null },
+    const claimed = await prisma.salesOrder.updateMany({
+      where: { companyId: row.companyId, docEntry: row.docEntry, portalRef: null },
       data: { portalRef: request.id },
     })
+    if (claimed.count === 0) {
+      const current = await prisma.salesOrder.findUnique({
+        where: { companyId_docEntry: { companyId: row.companyId, docEntry: row.docEntry } },
+        select: { portalRef: true },
+      })
+      if (current?.portalRef !== request.id) {
+        return { linked: false, view: null, message: 'Dokumen SAP sudah terhubung ke permintaan lain.' }
+      }
+    }
   } catch {
     const owner = await prisma.salesOrder.findFirst({
-      where: { portalRef: request.id, NOT: { docEntry: row.docEntry } },
+      where: { portalRef: request.id, NOT: { companyId: row.companyId, docEntry: row.docEntry } },
       select: { docNum: true },
     })
     if (owner) {
@@ -557,9 +563,8 @@ export const linkSapDocument = async (
     }
     throw new Error('Gagal menautkan dokumen sistem.')
   }
-
-  const coverage = await deliveryCoverage([row.docEntry])
-  const result = await reconcileRequest(request, row, coverage.get(row.docEntry) ?? null)
+  const coverage = await deliveryCoverage([{ companyId: row.companyId, docEntry: row.docEntry }])
+  const result = await reconcileRequest(request, row, coverage.get(sapOrderKey(row.companyId, row.docEntry)) ?? null)
   return {
     linked: true,
     view: result.view,

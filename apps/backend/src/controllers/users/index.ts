@@ -172,9 +172,9 @@ export const createUser = async (
   }
 
   if (role.name === 'customer') {
-    res
-      .status(400)
-      .json({ message: 'Tidak dapat membuat user dengan role customer melalui modul ini' })
+    res.status(400).json({
+      message: 'Tidak dapat membuat user dengan role customer melalui modul ini',
+    })
     return
   }
 
@@ -199,7 +199,7 @@ export const createUser = async (
     data: {
       username,
       password: hashedPassword,
-      encryptedPassword: password,
+      encryptedPassword: null,
       name,
       roleId,
       isActive,
@@ -242,6 +242,14 @@ export const updateUser = async (
     return
   }
 
+  // Customer dikelola melalui modul terpisah
+  if (existing.role.name === 'customer') {
+    res.status(403).json({
+      message: 'Akun customer tidak dapat diperbarui melalui modul ini',
+    })
+    return
+  }
+
   const slp = await resolveUpdateSlpCode(
     { id: existing.roleId, name: existing.role.name },
     roleId,
@@ -259,6 +267,10 @@ export const updateUser = async (
     ...(fields.isActive !== undefined && { isActive: fields.isActive }),
     ...(roleId !== undefined && { roleId }),
     ...(slp.slpCode !== undefined && { slpCode: slp.slpCode }),
+
+    // Password staf tidak boleh disimpan dalam bentuk asli
+    encryptedPassword: null,
+
     ...(password && {
       password: await bcrypt.hash(password, 10),
     }),

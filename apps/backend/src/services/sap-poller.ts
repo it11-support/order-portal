@@ -44,20 +44,33 @@ export const settleOpenInquiryPrices = async (): Promise<{
 }> => {
   let scanned = 0
   let opened = 0
+  let cursor: string | undefined
 
-  for (;;) {
+  for (; ;) {
     const inquiries = await prisma.portalRequest.findMany({
-      where: { kind: 'quote', status: { in: ['pending', 'processing'] } },
+      where: {
+        kind: 'quote',
+        status: { in: ['pending', 'processing'] },
+      },
       select: { id: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { id: 'asc' },
       take: BATCH_SIZE,
+      ...(cursor
+        ? { cursor: { id: cursor }, skip: 1 }
+        : {}),
     })
+
     if (!inquiries.length) break
 
     for (const inquiry of inquiries) {
       scanned += 1
-      if (await settleInquiryOrderability(inquiry.id)) opened += 1
+
+      if (await settleInquiryOrderability(inquiry.id)) {
+        opened += 1
+      }
     }
+
+    cursor = inquiries[inquiries.length - 1].id
 
     if (inquiries.length < BATCH_SIZE) break
   }
@@ -66,48 +79,55 @@ export const settleOpenInquiryPrices = async (): Promise<{
 }
 
 export const pollSapOrderStatuses = async (): Promise<PollResult> => {
-  let scanned = 0
-  let changed = 0
-
-  // Batched rather than read in one go: a company with thousands of open orders
-  // would otherwise time the request out on every tick. Each pass takes the
-  // orders reconciled least recently, so a long queue is worked through in turn
-  // instead of the same first page being scanned over and over while the rest
-  // never gets looked at.
-  for (;;) {
-    const requests = await prisma.portalRequest.findMany({
-      where: { kind: 'order', status: { in: LIVE_STATUSES } },
-      select: {
-        id: true,
-        kind: true,
-        status: true,
-        customerId: true,
-        sapCompanyId: true,
-        sapDocEntry: true,
-        sapSyncedAt: true,
-        customer: {
-          select: { CardCode: true, CardName: true, CntctPrsn: true, SlpCode: true },
+  const requests = await prisma.portalRequest.findMany({
+    where: {
+      kind: 'order',
+      status: { in: LIVE_STATUSES },
+    },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      customerId: true,
+      sapCompanyId: true,
+      sapDocEntry: true,
+      sapSyncedAt: true,
+      customer: {
+        select: {
+          CardCode: true,
+          CardName: true,
+          CntctPrsn: true,
+          SlpCode: true,
         },
       },
-      // An order that has never been reconciled has no timestamp, and those sort
-      // first so they are picked up before the ones already in the loop.
-      orderBy: [{ sapSyncedAt: { sort: 'asc', nulls: 'first' } }, { id: 'asc' }],
-      take: BATCH_SIZE,
-    })
+    },
+    orderBy: [
+      { sapSyncedAt: { sort: 'asc', nulls: 'first' } },
+      { id: 'asc' },
+    ],
+    take: 500,
+  })
 
-    if (!requests.length) break
+  const before = new Map(
+    requests.map((row) => [row.id, row.status]),
+  )
 
-    const before = new Map(requests.map((row) => [row.id, row.status]))
-    const views = await reconcileRequests(requests)
-    for (const [id, status] of views) {
-      if (before.get(id) !== status.portalStatus) changed += 1
+  const views = await reconcileRequests(requests)
+
+  let changed = 0
+
+  for (const [id, status] of views) {
+    if (before.get(id) !== status.portalStatus) {
+      changed += 1
     }
-    scanned += requests.length
-
-    if (requests.length < BATCH_SIZE) break
   }
 
-  return { scanned, changed, inquiriesScanned: 0, inquiriesOpened: 0 }
+  return {
+    scanned: requests.length,
+    changed,
+    inquiriesScanned: 0,
+    inquiriesOpened: 0,
+  }
 }
 
 /**
