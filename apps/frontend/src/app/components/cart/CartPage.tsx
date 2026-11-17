@@ -1,150 +1,33 @@
 import { ShoppingCart, CheckCircle, TrendingUp, Save, Send } from 'lucide-react'
 import { Shell } from '@layouts'
-import { useState, useEffect, useMemo } from 'react'
 import { QtyControl } from '@components'
-import { useCart, useOrders, useCategories } from '@contexts'
-import { PriceIncreasedError } from '@/app/contexts/OrderContext'
-import type { PriceChange } from '@repo/shared'
-import { toast } from 'sonner'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { formatRupiah } from '@/lib/formatCurrency'
-import { api } from '@lib'
 import CartDraftSection from './CartDraftSection'
-import { useActiveDraft } from '@hooks'
+import { useCartPage } from './hooks'
 
 const CartPage = () => {
-  const { cart, setCart, cartQty, inquiryId, setInquiryId } = useCart()
-  const { orders, refreshOrders, placeOrder, orderPlaced, setOrderPlaced, submitting, error } =
-    useOrders()
-  const { getCategoryIcon } = useCategories()
-  const { editingDraftId, setEditingDraftId } = useActiveDraft()
-  const [orderNotes, setOrderNotes] = useState('')
-  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([])
-  const [draftBusy, setDraftBusy] = useState(false)
-
-  useEffect(() => {
-    setOrderPlaced(false)
-    void refreshOrders()
-  }, [setOrderPlaced, refreshOrders])
-
-  const savedDrafts = useMemo(
-    () => orders.filter((o) => o.kind === 'order' && o.status === 'draft'),
-    [orders],
-  )
-  const activeDraftExists = savedDrafts.some((o) => o.id === editingDraftId)
-  const activeDraftId = activeDraftExists ? editingDraftId : null
-
-  const total = cart.reduce((sum, item) => {
-    const price = item.acceptedPrice ?? item.price ?? item.product.price ?? 0
-    return sum + Number(price) * (item.qty ?? 0)
-  }, 0)
-
-  const getItems = () => {
-    const unique = new Map<string, { productId: string; qty: number }>()
-    for (const line of cart) {
-      const qty = Number(line.qty ?? 0)
-      if (Number.isSafeInteger(qty) && qty > 0) {
-        unique.set(String(line.product.id), {
-          productId: String(line.product.id),
-          qty,
-        })
-      }
-    }
-    return [...unique.values()]
-  }
-
-  const openDraft = (id: string) => {
-    const draft = savedDrafts.find((o) => o.id === id)
-    if (!draft) return
-    if (activeDraftId === id) return
-
-    if (
-      cart.length > 0 &&
-      !window.confirm(
-        'Ganti isi keranjang aktif dengan draft ini? Perubahan yang belum disimpan akan hilang.',
-      )
-    ) {
-      return
-    }
-    const validItems = (draft.items ?? []).filter((item) => item.product?.id != null)
-    if (validItems.length !== (draft.items ?? []).length) {
-      toast.error('Sebagian produk draft tidak tersedia. Draft tidak dibuka.')
-      return
-    }
-    setCart(
-      validItems.map((item) => ({
-        product: {
-          ...item.product,
-          id: Number(item.product.id),
-          price: item.price ?? item.product.price ?? null,
-          currency: item.currency ?? item.product.currency ?? null,
-          priceSource: item.priceSource ?? item.product.priceSource ?? null,
-        },
-        qty: item.qty ?? 1,
-      })),
-    )
-    setEditingDraftId(id)
-    setPriceChanges([])
-    toast.success('Draft dibuka di keranjang')
-  }
-
-  const saveActiveDraft = async (send = false) => {
-    if (!activeDraftId || draftBusy || submitting) return
-    const items = getItems()
-    if (!items.length) {
-      toast.error('Draft tidak boleh kosong. Hapus draft melalui daftar draft.')
-      return
-    }
-    setDraftBusy(true)
-    try {
-      await api.patch(`/requests/${activeDraftId}`, { items })
-      if (send) {
-        await api.patch(`/requests/${activeDraftId}`, { status: 'pending' })
-      }
-      await refreshOrders()
-      setCart([])
-      setEditingDraftId(null)
-      setPriceChanges([])
-      toast.success(send ? 'Order berhasil dikirim' : 'Draft berhasil disimpan')
-    } catch (e) {
-      console.error('Gagal memproses draft', e)
-      toast.error('Gagal memproses draft. Item tetap di keranjang.')
-    } finally {
-      setDraftBusy(false)
-    }
-  }
-
-  const submit = async (priceAccepted: boolean): Promise<boolean> => {
-    try {
-      await placeOrder(cart, orderNotes, setOrderNotes, () => setCart([]), {
-        priceAccepted,
-        inquiryId,
-      })
-      setInquiryId(null)
-      setPriceChanges([])
-      return true
-    } catch (e) {
-      if (e instanceof PriceIncreasedError) setPriceChanges(e.changes)
-      return false
-    }
-  }
-
-  const handlePlaceOrder = async () => {
-    if (activeDraftId) {
-      await saveActiveDraft(true)
-      return
-    }
-    const success = await submit(false)
-    if (success) toast.success('Order berhasil dikirim')
-    else if (!priceChanges.length)
-      toast.error('Order belum terkirim. Periksa pesan atau konfirmasi harga.')
-  }
-
-  const handleAcceptNewPrice = async () => {
-    const success = await submit(true)
-    if (success) toast.success('Order dikirim dengan harga terbaru')
-    else toast.error('Order belum terkirim')
-  }
+  const {
+    cart,
+    cartQty,
+    inquiryId,
+    orderPlaced,
+    submitting,
+    error,
+    getCategoryIcon,
+    total,
+    savedDrafts,
+    activeDraftId,
+    draftBusy,
+    openDraft,
+    saveActiveDraft,
+    orderNotes,
+    setOrderNotes,
+    priceChanges,
+    setPriceChanges,
+    handlePlaceOrder,
+    handleAcceptNewPrice,
+  } = useCartPage()
 
   const cartActionBar =
     cart.length > 0 ? (

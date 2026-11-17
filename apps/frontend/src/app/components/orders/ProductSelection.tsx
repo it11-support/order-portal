@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { SalesProductRow } from './SalesProductRow'
 import { QtyControl } from '../QtyControl'
@@ -55,8 +55,6 @@ type ProductSelectionProps = {
   setActiveSuggestionIndex: Dispatch<SetStateAction<number>>
   suggestionsLoading: boolean
   productSuggestions: ProductSuggestion[]
-  productSearchRef: (element: HTMLInputElement | null) => void
-
   suggestionRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>
   openProductCart: (product: Product) => void
   searchingProducts: boolean
@@ -81,6 +79,7 @@ type ProductSelectionProps = {
 
 const ProductSelection = (props: ProductSelectionProps) => {
   const [summaryExpanded, setSummaryExpanded] = useState(false)
+  const productInputRef = useRef<HTMLInputElement>(null)
   const {
     selectedCustomer,
     activeDraftId,
@@ -96,7 +95,6 @@ const ProductSelection = (props: ProductSelectionProps) => {
     onConfirm,
     addLine,
     resetProductSearch,
-    productSearchRef,
     productSearch,
     onProductSearch,
     productSuggestionsOpen,
@@ -126,6 +124,17 @@ const ProductSelection = (props: ProductSelectionProps) => {
     historyLoading,
     pricelistLoading,
   } = props
+
+  useEffect(() => {
+    if (!selectedCustomer?.CardCode) return
+
+    const frame = requestAnimationFrame(() => {
+      productInputRef.current?.focus()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [selectedCustomer?.CardCode])
+
   return (
     <div className="space-y-3">
       {/* Active account context */}
@@ -317,7 +326,7 @@ const ProductSelection = (props: ProductSelectionProps) => {
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
             <input
-              ref={productSearchRef}
+              ref={productInputRef}
               value={productSearch}
               onChange={(e) => onProductSearch(e.target.value)}
               onFocus={() => setProductSuggestionsOpen(Boolean(productSearch.trim()))}

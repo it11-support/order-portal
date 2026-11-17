@@ -1,110 +1,84 @@
-import { User } from '@repo/shared'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { User } from '@repo/shared'
+import { useState, type ReactNode } from 'react'
+import useSWR from 'swr'
 import { api } from '@lib'
 import { AuthContext, type AuthContextType } from './authHook'
 
-type MeRequest = {
-  token: string
-  promise: Promise<User>
-}
-
-let meRequest: MeRequest | null = null
-
-const getMe = (token: string): Promise<User> => {
-  if (!meRequest || meRequest.token !== token) {
-    const promise = api.get<User>('/me').then((response) => response.data)
-
-    meRequest = { token, promise }
-    void promise.catch(() => {
-      if (meRequest?.promise === promise) meRequest = null
-    })
-  }
-
-  return meRequest.promise
+const fetchMe = async (): Promise<User> => {
+  const response = await api.get<User>('/me')
+  return response.data
 }
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
+
   const [loginError, setLoginError] = useState<AuthContextType['loginError']>({})
-  const authVersionRef = useRef(0)
-  const initPromiseRef = useRef<Promise<void> | null>(null)
 
-  const isAdmin = user?.role.name === 'admin'
-  const isSalesAdmin = user?.role.name === 'sales_admin'
-  const isCustomer = user?.role.name === 'customer'
-  const accessToken = localStorage.getItem('token')
-
-  useEffect(() => {
-    if (initPromiseRef.current) return
-
-    const token = localStorage.getItem('token')
-
-    if (!token) {
-      setLoading(false)
-      return
-    }
-
-    const init = async () => {
-      const version = authVersionRef.current
-
-      try {
-        const res = await getMe(token)
-
-        if (version === authVersionRef.current && localStorage.getItem('token') === token) {
-          setUser(res)
-        }
-      } catch {
-        if (version === authVersionRef.current) {
-          if (localStorage.getItem('token') === token) {
-            localStorage.removeItem('token')
-          }
-          setUser(null)
-          setLoading(false)
-        }
-      } finally {
-        if (version === authVersionRef.current) {
-          setLoading(false)
-        }
-      }
-    }
-
-    initPromiseRef.current = init()
-  }, [])
+  const {
+    data: user,
+    isLoading,
+    mutate,
+  } = useSWR<User>(token ? ['/me', token] : null, fetchMe, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    shouldRetryOnError: false,
+    keepPreviousData: false,
+  })
 
   const login = async (username: string, password: string) => {
     try {
       setLoginError({})
 
-      const res = await api.post('/auth/login', { username, password })
+      const response = await api.post<{
+        token: string
+        user: User
+      }>('/auth/login', {
+        username,
+        password,
+      })
 
-      authVersionRef.current += 1
-      meRequest = null
-      localStorage.setItem('token', res.data.token)
-      setUser(res.data.user)
-      setLoading(false)
-    } catch (err: any) {
-      setLoginError(err.response?.data?.errors ?? {})
+      const { token: newToken, user: loggedInUser } = response.data
+
+      localStorage.setItem('token', newToken)
+      setToken(newToken)
+
+      // Isi cache langsung dari respons login.
+      // Tidak perlu memanggil /me lagi.
+      await mutate(loggedInUser, { revalidate: false })
+    } catch (err: unknown) {
+      const error = err as {
+        response?: {
+          data?: {
+            errors?: AuthContextType['loginError']
+          }
+        }
+      }
+
+      setLoginError(error.response?.data?.errors ?? {})
       throw err
     }
   }
 
   const logout = () => {
-    authVersionRef.current += 1
-    meRequest = null
     localStorage.removeItem('token')
-    setUser(null)
-    setLoading(false)
+    setToken(null)
+    setLoginError({})
   }
+
+  const currentUser = token ? (user ?? null) : null
+
+  const isAdmin = currentUser?.role?.name === 'admin'
+  const isSalesAdmin = currentUser?.role?.name === 'sales_admin'
+  const isCustomer = currentUser?.role?.name === 'customer'
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        accessToken,
+        user: currentUser,
+        accessToken: token,
         login,
         logout,
-        loading,
+        loading: Boolean(token && isLoading),
         loginError,
         setLoginError,
         isAdmin,

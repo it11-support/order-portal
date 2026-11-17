@@ -12,16 +12,13 @@ const AdminProductListPage = () => {
     isFetching,
     isReachingEnd,
     total,
-
     filters,
     setSearch,
     setCategory,
-
     sortBy,
     sortDirection,
     setSortBy,
     setSortDirection,
-
     loadMore,
   } = useProducts()
 
