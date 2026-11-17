@@ -115,7 +115,7 @@ const AdminProductListPage = () => {
                   items-center
                   justify-between
                   gap-3
-                  min-w-[180px]
+                  min-w-45
                   rounded-xl
                   border border-gray-200
                   bg-white
@@ -153,7 +153,7 @@ const AdminProductListPage = () => {
                     z-50
                     mt-2
                     w-full
-                    min-w-[180px]
+                    min-w-45
                     overflow-hidden
                     rounded-xl
                     border border-gray-200
