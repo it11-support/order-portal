@@ -35,7 +35,7 @@ export const ProductList = ({ products, cart, onContactSales }: ProductListProps
       </div>
 
       <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {products.map((product) => {
+        {sortedProducts.map((product) => {
           const selected = selectedIds.has(String(product.id))
           return (
             <div
