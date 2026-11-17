@@ -1,11 +1,12 @@
 import type { Product } from '@repo/shared'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Minus, Plus, Trash2, MessageCircle, X, AlertTriangle, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../contexts/authHook'
 import { useCart } from '../contexts'
 import { useContactSales } from '../contexts/ContactSalesContext'
 import { formatRupiah } from '@/lib/formatCurrency'
-import { api } from '@lib'
+import useSWR from 'swr'
+import { swrFetcher } from '@lib'
 
 type QtyControlProps = {
   product: Product
@@ -19,6 +20,8 @@ type QtyControlProps = {
   onAdd?: (product: Product, qty?: number) => void
   listMode?: boolean
   disabled?: boolean
+  openRequest?: number
+  onDialogClose?: () => void
 }
 
 const QtyControlComponent = ({
@@ -33,6 +36,8 @@ const QtyControlComponent = ({
   onAdd: propsOnAdd,
   listMode = false,
   disabled,
+  openRequest = 0,
+  onDialogClose,
 }: QtyControlProps) => {
   const { user: currentUser, isCustomer } = useAuth()
   const customer = currentUser?.customer
@@ -69,6 +74,32 @@ const QtyControlComponent = ({
   const [showPriceConfirm, setShowPriceConfirm] = useState(false)
   const [showQtyDialog, setShowQtyDialog] = useState(false)
   const [dialogQty, setDialogQty] = useState('1')
+  const dialogUnitRef = useRef<HTMLSelectElement>(null)
+
+  const closeDialog = () => {
+    setShowQtyDialog(false)
+    setShowPriceConfirm(false)
+    onDialogClose?.()
+  }
+
+  const getSapPayload = (response: unknown): Record<string, unknown> => {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return {}
+    }
+
+    const result = response as Record<string, unknown>
+    const data = result.data
+
+    return data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : result
+  }
+
+  useEffect(() => {
+    if (!showQtyDialog) return
+
+    dialogUnitRef.current?.focus()
+  }, [showQtyDialog])
 
   const isActualPrice = product.priceSource === 'actual'
   const hasPrice = product.price != null && Number(product.price) > 0
@@ -81,106 +112,71 @@ const QtyControlComponent = ({
     null
   const targetCardCode = cardcode || customerCardCode
 
-  const [sapChecking, setSapChecking] = useState(false)
-  const [sapCheckError, setSapCheckError] = useState('')
-  const [stockChecked, setStockChecked] = useState(false)
-  const [priceChecked, setPriceChecked] = useState(false)
-  const [sapPrice, setSapPrice] = useState<number | null>(null)
+  const sapEnabled = showQtyDialog && Boolean(targetCardCode) && Boolean(product.itemCode)
 
-  useEffect(() => {
-    if (!showQtyDialog) return
+  const {
+    data: stockData,
+    error: stockError,
+    isLoading: stockLoading,
+  } = useSWR(
+    sapEnabled ? `/sap/stock?itemcode=${encodeURIComponent(product.itemCode)}` : null,
+    swrFetcher,
+    {
+      revalidateOnFocus: false,
+      keepPreviousData: false,
+      revalidateOnMount: true,
+    },
+  )
 
-    const controller = new AbortController()
-    let active = true
-    setSapChecking(true)
-    setSapCheckError('')
-    setStockChecked(false)
-    setPriceChecked(false)
-    setSapPrice(null)
+  const {
+    data: priceData,
+    error: priceError,
+    isLoading: priceLoading,
+  } = useSWR(
+    sapEnabled && targetCardCode
+      ? `/sap/price?cardcode=${encodeURIComponent(targetCardCode)}&itemcode=${encodeURIComponent(product.itemCode)}`
+      : null,
+    swrFetcher,
+    {
+      revalidateOnFocus: false,
+      keepPreviousData: false,
+      revalidateOnMount: true,
+    },
+  )
 
-    const check = async () => {
-      try {
-        if (!targetCardCode) {
-          setSapCheckError('CardCode customer tidak tersedia.')
-          return
-        }
+  const stockPayload = getSapPayload(stockData)
+  const pricePayload = getSapPayload(priceData)
 
+  const rawStock = stockPayload.Available ?? stockPayload.available
+  const parsedStock = rawStock == null || rawStock === '' ? NaN : Number(rawStock)
 
-        const [stockResult, priceResult] = await Promise.allSettled([
-          api.get('/sap/stock', {
-            params: { itemcode: product.itemCode },
-            signal: controller.signal,
-          }),
-          api.get('/sap/price', {
-            params: {
-              cardcode: targetCardCode,
-              itemcode: product.itemCode,
-            },
-            signal: controller.signal,
-          }),
-        ])
+  const rawPrice =
+    pricePayload.price ?? pricePayload.Price ?? pricePayload.actualPrice ?? pricePayload.ActualPrice
 
-        if (!active) return
+  const parsedPrice = rawPrice == null || rawPrice === '' ? NaN : Number(rawPrice)
 
-        // STOCK
-        if (stockResult.status === 'fulfilled') {
-          const response = stockResult.value.data as Record<string, unknown>
-          const data = response?.data
+  const stockChecked = sapEnabled && Boolean(stockData) && Number.isFinite(parsedStock)
 
-          const payload =
-            data && typeof data === 'object' && !Array.isArray(data)
-              ? (data as Record<string, unknown>)
-              : response
+  const priceChecked =
+    sapEnabled && Boolean(priceData) && Number.isFinite(parsedPrice) && parsedPrice > 0
 
-          const raw = payload.Available ?? payload.available
-          const parsed = raw == null || raw === '' ? NaN : Number(raw)
+  const sapPrice = priceChecked ? parsedPrice : null
 
-          if (Number.isFinite(parsed)) {
-            setStockChecked(true)
-          } else {
-            setStockChecked(false)
-            setSapCheckError('Respons stok SAP tidak valid.')
-          }
-        } else {
-          setStockChecked(false)
-          setSapCheckError('Gagal memeriksa stok SAP.')
-        }
+  const sapChecking = sapEnabled && (stockLoading || priceLoading)
 
-        // PRICE
-        if (priceResult.status === 'fulfilled') {
-          const response = priceResult.value.data as Record<string, unknown>
-          const data = response?.data
-
-          const payload =
-            data && typeof data === 'object' && !Array.isArray(data)
-              ? (data as Record<string, unknown>)
-              : response
-
-          const raw = payload.price ?? payload.Price ?? payload.actualPrice ?? payload.ActualPrice
-
-          const parsed = raw == null || raw === '' ? NaN : Number(raw)
-
-          if (Number.isFinite(parsed) && parsed > 0) {
-            setSapPrice(parsed)
-            setPriceChecked(true)
-          } else {
-            setSapCheckError('Respons harga SAP tidak memuat harga yang valid.')
-          }
-        } else {
-          setSapCheckError('Gagal memeriksa harga SAP.')
-        }
-      } catch {
-        if (active) setSapCheckError('Gagal memeriksa SAP.')
-      } finally {
-        if (active) setSapChecking(false)
-      }
-    }
-    void check()
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [showQtyDialog, product.itemCode, targetCardCode])
+  const sapCheckError = !showQtyDialog
+    ? ''
+    : !targetCardCode
+      ? 'CardCode customer tidak tersedia.'
+      : stockError
+        ? 'Gagal memeriksa stok SAP.'
+        : priceError
+          ? 'Gagal memeriksa harga SAP.'
+          : stockData && !stockChecked
+            ? 'Respons stok SAP tidak valid.'
+            : priceData && !priceChecked
+              ? 'Respons harga SAP tidak memuat harga yang valid.'
+              : ''
 
   useEffect(() => {
     if (!editing) {
@@ -241,7 +237,7 @@ const QtyControlComponent = ({
       setShowCreditModal(true)
       return
     }
-    if (cardcode || (isActualPrice && hasPrice)) {
+    if (isActualPrice && hasPrice) {
       setDialogQty('1')
       setSelectedUnit('salesUnit')
       setShowQtyDialog(true)
@@ -249,6 +245,14 @@ const QtyControlComponent = ({
     }
     setShowPriceConfirm(true)
   }
+
+  // Trigger dari autocomplete: gunakan alur yang sama dengan klik ikon keranjang.
+  const handledOpenRequest = React.useRef(0)
+  useEffect(() => {
+    if (openRequest <= 0 || handledOpenRequest.current === openRequest) return
+    handledOpenRequest.current = openRequest
+    handleAdd()
+  }, [openRequest])
 
   const handleAcceptPrice = () => {
     if (isOverCredit) {
@@ -281,7 +285,7 @@ const QtyControlComponent = ({
       return
 
     if (isOverCredit) {
-      setShowQtyDialog(false)
+      closeDialog()
       setShowCreditModal(true)
       return
     }
@@ -295,7 +299,7 @@ const QtyControlComponent = ({
       onQtyChange(product.id, qty + convertedQty)
     }
 
-    setShowQtyDialog(false)
+    closeDialog()
     setDialogQty('1')
     setSelectedUnit('salesUnit')
   }
@@ -315,7 +319,7 @@ const QtyControlComponent = ({
   const qtyDialog = showQtyDialog ? (
     <div
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4"
-      onClick={() => setShowQtyDialog(false)}
+      onClick={() => closeDialog()}
     >
       <div
         role="dialog"
@@ -323,12 +327,18 @@ const QtyControlComponent = ({
         aria-labelledby={`add-cart-${product.id}`}
         className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-xl"
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return
+          event.preventDefault()
+          event.stopPropagation()
+          handleConfirmQty()
+        }}
       >
         <div className="flex items-center justify-between gap-3">
           <h3 id={`add-cart-${product.id}`} className="font-bold text-foreground">
             Tambah ke Keranjang
           </h3>
-          <button type="button" aria-label="Tutup" onClick={() => setShowQtyDialog(false)}>
+          <button type="button" aria-label="Tutup" onClick={() => closeDialog()}>
             <X size={18} />
           </button>
         </div>
@@ -349,6 +359,7 @@ const QtyControlComponent = ({
             </label>
 
             <select
+              ref={dialogUnitRef}
               id={`unit-dialog-${product.id}`}
               value={selectedUnit}
               onChange={(event) => {
@@ -510,7 +521,7 @@ const QtyControlComponent = ({
         {showPriceConfirm && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            onClick={() => setShowPriceConfirm(false)}
+            onClick={closeDialog}
           >
             <div
               role="dialog"
@@ -522,7 +533,7 @@ const QtyControlComponent = ({
               <button
                 type="button"
                 aria-label="Tutup"
-                onClick={() => setShowPriceConfirm(false)}
+                onClick={closeDialog}
                 className="absolute right-3 top-3 w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
               >
                 <X size={16} />
