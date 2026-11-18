@@ -1,4 +1,4 @@
-import { Bell, X, CheckCheck, ExternalLink } from 'lucide-react'
+import { Bell, X, CheckCheck, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { Loader } from '@components'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -21,7 +21,9 @@ const NotificationPanel = () => {
   const navigate = useNavigate()
   const { notifications, unreadCount, loading, markRead, dismiss } = useNotifications()
   const { isCustomer } = useAuth()
+
   const [open, setOpen] = useState(false)
+  const [expandedIds, setExpandedIds] = useState<string[]>([])
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -30,23 +32,35 @@ const NotificationPanel = () => {
         setOpen(false)
       }
     }
+
     if (open) {
       document.addEventListener('mousedown', handleClickOutside)
     }
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [open])
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
 
   const visible = notifications.slice(0, 8)
 
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
         onClick={() => setOpen((prev) => !prev)}
+        aria-label="Notifikasi"
+        aria-expanded={open}
         className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
       >
         <Bell size={19} />
+
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -55,11 +69,14 @@ const NotificationPanel = () => {
       </button>
 
       {open && (
-        <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:translate-x-0 sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 md:w-96 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 md:w-96 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <p className="text-sm font-bold text-foreground">Notifikasi</p>
+
             <button
+              type="button"
               onClick={() => setOpen(false)}
+              aria-label="Tutup notifikasi"
               className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
             >
               <X size={14} />
@@ -75,75 +92,117 @@ const NotificationPanel = () => {
               </p>
             ) : (
               <div className="divide-y divide-border">
-                {visible.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-3 hover:bg-secondary/50 transition-colors ${
-                      !notification.read ? 'bg-accent/10 border-l-2 border-accent' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground truncate">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {fmtDate(notification.createdAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {!notification.read && (
+                {visible.map((notification) => {
+                  const id = String(notification.id)
+                  const expanded = expandedIds.includes(id)
+
+                  const hasLongMessage =
+                    notification.message.length > 140 || notification.message.includes('\n')
+
+                  const target = notificationTarget(
+                    notification.type,
+                    notification.relatedId,
+                    notification.kind,
+                    isCustomer,
+                  )
+
+                  return (
+                    <div
+                      key={notification.id}
+                      className={`p-3 hover:bg-secondary/50 transition-colors ${
+                        !notification.read ? 'bg-accent/10 border-l-2 border-accent' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground wrap-break-word">
+                            {notification.title}
+                          </p>
+
+                          <div className="mt-1">
+                            <p
+                              className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap wrap-break-word ${
+                                expanded ? '' : 'line-clamp-2'
+                              }`}
+                            >
+                              {notification.message}
+                            </p>
+
+                            {hasLongMessage && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(id)}
+                                aria-expanded={expanded}
+                                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                              >
+                                {expanded ? (
+                                  <>
+                                    Lebih sedikit
+                                    <ChevronUp size={12} />
+                                  </>
+                                ) : (
+                                  <>
+                                    Selengkapnya
+                                    <ChevronDown size={12} />
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+
+                          <p className="text-[10px] text-muted-foreground mt-2">
+                            {fmtDate(notification.createdAt)}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!notification.read && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await markRead(notification.id)
+                                toast.success('Notifikasi ditandai dibaca')
+                              }}
+                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
+                              title="Tandai dibaca"
+                              aria-label="Tandai dibaca"
+                            >
+                              <CheckCheck size={14} />
+                            </button>
+                          )}
+
                           <button
+                            type="button"
                             onClick={async () => {
-                              await markRead(notification.id)
-                              toast.success('Notifikasi ditandai dibaca')
+                              await dismiss(notification.id)
+                              toast.success('Notifikasi diabaikan')
                             }}
                             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
-                            title="Tandai dibaca"
+                            title="Abaikan"
+                            aria-label="Abaikan notifikasi"
                           >
-                            <CheckCheck size={14} />
+                            <X size={14} />
                           </button>
-                        )}
-                        <button
-                          onClick={async () => {
-                            await dismiss(notification.id)
-                            toast.success('Notifikasi diabaikan')
-                          }}
-                          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-secondary transition-colors text-muted-foreground"
-                          title="Abaikan"
-                        >
-                          <X size={14} />
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                    {(() => {
-                      const target = notificationTarget(
-                        notification.type,
-                        notification.relatedId,
-                        notification.kind,
-                        isCustomer,
-                      )
-                      if (!target) return null
-                      return (
+
+                      {target && (
                         <button
+                          type="button"
                           onClick={() => {
-                            // Opening a notification is the explicit "seen"
-                            // action; merely landing on an order page is not.
                             void markRead(notification.id)
                             navigate(target)
                             setOpen(false)
                           }}
                           className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
                         >
-                          Lihat detail <ExternalLink size={12} />
+                          Lihat detail
+                          <ExternalLink size={12} />
                         </button>
-                      )
-                    })()}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -151,6 +210,7 @@ const NotificationPanel = () => {
           {notifications.length > 0 && (
             <div className="border-t border-border p-2">
               <button
+                type="button"
                 onClick={() => {
                   navigate('/notifications')
                   setOpen(false)

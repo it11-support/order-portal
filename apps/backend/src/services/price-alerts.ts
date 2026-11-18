@@ -164,32 +164,56 @@ export const announcePriceChanges = async (
   })
 
   // 1. The customer gets a standalone notice for meaningful increases.
+
   if (increased.length && customerUser) {
-    const summary = increased
-      .map((alert) => `${alert.itemName}: ${alert.formattedOld} → ${alert.formattedNew}`)
-      .join('\n')
-    await prisma.notification.create({
-      data: {
+    const alreadyNotified = await prisma.notification.findFirst({
+      where: {
         userId: customerUser.id,
-        title:
-          increased.length === 1
-            ? `Harga ${increased[0].itemName} naik`
-            : `${increased.length} harga produk naik`,
-        message: `Harga baru berlaku dan belum dikonfirmasi:\n${summary}`,
         type: 'price_increase',
-        relatedId: increased[0].itemCode,
+        kind: null,
+        createdAt: localDayRange(),
       },
+      select: { id: true },
     })
+
+    if (!alreadyNotified) {
+      const summary = increased
+        .map(
+          (alert, index) =>
+            `${index + 1}. ${alert.itemName}\n` +
+            `   ${alert.formattedOld} → ${alert.formattedNew}`,
+        )
+        .join('\n\n')
+
+      const notification = await prisma.notification.create({
+        data: {
+          userId: customerUser.id,
+          title:
+            increased.length === 1
+              ? `Harga ${increased[0].itemName} naik`
+              : `${increased.length} produk mengalami kenaikan harga`,
+          message: `Terdapat perubahan harga pada produk berikut:\n\n${summary}`,
+          type: 'price_increase',
+          relatedId: increased[0].itemCode,
+        },
+      })
+
+      ws.emitNotificationCreated(notification)
+    }
+
     await prisma.priceChangeLog.updateMany({
       where: {
         customerId: cid,
-        itemCode: { in: increased.map((alert) => alert.itemCode) },
+        itemCode: {
+          in: increased.map((alert) => alert.itemCode),
+        },
         direction: 'up',
         notifiedAt: null,
       },
       data: { notifiedAt: new Date() },
     })
   }
+
 
   // 2. Every open inquiry that mentions a moved item gets the news in its own
   //    conversation, so the negotiation continues from the current figure.
@@ -261,6 +285,16 @@ const inquiryItems = (inquiry: InquiryRow): string[] => {
     .filter((code): code is string => typeof code === 'string')
 }
 
+const localDayRange = (now = new Date()) => {
+  const offset = 8 * 60 * 60 * 1000
+  const dayMs = 24 * 60 * 60 * 1000
+  const start = Math.floor((now.getTime() + offset) / dayMs) * dayMs - offset
+
+  return {
+    gte: new Date(start),
+    lt: new Date(start + dayMs),
+  }
+}
 /**
  * Opens an inquiry for ordering, once every line of it is priced.
  *
@@ -298,8 +332,7 @@ export const settleInquiryOrderability = async (requestId: string): Promise<bool
 
   // Ask the system what it holds now, before judging the inquiry against it. Any
   // movement is published first so the conversation never lags the price.
-  const movements = await refreshCustomerPrices(customer, itemCodes)
-  if (movements.length) await announcePriceChanges(cid, movements)
+  await refreshCustomerPrices(customer, itemCodes)
 
   if (!(await hasNegotiatedPrices(cid, itemCodes))) return false
 

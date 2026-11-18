@@ -1,4 +1,4 @@
-import { CategoryIcon } from '../../categories'
+import CategoryIcon from '../../categories/CategoryIcon'
 import { Loader } from '../../common'
 import { useAdminProductList } from '../hooks'
 import ProductStatusBadge from './ProductStatusBadge '

@@ -1,8 +1,8 @@
 import { ArrowUpDown } from 'lucide-react'
 import { useAdminProductList } from '../hooks'
 import { Loader } from '../../common'
-import { CategoryIcon } from '../../categories'
 import ProductStatusBadge from './ProductStatusBadge '
+import CategoryIcon from '../../categories/CategoryIcon'
 
 const ProductTable = () => {
   const { products, loading, handleSort } = useAdminProductList()
