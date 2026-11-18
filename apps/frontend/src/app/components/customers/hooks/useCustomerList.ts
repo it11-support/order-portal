@@ -21,7 +21,6 @@ export const useCustomerList = () => {
   const [loginError, setLoginError] = useState('')
   const pendingLogin = useRef(false)
   const [search, setSearch] = useState('')
-  const [showInactive, setShowInactive] = useState(false)
   const limit = DEFAULT_LIMIT
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -40,7 +39,6 @@ export const useCustomerList = () => {
       page: String(pageIndex + 1),
       limit: String(limit),
       search: debouncedSearch,
-      showInactive: String(showInactive),
     })
 
     return `/customers?${params.toString()}`
@@ -99,11 +97,11 @@ export const useCustomerList = () => {
             data: page.data.map((row) =>
               String(row.id) === String(customer.id)
                 ? {
-                  ...row,
-                  loginUsername: username ?? null,
-                  loginPassword: password ?? null,
-                  hasLogin: true,
-                }
+                    ...row,
+                    loginUsername: username ?? null,
+                    loginPassword: password ?? null,
+                    hasLogin: true,
+                  }
                 : row,
             ),
           })),
@@ -131,10 +129,20 @@ export const useCustomerList = () => {
     threshold: 0,
   })
   return {
-    isAdmin, busyId, loginError, search, setSearch,
-    showInactive, setShowInactive, handleClearSearch,
-    customers, isLoading, isValidating, isFetching,
-    isEmpty, isReachingEnd, observerTargetRef,
-    setLoginEnabled, handleReset,
+    isAdmin,
+    busyId,
+    loginError,
+    search,
+    setSearch,
+    handleClearSearch,
+    customers,
+    isLoading,
+    isValidating,
+    isFetching,
+    isEmpty,
+    isReachingEnd,
+    observerTargetRef,
+    setLoginEnabled,
+    handleReset,
   }
 }

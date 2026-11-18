@@ -13,12 +13,26 @@ type Args = {
   customers: Customer[]
   incomingDraft?: Order
   refreshOrders: () => Promise<unknown>
-  submitForCustomer: (payload: { kind: 'order'; customerId: string; items: { productId: string; qty: number }[]; notes: string }) => Promise<unknown>
+  submitForCustomer: (payload: {
+    kind: 'order'
+    customerId: string
+    items: { productId: string; qty: number }[]
+    notes: string
+  }) => Promise<unknown>
   form: ReturnType<typeof useOrderForm>
   cart: ReturnType<typeof useOrderLines>
   customerSearch: ReturnType<typeof useCustomerSearch>
 }
-export const useOrderDraft = ({ orders, customers, incomingDraft, refreshOrders, submitForCustomer, form, cart, customerSearch }: Args) => {
+export const useOrderDraft = ({
+  orders,
+  customers,
+  incomingDraft,
+  refreshOrders,
+  submitForCustomer,
+  form,
+  cart,
+  customerSearch,
+}: Args) => {
   const location = useLocation()
   const navigate = useNavigate()
   const resumedDraftRef = useRef<string | null>(null)
@@ -37,7 +51,7 @@ export const useOrderDraft = ({ orders, customers, incomingDraft, refreshOrders,
     setProductTab,
     setHistoryPage,
     setPricelistPage,
-    setStep
+    setStep,
   } = form
 
   const { lines, setLines } = cart
@@ -124,9 +138,9 @@ export const useOrderDraft = ({ orders, customers, incomingDraft, refreshOrders,
       }
       const response = activeDraftId
         ? await api.patch(`/requests/${activeDraftId}`, {
-          ...payload,
-          ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
-        })
+            ...payload,
+            ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
+          })
         : await api.post('/requests', { kind: 'order', customerId, ...payload, status: 'draft' })
       if (!activeDraftId) setActiveDraftId(response.data.data.id)
       await refreshOrders()

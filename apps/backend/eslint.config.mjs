@@ -12,14 +12,17 @@ export default [
     },
     ignores: ['prisma.config.ts', 'src/generated/**/*.{ts,tsx}'],
     rules: {
-      "no-unused-vars": ["error", {
-        "vars": "all",
-        "args": "after-used",
-        "ignoreRestSiblings": true,
-        "varsIgnorePattern": "^_",
-        "argsIgnorePattern": "^_"
-      }]
-    }
+      'no-unused-vars': [
+        'error',
+        {
+          vars: 'all',
+          args: 'after-used',
+          ignoreRestSiblings: true,
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
   eslintConfigPrettier,
 ]

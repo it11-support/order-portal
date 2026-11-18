@@ -1,4 +1,3 @@
-
 import { prisma } from '@/utils'
 import type { CreateRequestInput } from './validation'
 import type { Prisma, Product } from '@/generated/prisma/client'
@@ -37,17 +36,14 @@ export const createDraftRequest = async ({
   const customerForPrices = await priceableCustomer(customerId)
 
   if (customerForPrices) {
-    await refreshCustomerPrices(
-      customerForPrices,
-      [...new Set(products.map((product) => product.itemCode))],
-    )
+    await refreshCustomerPrices(customerForPrices, [
+      ...new Set(products.map((product) => product.itemCode)),
+    ])
   }
 
   const linePrices = await pricesForItems(customerId, input.items)
 
-  const productMap = new Map(
-    products.map((product) => [String(product.id), product]),
-  )
+  const productMap = new Map(products.map((product) => [String(product.id), product]))
 
   const snapshot = input.items.map((item) => {
     const product = productMap.get(item.productId)
@@ -64,11 +60,11 @@ export const createDraftRequest = async ({
       qty,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          priceSource: price.source,
-          lineTotal: round6(qty * price.price),
-        }
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: round6(qty * price.price),
+          }
         : {}),
     }
   })
@@ -81,9 +77,7 @@ export const createDraftRequest = async ({
       customerId,
       kind: 'order',
       notes: input.notes,
-      items: JSON.parse(
-        JSON.stringify(snapshot),
-      ) as Prisma.InputJsonValue,
+      items: JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue,
       status: 'draft',
       source: actor.role === 'customer' ? 'customer' : 'sales',
       createdById,

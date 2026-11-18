@@ -5,8 +5,9 @@ import CustomerCardView from './CustomerCardView'
 import CustomerListHeader from './CustomerListHeader'
 
 const CustomerList: React.FC = () => {
+  const customerList = useCustomerList()
   const { loginError, isLoading, isValidating, isEmpty, isReachingEnd, observerTargetRef } =
-    useCustomerList()
+    customerList
 
   return (
     <div className="p-4 max-w-7xl mx-auto bg-gray-50 min-h-screen">
@@ -16,13 +17,13 @@ const CustomerList: React.FC = () => {
         </p>
       )}
       {/* HEADER & SEARCH BAR */}
-      <CustomerListHeader />
+      <CustomerListHeader customerList={customerList} />
 
       {/* CARD VIEW — mobile only */}
-      <CustomerCardView />
+      <CustomerCardView customerList={customerList} />
 
       {/* TABLE VIEW — desktop only */}
-      <CustomerTable />
+      <CustomerTable customerList={customerList} />
 
       <div ref={observerTargetRef} className="w-full min-h-1">
         <InfiniteScrollWatcher

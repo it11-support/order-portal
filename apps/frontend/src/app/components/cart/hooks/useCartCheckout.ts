@@ -46,7 +46,12 @@ export const useCartCheckout = () => {
   }
 
   return {
-    ...draft, orderNotes, setOrderNotes, priceChanges, setPriceChanges,
-    handlePlaceOrder, handleAcceptNewPrice,
+    ...draft,
+    orderNotes,
+    setOrderNotes,
+    priceChanges,
+    setPriceChanges,
+    handlePlaceOrder,
+    handleAcceptNewPrice,
   }
 }

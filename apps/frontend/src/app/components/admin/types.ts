@@ -1,4 +1,4 @@
-import { OrderStatus, RequestKind, SapLink } from "@repo/shared"
+import { OrderStatus, RequestKind, SapLink } from '@repo/shared'
 
 export type AdminOrder = {
   id: string

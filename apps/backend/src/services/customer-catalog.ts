@@ -282,15 +282,15 @@ export const customerUnpurchasedProductFilter = async (
     isActive: true,
     ...(purchasedCodes.length > 0
       ? {
-        NOT: {
-          OR: purchasedCodes.map((itemCode) => ({
-            itemCode: {
-              equals: itemCode,
-              mode: 'insensitive' as const,
-            },
-          })),
-        },
-      }
+          NOT: {
+            OR: purchasedCodes.map((itemCode) => ({
+              itemCode: {
+                equals: itemCode,
+                mode: 'insensitive' as const,
+              },
+            })),
+          },
+        }
       : {}),
   }
 }

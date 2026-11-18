@@ -28,25 +28,35 @@ export const useOrderForm = () => {
   }, [debouncedProductSearch, historyPage, pricelistPage])
 
   useEffect(() => {
-    if (activeSuggestionIndex >= 0) suggestionRefs.current[activeSuggestionIndex]?.scrollIntoView({ block: 'nearest' })
+    if (activeSuggestionIndex >= 0)
+      suggestionRefs.current[activeSuggestionIndex]?.scrollIntoView({ block: 'nearest' })
   }, [activeSuggestionIndex])
 
   const onProductSearch = (value: string) => {
-    setProductSearch(value); setActiveSuggestionIndex(-1)
+    setProductSearch(value)
+    setActiveSuggestionIndex(-1)
     setProductSuggestionsOpen(Boolean(value.trim()))
-    setHistoryPage(1); setPricelistPage(1)
+    setHistoryPage(1)
+    setPricelistPage(1)
   }
   const openProductCart = (product: Product) => {
-    setCartDialogProduct(product); setCartOpenRequest(current => current + 1)
-    setProductSuggestionsOpen(false); setActiveSuggestionIndex(-1)
+    setCartDialogProduct(product)
+    setCartOpenRequest((current) => current + 1)
+    setProductSuggestionsOpen(false)
+    setActiveSuggestionIndex(-1)
   }
   const resetProductSearch = () => {
     onProductSearch('')
     requestAnimationFrame(() => productSearchRef.current?.focus())
   }
   const selectCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer); setActiveDraftId(null); setActiveDraftVersion(null)
-    setNotes(''); setProductSearch(''); setHistoryPage(1); setPricelistPage(1)
+    setSelectedCustomer(customer)
+    setActiveDraftId(null)
+    setActiveDraftVersion(null)
+    setNotes('')
+    setProductSearch('')
+    setHistoryPage(1)
+    setPricelistPage(1)
     setStep('product')
   }
   return {
@@ -85,6 +95,6 @@ export const useOrderForm = () => {
     onProductSearch,
     openProductCart,
     resetProductSearch,
-    selectCustomer
+    selectCustomer,
   }
 }

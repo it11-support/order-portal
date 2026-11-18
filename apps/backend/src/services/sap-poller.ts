@@ -46,7 +46,7 @@ export const settleOpenInquiryPrices = async (): Promise<{
   let opened = 0
   let cursor: string | undefined
 
-  for (; ;) {
+  for (;;) {
     const inquiries = await prisma.portalRequest.findMany({
       where: {
         kind: 'quote',
@@ -55,9 +55,7 @@ export const settleOpenInquiryPrices = async (): Promise<{
       select: { id: true },
       orderBy: { id: 'asc' },
       take: BATCH_SIZE,
-      ...(cursor
-        ? { cursor: { id: cursor }, skip: 1 }
-        : {}),
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     })
 
     if (!inquiries.length) break
@@ -101,16 +99,11 @@ export const pollSapOrderStatuses = async (): Promise<PollResult> => {
         },
       },
     },
-    orderBy: [
-      { sapSyncedAt: { sort: 'asc', nulls: 'first' } },
-      { id: 'asc' },
-    ],
+    orderBy: [{ sapSyncedAt: { sort: 'asc', nulls: 'first' } }, { id: 'asc' }],
     take: 500,
   })
 
-  const before = new Map(
-    requests.map((row) => [row.id, row.status]),
-  )
+  const before = new Map(requests.map((row) => [row.id, row.status]))
 
   const views = await reconcileRequests(requests)
 

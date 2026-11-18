@@ -1,4 +1,3 @@
-
 import { prisma } from '@/utils'
 import type { Prisma, Product } from '@/generated/prisma/client'
 import type { CreateRequestInput } from './validation'
@@ -11,7 +10,6 @@ import {
 import { generateRequestNumber } from '@/services/order-number'
 import { actorOf, customerSelect } from '@/services/requests/access'
 import { settleInquiryOrderability } from '@/services/price-alerts'
-
 
 type PendingContext = {
   actor: NonNullable<ReturnType<typeof actorOf>>
@@ -43,17 +41,14 @@ export const createPendingRequest = async ({
   const customerForPrices = await priceableCustomer(customerId)
 
   if (customerForPrices) {
-    await refreshCustomerPrices(
-      customerForPrices,
-      [...new Set(products.map((product) => product.itemCode))],
-    )
+    await refreshCustomerPrices(customerForPrices, [
+      ...new Set(products.map((product) => product.itemCode)),
+    ])
   }
 
   const linePrices = await pricesForItems(customerId, items)
 
-  const productMap = new Map(
-    products.map((product) => [String(product.id), product]),
-  )
+  const productMap = new Map(products.map((product) => [String(product.id), product]))
 
   const sources = new Set<string>()
 
@@ -74,24 +69,16 @@ export const createPendingRequest = async ({
       qty,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          priceSource: price.source,
-          lineTotal:
-            kind === 'order'
-              ? round6(qty * price.price)
-              : null,
-        }
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: kind === 'order' ? round6(qty * price.price) : null,
+          }
         : {}),
     }
   })
 
-  const priceBasis =
-    sources.size === 1
-      ? [...sources][0]
-      : sources.size > 1
-        ? 'mixed'
-        : null
+  const priceBasis = sources.size === 1 ? [...sources][0] : sources.size > 1 ? 'mixed' : null
 
   const id = await generateRequestNumber(kind)
 
@@ -108,9 +95,7 @@ export const createPendingRequest = async ({
         customerId,
         kind,
         notes,
-        items: JSON.parse(
-          JSON.stringify(snapshot),
-        ) as Prisma.InputJsonValue,
+        items: JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue,
         status: 'pending',
         source: actor.role === 'customer' ? 'customer' : 'sales',
         createdById,
@@ -157,7 +142,7 @@ export const createPendingRequest = async ({
   })
 
   // Only pending inquiries need automatic orderability settlement.
-  if (kind === 'quote' && await settleInquiryOrderability(row.id)) {
+  if (kind === 'quote' && (await settleInquiryOrderability(row.id))) {
     return prisma.portalRequest.findUniqueOrThrow({
       where: { id: row.id },
       include,

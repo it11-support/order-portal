@@ -27,10 +27,7 @@ const VALID_STATUSES = new Set([
 const DEFAULT_PAGE_SIZE = 20
 const MAX_PAGE_SIZE = 100
 
-const parsePositiveInt = (
-  value: unknown,
-  fallback: number,
-): number => {
+const parsePositiveInt = (value: unknown, fallback: number): number => {
   if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
     return fallback
   }
@@ -97,11 +94,7 @@ const checkRowAccess = (
   return null
 }
 
-
-export const listRequests = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const listRequests = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)
 
   if (!actor) {
@@ -135,10 +128,7 @@ export const listRequests = async (
 
     const customerId = BigInt(customerFilter)
 
-    if (
-      actor.role === 'customer' &&
-      where.customerId !== customerId
-    ) {
+    if (actor.role === 'customer' && where.customerId !== customerId) {
       return deny(res, 'Akses ditolak.')
     }
 
@@ -164,10 +154,7 @@ export const listRequests = async (
   // Pagination
   const page = parsePositiveInt(req.query.page, 1)
 
-  const limit = Math.min(
-    parsePositiveInt(req.query.limit, DEFAULT_PAGE_SIZE),
-    MAX_PAGE_SIZE,
-  )
+  const limit = Math.min(parsePositiveInt(req.query.limit, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE)
 
   const skip = (page - 1) * limit
 
@@ -179,10 +166,7 @@ export const listRequests = async (
     prisma.portalRequest.findMany({
       where,
       include: requestInclude,
-      orderBy: [
-        { createdAt: 'desc' },
-        { id: 'desc' },
-      ],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip,
       take: limit,
     }),
@@ -203,12 +187,7 @@ export const listRequests = async (
   // Tetap gunakan sinkronisasi SAP asli
   const views = await reconcileRequests(rows)
 
-  const stats = Object.fromEntries(
-    statusCounts.map((item) => [
-      item.status,
-      item._count._all,
-    ]),
-  )
+  const stats = Object.fromEntries(statusCounts.map((item) => [item.status, item._count._all]))
 
   res.setHeader('Cache-Control', 'no-store')
 
@@ -225,7 +204,6 @@ export const listRequests = async (
     stats,
   })
 }
-
 
 export const getRequest = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)

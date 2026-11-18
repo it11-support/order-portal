@@ -1,4 +1,4 @@
-import { OrderStatus, RequestKind } from "@repo/shared"
+import { OrderStatus, RequestKind } from '@repo/shared'
 
 export const COPY: Record<
   RequestKind,
@@ -26,21 +26,11 @@ export const COPY: Record<
 export const PAGE_SIZE = 20
 
 export const STATUSES: Record<RequestKind, OrderStatus[]> = {
-  order: [
-    'draft',
-    'pending',
-    'confirmed',
-    'processing',
-    'delivered',
-    'cancelled',
-  ],
-  quote: [
-    'pending',
-    'processing',
-    'ready',
-    'converted',
-    'cancelled',
-  ],
+  order: ['draft', 'pending', 'confirmed', 'processing', 'delivered', 'cancelled'],
+  quote: ['pending', 'processing', 'ready', 'converted', 'cancelled'],
 }
 
-export const LIST_PATH: Record<RequestKind, string> = { order: '/admin/orders', quote: '/admin/inquiries' }
+export const LIST_PATH: Record<RequestKind, string> = {
+  order: '/admin/orders',
+  quote: '/admin/inquiries',
+}

@@ -7,7 +7,10 @@ import type { Actor } from '@/services/requests/access'
 import { FLOW, actorRoleName } from '@/services/requests/status-flow'
 import { prepareDraftItems, prepareDraftSubmission } from '@/services/requests/draft'
 import { publishRequestStatusChange } from '@/services/requests/notifications'
-import type { PortalRequestGetPayload, PortalRequestUpdateManyMutationInput } from '@/generated/prisma/models'
+import type {
+  PortalRequestGetPayload,
+  PortalRequestUpdateManyMutationInput,
+} from '@/generated/prisma/models'
 
 type DraftItemInput = {
   productId: string
@@ -83,30 +86,18 @@ const parseItems = (value: unknown): DraftItemInput[] | null => {
 }
 
 const isInvalidText = (value: unknown): boolean =>
-  value !== undefined &&
-  (typeof value !== 'string' || value.length > 5000)
+  value !== undefined && (typeof value !== 'string' || value.length > 5000)
 
 const isInvalidDate = (value: unknown): boolean =>
   value !== undefined &&
-  (
-    typeof value !== 'string' ||
-    !value.trim() ||
-    Number.isNaN(Date.parse(value))
-  )
+  (typeof value !== 'string' || !value.trim() || Number.isNaN(Date.parse(value)))
 
 const validateBody = (value: unknown): ValidationResult => {
   if (!isRecord(value)) {
     return invalid('Body request tidak valid.')
   }
 
-  const {
-    status,
-    salesNotes,
-    items,
-    notes,
-    updatedAt,
-    priceAccepted = false,
-  } = value
+  const { status, salesNotes, items, notes, updatedAt, priceAccepted = false } = value
 
   if (isInvalidText(salesNotes)) {
     return invalid('Catatan sales tidak valid.')
@@ -128,8 +119,7 @@ const validateBody = (value: unknown): ValidationResult => {
     return invalid('Status tidak valid.')
   }
 
-  const parsedItems =
-    items === undefined ? undefined : parseItems(items)
+  const parsedItems = items === undefined ? undefined : parseItems(items)
 
   if (items !== undefined && parsedItems === null) {
     return invalid('Item pesanan tidak valid atau duplikat.')
@@ -213,13 +203,11 @@ const validateStatusTransition = (
     return null
   }
 
-  const allowedRoles: readonly string[] =
-    flow.next[effectiveStatus] ?? []
+  const allowedRoles: readonly string[] = flow.next[effectiveStatus] ?? []
 
   if (!allowedRoles.includes(actorRoleName(actor))) {
     return (
-      `Status ${row.status} tidak dapat diubah menjadi ` +
-      `${effectiveStatus} oleh peran Anda.`
+      `Status ${row.status} tidak dapat diubah menjadi ` + `${effectiveStatus} oleh peran Anda.`
     )
   }
 
@@ -265,10 +253,7 @@ const saveRequestUpdate = async (
   return result.count === 1
 }
 
-export const updateRequest = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const updateRequest = async (req: AuthenticatedRequest, res: Response) => {
   const validation = validateBody(req.body)
 
   if (!validation.ok) {
@@ -315,11 +300,7 @@ export const updateRequest = async (
 
   const effectiveStatus = body.status ?? row.status
 
-  const statusError = validateStatusTransition(
-    row,
-    effectiveStatus,
-    actor,
-  )
+  const statusError = validateStatusTransition(row, effectiveStatus, actor)
 
   if (statusError) {
     return res.status(400).json({
@@ -329,12 +310,7 @@ export const updateRequest = async (
 
   const data = buildUpdateData(body, actor, row.status)
 
-  const draftResult = await prepareDraftItems(
-    row,
-    body.items,
-    data,
-    res,
-  )
+  const draftResult = await prepareDraftItems(row, body.items, data, res)
 
   if (!draftResult.ok) return
 
@@ -351,11 +327,7 @@ export const updateRequest = async (
 
   if (!canSubmit) return
 
-  const saved = await saveRequestUpdate(
-    row,
-    body.updatedAt,
-    data,
-  )
+  const saved = await saveRequestUpdate(row, body.updatedAt, data)
 
   if (!saved) {
     return res.status(409).json({

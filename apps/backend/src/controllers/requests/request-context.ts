@@ -1,19 +1,18 @@
-
 import type { ProductWhereInput } from '@/generated/prisma/models'
 import { prisma } from '@/utils'
 
 import { AuthenticatedRequest } from '@/auth'
 import { CreateRequestInput } from './validation'
-import { customerPurchasedProductFilter, customerUnpurchasedProductFilter } from '@/services/customer-catalog'
+import {
+  customerPurchasedProductFilter,
+  customerUnpurchasedProductFilter,
+} from '@/services/customer-catalog'
 import { priceIncreaseCheck } from '@/services/pricing'
 import { actorOf } from '@/services/requests/access'
 
 type Actor = NonNullable<ReturnType<typeof actorOf>>
 
-const resolveParentInquiry = async (
-  inquiryId: string | undefined,
-  customerId: bigint,
-) => {
+const resolveParentInquiry = async (inquiryId: string | undefined, customerId: bigint) => {
   if (!inquiryId) {
     return { ok: true, data: null } as const
   }
@@ -78,8 +77,8 @@ const inquiryItemCodes = (items: unknown): string[] => {
 
 type ParentInquiry = NonNullable<
   Awaited<ReturnType<typeof resolveParentInquiry>> extends never
-  ? never
-  : Awaited<ReturnType<typeof prisma.portalRequest.findUnique>>
+    ? never
+    : Awaited<ReturnType<typeof prisma.portalRequest.findUnique>>
 >
 
 const resolveProductFilter = async (
@@ -118,18 +117,11 @@ const validateRequestPrices = async (
   customerId: bigint,
   input: CreateRequestInput,
 ) => {
-  if (
-    input.status === 'draft' ||
-    input.kind !== 'order' ||
-    actor.role !== 'customer'
-  ) {
+  if (input.status === 'draft' || input.kind !== 'order' || actor.role !== 'customer') {
     return { ok: true } as const
   }
 
-  const priceChanges = await priceIncreaseCheck(
-    customerId,
-    input.items,
-  )
+  const priceChanges = await priceIncreaseCheck(customerId, input.items)
 
   if (!priceChanges.length || input.priceAccepted) {
     return { ok: true } as const
@@ -171,21 +163,13 @@ export const prepareRequestContext = async (
   customerId: bigint,
   input: CreateRequestInput,
 ) => {
-  const inquiry = await resolveParentInquiry(
-    input.inquiryId,
-    customerId,
-  )
+  const inquiry = await resolveParentInquiry(input.inquiryId, customerId)
 
   if (!inquiry.ok) return inquiry
 
   const parentInquiry = inquiry.data
 
-  const productWhere = await resolveProductFilter(
-    req,
-    actor,
-    input.kind,
-    parentInquiry,
-  )
+  const productWhere = await resolveProductFilter(req, actor, input.kind, parentInquiry)
 
   const products = await prisma.product.findMany({
     where: {
@@ -206,20 +190,12 @@ export const prepareRequestContext = async (
       ok: false,
       status: 400,
       error: {
-        message: productValidationMessage(
-          actor,
-          input.kind,
-          Boolean(parentInquiry),
-        ),
+        message: productValidationMessage(actor, input.kind, Boolean(parentInquiry)),
       },
     } as const
   }
 
-  const pricing = await validateRequestPrices(
-    actor,
-    customerId,
-    input,
-  )
+  const pricing = await validateRequestPrices(actor, customerId, input)
 
   if (!pricing.ok) return pricing
 

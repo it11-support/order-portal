@@ -32,8 +32,7 @@ const csvValue = (value: unknown): string => {
   return text
 }
 
-const isMissing = (value: unknown): boolean =>
-  value == null || value === ''
+const isMissing = (value: unknown): boolean => value == null || value === ''
 
 const createCsv = (columns: string[], rows: unknown[][]): string => {
   return (
@@ -97,10 +96,7 @@ export const exportDtwOrder = async (order: DtwOrder): Promise<string> => {
   const orderId = safeOrderId(order.id)
   const items = parseItems(order.items)
 
-  if (
-    !(order.createdAt instanceof Date) ||
-    Number.isNaN(order.createdAt.getTime())
-  ) {
+  if (!(order.createdAt instanceof Date) || Number.isNaN(order.createdAt.getTime())) {
     throw new Error(`Invalid order date: ${orderId}`)
   }
 

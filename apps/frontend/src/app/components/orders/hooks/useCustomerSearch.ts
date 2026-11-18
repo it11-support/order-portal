@@ -5,7 +5,10 @@ import type { Customer } from '@repo/shared'
 import { useDebounce } from '@/app/hooks'
 import type { Step } from './types'
 
-type CustomerResponse = { data: Customer[]; pagination: { page: number; limit: number; total: number; totalPages: number } }
+type CustomerResponse = {
+  data: Customer[]
+  pagination: { page: number; limit: number; total: number; totalPages: number }
+}
 export const useCustomerSearch = (step: Step) => {
   const [search, setSearch] = useState('')
   const [activeCustomerIndex, setActiveCustomerIndex] = useState(-1)
@@ -27,12 +30,20 @@ export const useCustomerSearch = (step: Step) => {
       customerOptionRefs.current[activeCustomerIndex]?.scrollIntoView({ block: 'nearest' })
   }, [activeCustomerIndex, step, customerSuggestionsOpen])
 
-  const { data, isLoading: customersLoading, isValidating: customersValidating } = useSWR<CustomerResponse>(
-    step === 'customer' ? `/customers?page=1&limit=100&search=${encodeURIComponent(debouncedSearch)}&showInactive=false` : null,
-    swrFetcher, {
-    keepPreviousData: false,
-    revalidateOnFocus: false
-  })
+  const {
+    data,
+    isLoading: customersLoading,
+    isValidating: customersValidating,
+  } = useSWR<CustomerResponse>(
+    step === 'customer'
+      ? `/customers?page=1&limit=100&search=${encodeURIComponent(debouncedSearch)}&showInactive=false`
+      : null,
+    swrFetcher,
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+    },
+  )
 
   const customers = data?.data ?? []
   return {
@@ -48,7 +59,8 @@ export const useCustomerSearch = (step: Step) => {
     customers,
     customersLoading,
     customersValidating,
-    customerResultsReady: !customersLoading && !customersValidating && debouncedSearch === search.trim(),
-    customerSuggestions: customers.slice(0, 10)
+    customerResultsReady:
+      !customersLoading && !customersValidating && debouncedSearch === search.trim(),
+    customerSuggestions: customers.slice(0, 10),
   }
 }

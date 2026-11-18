@@ -9,8 +9,6 @@ import type { OrderStatus, RequestKind } from '@repo/shared'
 import { useAdminOrders } from './hooks'
 import { COPY } from './constants'
 
-
-
 const AdminOrdersPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const copy = COPY[kind]
   const {

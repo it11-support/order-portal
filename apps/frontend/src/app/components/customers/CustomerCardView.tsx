@@ -3,7 +3,12 @@ import { Switch } from '../ui'
 import CustomerCredentials from './CustomerCredentials'
 import { useCustomerList } from './hooks/useCustomerList'
 
-const CustomerCardView = () => {
+type CustomerCardViewProps = {
+  customerList: ReturnType<typeof useCustomerList>
+}
+
+const CustomerCardView = (props: CustomerCardViewProps) => {
+  const { customerList } = props
   const {
     isAdmin,
     busyId,
@@ -13,7 +18,7 @@ const CustomerCardView = () => {
     isEmpty,
     setLoginEnabled,
     handleReset,
-  } = useCustomerList()
+  } = customerList
 
   return (
     <div className="md:hidden space-y-3">

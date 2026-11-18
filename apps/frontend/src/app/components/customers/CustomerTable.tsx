@@ -1,10 +1,14 @@
 import { Switch } from '../ui'
 import CustomerCredentials from './CustomerCredentials'
-import { useCustomerList } from './hooks/useCustomerList'
+import type { useCustomerList } from './hooks/useCustomerList'
 
-const CustomerTable = () => {
+type CustomerTableProps = {
+  customerList: ReturnType<typeof useCustomerList>
+}
+
+const CustomerTable = ({ customerList }: CustomerTableProps) => {
   const { isAdmin, busyId, customers, isFetching, isEmpty, setLoginEnabled, handleReset } =
-    useCustomerList()
+    customerList
   return (
     <div className="hidden md:block">
       <div className="overflow-x-auto">

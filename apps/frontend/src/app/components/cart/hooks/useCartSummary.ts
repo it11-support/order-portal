@@ -3,10 +3,14 @@ import { useCart } from '@contexts'
 
 export const useCartSummary = () => {
   const { cart } = useCart()
-  const total = useMemo(() => cart.reduce((sum, item) => {
-    const price = item.acceptedPrice ?? item.price ?? item.product.price ?? 0
-    return sum + Number(price) * (item.qty ?? 0)
-  }, 0), [cart])
+  const total = useMemo(
+    () =>
+      cart.reduce((sum, item) => {
+        const price = item.acceptedPrice ?? item.price ?? item.product.price ?? 0
+        return sum + Number(price) * (item.qty ?? 0)
+      }, 0),
+    [cart],
+  )
 
   const getItems = () => {
     const unique = new Map<string, { productId: string; qty: number }>()

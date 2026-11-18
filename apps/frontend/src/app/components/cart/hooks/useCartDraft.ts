@@ -24,8 +24,7 @@ export const useCartDraft = (onResetPriceChanges: () => void) => {
     () => orders.filter((o) => o.kind === 'order' && o.status === 'draft'),
     [orders],
   )
-  const activeDraftId = savedDrafts.some((o) => o.id === editingDraftId)
-    ? editingDraftId : null
+  const activeDraftId = savedDrafts.some((o) => o.id === editingDraftId) ? editingDraftId : null
   const { trigger: updateDraft, isMutating } = useSWRMutation(
     activeDraftId ? `/requests/${activeDraftId}` : null,
     patchDraft,
@@ -34,24 +33,30 @@ export const useCartDraft = (onResetPriceChanges: () => void) => {
   const openDraft = (id: string) => {
     const draft = savedDrafts.find((o) => o.id === id)
     if (!draft || activeDraftId === id) return
-    if (cart.length > 0 && !window.confirm(
-      'Ganti isi keranjang aktif dengan draft ini? Perubahan yang belum disimpan akan hilang.',
-    )) return
+    if (
+      cart.length > 0 &&
+      !window.confirm(
+        'Ganti isi keranjang aktif dengan draft ini? Perubahan yang belum disimpan akan hilang.',
+      )
+    )
+      return
     const validItems = (draft.items ?? []).filter((item) => item.product?.id != null)
     if (validItems.length !== (draft.items ?? []).length) {
       toast.error('Sebagian produk draft tidak tersedia. Draft tidak dibuka.')
       return
     }
-    setCart(validItems.map((item) => ({
-      product: {
-        ...item.product,
-        id: Number(item.product.id),
-        price: item.price ?? item.product.price ?? null,
-        currency: item.currency ?? item.product.currency ?? null,
-        priceSource: item.priceSource ?? item.product.priceSource ?? null,
-      },
-      qty: item.qty ?? 1,
-    })))
+    setCart(
+      validItems.map((item) => ({
+        product: {
+          ...item.product,
+          id: Number(item.product.id),
+          price: item.price ?? item.product.price ?? null,
+          currency: item.currency ?? item.product.currency ?? null,
+          priceSource: item.priceSource ?? item.product.priceSource ?? null,
+        },
+        qty: item.qty ?? 1,
+      })),
+    )
     setEditingDraftId(id)
     onResetPriceChanges()
     toast.success('Draft dibuka di keranjang')
@@ -81,5 +86,11 @@ export const useCartDraft = (onResetPriceChanges: () => void) => {
     }
   }
 
-  return { savedDrafts, activeDraftId, draftBusy: draftBusy || isMutating, openDraft, saveActiveDraft }
+  return {
+    savedDrafts,
+    activeDraftId,
+    draftBusy: draftBusy || isMutating,
+    openDraft,
+    saveActiveDraft,
+  }
 }

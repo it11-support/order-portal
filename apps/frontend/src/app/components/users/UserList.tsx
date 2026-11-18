@@ -251,7 +251,7 @@ const UserList: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="font-medium text-sm">{user.name}</p>            
+              <p className="font-medium text-sm">{user.name}</p>
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-medium">
                 {roleLabel(Number(user.roleId ?? 0))}
               </span>
@@ -283,7 +283,7 @@ const UserList: React.FC = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
                 <th className="p-4">Username</th>
-                <th className="p-4">Nama</th>              
+                <th className="p-4">Nama</th>
                 <th className="p-4 w-40">Password</th>
                 <th className="p-4 w-32">Role</th>
                 <th className="p-4 w-24 text-center">Status</th>
@@ -299,7 +299,7 @@ const UserList: React.FC = () => {
                         {user.username}
                       </span>
                     </td>
-                    <td className="p-4 font-medium">{user.name}</td>                  
+                    <td className="p-4 font-medium">{user.name}</td>
                     <td className="p-4 w-40">
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-sm text-gray-800 break-all">
@@ -439,7 +439,7 @@ const UserList: React.FC = () => {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Nama lengkap"
                 />
-              </div>             
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm text-muted-foreground">
                   {editing ? 'Password Baru (opsional)' : 'Password'}

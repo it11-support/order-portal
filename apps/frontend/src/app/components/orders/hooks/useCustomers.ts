@@ -12,16 +12,8 @@ type CustomerResponse = {
   }
 }
 
-export const useCustomers = (
-  enabled: boolean,
-  debouncedSearch: string,
-) => {
-  const {
-    data,
-    isLoading,
-    isValidating,
-    error,
-  } = useSWR<CustomerResponse>(
+export const useCustomers = (enabled: boolean, debouncedSearch: string) => {
+  const { data, isLoading, isValidating, error } = useSWR<CustomerResponse>(
     enabled
       ? `/customers?page=1&limit=100&search=${encodeURIComponent(debouncedSearch)}&showInactive=false`
       : null,

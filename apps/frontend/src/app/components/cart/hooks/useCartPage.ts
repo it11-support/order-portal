@@ -16,7 +16,14 @@ export const useCartPage = () => {
   }, [setOrderPlaced, refreshOrders])
 
   return {
-    cart, cartQty, inquiryId, orderPlaced, submitting, error,
-    getCategoryIcon, total, ...checkout,
+    cart,
+    cartQty,
+    inquiryId,
+    orderPlaced,
+    submitting,
+    error,
+    getCategoryIcon,
+    total,
+    ...checkout,
   }
 }

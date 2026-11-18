@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -50,7 +49,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
 
       try {
         const existingOrder = orders.find((item) => item.id === orderId)
-        const result = existingOrder ?? await fetchOrder(orderId)
+        const result = existingOrder ?? (await fetchOrder(orderId))
 
         if (!cancelled) {
           setOrder(result ?? null)
@@ -96,16 +95,10 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
 
     try {
       await toast.promise(
-        addFollowUp(
-          order.id,
-          noteInput,
-          internalNote ? 'internal' : 'customer',
-        ),
+        addFollowUp(order.id, noteInput, internalNote ? 'internal' : 'customer'),
         {
           loading: 'Mengirim pesan...',
-          success: internalNote
-            ? 'Pesan internal terkirim'
-            : 'Pesan terkirim',
+          success: internalNote ? 'Pesan internal terkirim' : 'Pesan terkirim',
           error: 'Gagal mengirim pesan',
         },
       )

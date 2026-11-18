@@ -1,4 +1,3 @@
-
 import { prisma } from '@/utils'
 import { actorOf } from '@/services/requests/access'
 import { AuthenticatedRequest } from '@/auth'
@@ -7,9 +6,7 @@ import { ws } from '@/services/websocket'
 
 type Actor = NonNullable<ReturnType<typeof actorOf>>
 
-type RequestRow = Awaited<
-  ReturnType<typeof import('./create-pending').createPendingRequest>
->
+type RequestRow = Awaited<ReturnType<typeof import('./create-pending').createPendingRequest>>
 
 type SnapshotItem = {
   product?: {
@@ -26,20 +23,11 @@ export const notifyRequestCreated = async (
   actor: Actor,
   req: AuthenticatedRequest,
 ): Promise<void> => {
-  const kindLabel =
-    row.kind === 'quote'
-      ? 'Permintaan Penawaran'
-      : 'Pesanan'
+  const kindLabel = row.kind === 'quote' ? 'Permintaan Penawaran' : 'Pesanan'
 
-  const customerLabel =
-    row.customer.CardName ||
-    row.customer.CntctPrsn ||
-    'pelanggan'
+  const customerLabel = row.customer.CardName || row.customer.CntctPrsn || 'pelanggan'
 
-  const recipients =
-    actor.role === 'customer'
-      ? await staffRecipientsFor(row.customer)
-      : []
+  const recipients = actor.role === 'customer' ? await staffRecipientsFor(row.customer) : []
 
   if (actor.role !== 'customer') {
     const customerUser = await customerRecipientFor(row.customerId)
@@ -54,34 +42,28 @@ export const notifyRequestCreated = async (
     recipients.push(...admins)
   }
 
-  const createdNotifications =
-    await prisma.notification.createManyAndReturn({
-      data: recipients.map((user) => ({
-        userId: user.id,
-        title:
-          actor.role === 'customer'
-            ? `${kindLabel} baru dari ${customerLabel}`
-            : `${kindLabel} baru untuk ${customerLabel}`,
-        message:
-          actor.role === 'customer'
-            ? `${kindLabel} ${row.id} menunggu tindakan.`
-            : `${kindLabel} ${row.id} dibuat oleh sales ${req.user!.name}.`,
-        type:
-          row.kind === 'quote'
-            ? 'new_quote'
-            : 'new_order',
-        relatedId: row.id,
-        kind: row.kind,
-      })),
-    })
+  const createdNotifications = await prisma.notification.createManyAndReturn({
+    data: recipients.map((user) => ({
+      userId: user.id,
+      title:
+        actor.role === 'customer'
+          ? `${kindLabel} baru dari ${customerLabel}`
+          : `${kindLabel} baru untuk ${customerLabel}`,
+      message:
+        actor.role === 'customer'
+          ? `${kindLabel} ${row.id} menunggu tindakan.`
+          : `${kindLabel} ${row.id} dibuat oleh sales ${req.user!.name}.`,
+      type: row.kind === 'quote' ? 'new_quote' : 'new_order',
+      relatedId: row.id,
+      kind: row.kind,
+    })),
+  })
 
   for (const notification of createdNotifications) {
     ws.emitNotificationCreated(notification)
   }
 
-  const snapshot = Array.isArray(row.items)
-    ? row.items as SnapshotItem[]
-    : []
+  const snapshot = Array.isArray(row.items) ? (row.items as SnapshotItem[]) : []
 
   const itemsWithPricing = snapshot.map((item) => ({
     productId: String(item.product?.id ?? ''),
@@ -91,10 +73,7 @@ export const notifyRequestCreated = async (
     total: item.lineTotal ?? 0,
   }))
 
-  const totalAmount = itemsWithPricing.reduce(
-    (sum, item) => sum + item.total,
-    0,
-  )
+  const totalAmount = itemsWithPricing.reduce((sum, item) => sum + item.total, 0)
 
   if (row.kind !== 'order' && row.kind !== 'quote') {
     throw new Error(`Invalid request kind: ${row.kind}`)

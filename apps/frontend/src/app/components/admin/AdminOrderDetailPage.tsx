@@ -10,7 +10,6 @@ import FollowUpThread from '../orders/FollowUpThread'
 import { useAdminOrderDetail } from './hooks'
 import { LIST_PATH } from './constants'
 
-
 const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const { getCategoryIcon } = useCategories()
 

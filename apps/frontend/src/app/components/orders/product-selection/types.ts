@@ -18,13 +18,7 @@ export type ProductMeta = {
   limit: number
 }
 
-import type {
-  Dispatch,
-  MutableRefObject,
-  RefObject,
-  SetStateAction,
-} from 'react'
-
+import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from 'react'
 
 export type ProductTab = 'actual' | 'pricelist'
 

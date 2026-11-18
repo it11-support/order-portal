@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useSWRInfinite from 'swr/infinite'
@@ -7,18 +6,12 @@ import type { OrderStatus, RequestKind } from '@repo/shared'
 import { AdminOrder, OrdersResponse } from '../types'
 import { PAGE_SIZE, STATUSES } from '../constants'
 
-
-
 export const useAdminOrders = (kind: RequestKind = 'order') => {
   const navigate = useNavigate()
 
-  const [statusFilter, setStatusFilter] =
-    useState<OrderStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
 
-  const getKey = (
-    pageIndex: number,
-    previousPageData: OrdersResponse | null,
-  ) => {
+  const getKey = (pageIndex: number, previousPageData: OrdersResponse | null) => {
     if (previousPageData && !previousPageData.pagination.hasNextPage) {
       return null
     }
@@ -50,10 +43,7 @@ export const useAdminOrders = (kind: RequestKind = 'order') => {
     dedupingInterval: 5000,
   })
 
-  const rows = useMemo(
-    () => pages?.flatMap((page) => page.data) ?? [],
-    [pages],
-  )
+  const rows = useMemo(() => pages?.flatMap((page) => page.data) ?? [], [pages])
 
   const stats = pages?.[0]?.stats ?? {}
   const pagination = pages?.[pages.length - 1]?.pagination
@@ -61,10 +51,7 @@ export const useAdminOrders = (kind: RequestKind = 'order') => {
   const isEmpty = pages?.[0]?.data.length === 0
 
   const isReachingEnd =
-    Boolean(isEmpty) ||
-    (pages
-      ? !pages[pages.length - 1].pagination.hasNextPage
-      : false)
+    Boolean(isEmpty) || (pages ? !pages[pages.length - 1].pagination.hasNextPage : false)
 
   const isFetching = isLoading || isValidating
 

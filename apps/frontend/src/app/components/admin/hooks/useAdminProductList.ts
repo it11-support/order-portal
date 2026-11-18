@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useCategories, useProducts } from '@contexts'
 
@@ -23,9 +22,7 @@ export const useAdminProductList = () => {
 
   const [categoryOpen, setCategoryOpen] = useState(false)
 
-  const selectedCategory = categories.find(
-    (category) => category.name === filters.category,
-  )
+  const selectedCategory = categories.find((category) => category.name === filters.category)
 
   const selectCategory = (category: string) => {
     setCategory(category)
@@ -38,9 +35,7 @@ export const useAdminProductList = () => {
 
   const handleSort = (field: typeof sortBy) => {
     if (sortBy === field) {
-      setSortDirection(
-        sortDirection === 'asc' ? 'desc' : 'asc',
-      )
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
       return
     }
 

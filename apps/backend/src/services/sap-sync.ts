@@ -202,8 +202,11 @@ export const reconcileRequest = async (
   coverage?: DeliveryCoverage | null,
 ): Promise<{ view: SapStatusView; changed: boolean; status: string }> => {
   // Never overwrite an existing SAP link with a different document.
-  if (request.sapDocEntry !== null && request.sapCompanyId !== null &&
-    (request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId)) {
+  if (
+    request.sapDocEntry !== null &&
+    request.sapCompanyId !== null &&
+    (request.sapDocEntry !== row.docEntry || request.sapCompanyId !== row.companyId)
+  ) {
     throw new Error(`SAP link mismatch for portal request ${request.id}`)
   }
   const next = portalStatusFromSap(row, request.status, coverage)
@@ -396,11 +399,7 @@ export const reconcileRequests = async (
             },
           },
           ...requests
-            .filter(
-              (request) =>
-                request.sapCompanyId !== null &&
-                request.sapDocEntry !== null,
-            )
+            .filter((request) => request.sapCompanyId !== null && request.sapDocEntry !== null)
             .map((request) => ({
               companyId: request.sapCompanyId!,
               docEntry: request.sapDocEntry!,
@@ -420,17 +419,10 @@ export const reconcileRequests = async (
     })
 
     const byRef = new Map(
-      documents
-        .filter((doc) => doc.portalRef)
-        .map((doc) => [doc.portalRef!, doc]),
+      documents.filter((doc) => doc.portalRef).map((doc) => [doc.portalRef!, doc]),
     )
 
-    const byEntry = new Map(
-      documents.map((doc) => [
-        sapOrderKey(doc.companyId, doc.docEntry),
-        doc,
-      ]),
-    )
+    const byEntry = new Map(documents.map((doc) => [sapOrderKey(doc.companyId, doc.docEntry), doc]))
 
     const coverage = await deliveryCoverage(
       documents.map((doc) => ({
@@ -440,14 +432,10 @@ export const reconcileRequests = async (
     )
 
     for (const request of requests) {
-      const linked =
-        request.sapCompanyId !== null &&
-        request.sapDocEntry !== null
+      const linked = request.sapCompanyId !== null && request.sapDocEntry !== null
 
       const doc = linked
-        ? byEntry.get(
-          sapOrderKey(request.sapCompanyId!, request.sapDocEntry!),
-        )
+        ? byEntry.get(sapOrderKey(request.sapCompanyId!, request.sapDocEntry!))
         : byRef.get(request.id)
 
       if (!doc) continue
@@ -457,11 +445,7 @@ export const reconcileRequests = async (
 
       const key = sapOrderKey(doc.companyId, doc.docEntry)
 
-      const result = await reconcileRequest(
-        request,
-        doc,
-        coverage.get(key) ?? null,
-      )
+      const result = await reconcileRequest(request, doc, coverage.get(key) ?? null)
 
       views.set(request.id, result.view)
     }
@@ -543,7 +527,11 @@ export const linkSapDocument = async (
         select: { portalRef: true },
       })
       if (current?.portalRef !== request.id) {
-        return { linked: false, view: null, message: 'Dokumen SAP sudah terhubung ke permintaan lain.' }
+        return {
+          linked: false,
+          view: null,
+          message: 'Dokumen SAP sudah terhubung ke permintaan lain.',
+        }
       }
     }
   } catch {
@@ -561,7 +549,11 @@ export const linkSapDocument = async (
     throw new Error('Gagal menautkan dokumen sistem.')
   }
   const coverage = await deliveryCoverage([{ companyId: row.companyId, docEntry: row.docEntry }])
-  const result = await reconcileRequest(request, row, coverage.get(sapOrderKey(row.companyId, row.docEntry)) ?? null)
+  const result = await reconcileRequest(
+    request,
+    row,
+    coverage.get(sapOrderKey(row.companyId, row.docEntry)) ?? null,
+  )
   return {
     linked: true,
     view: result.view,

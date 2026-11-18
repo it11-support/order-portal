@@ -9,10 +9,7 @@ import { createDraftRequest } from './create-draft'
 import { createPendingRequest } from './create-pending'
 import { notifyRequestCreated } from './notify-request'
 
-export const createRequest = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const createRequest = async (req: AuthenticatedRequest, res: Response) => {
   const actor = actorOf(req)
 
   if (!actor) {
@@ -38,12 +35,7 @@ export const createRequest = async (
   }
 
   // Resolve inquiry, allowed products and prices.
-  const context = await prepareRequestContext(
-    req,
-    actor,
-    target.id,
-    input.data,
-  )
+  const context = await prepareRequestContext(req, actor, target.id, input.data)
 
   if (!context.ok) {
     return res.status(context.status).json({
