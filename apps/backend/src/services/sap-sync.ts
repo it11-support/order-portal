@@ -385,18 +385,26 @@ export const reconcileRequests = async (
 ): Promise<Map<string, SapStatusView>> => {
   const views = new Map<string, SapStatusView>()
   if (!requests.length) return views
+
   try {
-    const linked = requests.filter(
-      (request) => request.sapDocEntry !== null && request.sapCompanyId !== null,
-    )
     const documents = await prisma.salesOrder.findMany({
       where: {
         OR: [
-          ...linked.map((request) => ({
-            companyId: request.sapCompanyId!,
-            docEntry: request.sapDocEntry!,
-          })),
-          { portalRef: { in: requests.map((request) => request.id) } },
+          {
+            portalRef: {
+              in: requests.map((request) => request.id),
+            },
+          },
+          ...requests
+            .filter(
+              (request) =>
+                request.sapCompanyId !== null &&
+                request.sapDocEntry !== null,
+            )
+            .map((request) => ({
+              companyId: request.sapCompanyId!,
+              docEntry: request.sapDocEntry!,
+            })),
         ],
       },
       select: {
@@ -410,68 +418,57 @@ export const reconcileRequests = async (
         remarks: true,
       },
     })
-    const byDocEntry = new Map(
-      documents.map((row) => [
-        sapOrderKey(row.companyId, row.docEntry),
-        row,
+
+    const byRef = new Map(
+      documents
+        .filter((doc) => doc.portalRef)
+        .map((doc) => [doc.portalRef!, doc]),
+    )
+
+    const byEntry = new Map(
+      documents.map((doc) => [
+        sapOrderKey(doc.companyId, doc.docEntry),
+        doc,
       ]),
     )
-    const byPortalRef = new Map<string, (typeof documents)[number]>()
-    const requested = new Map(requests.map((request) => [request.id, request]))
-    const registerRef = (ref: string, row: (typeof documents)[number]): boolean => {
-      const request = requested.get(ref)
-      if (!request) return false
-      if (request.sapCompanyId !== null && request.sapDocEntry !== null &&
-        (request.sapCompanyId !== row.companyId || request.sapDocEntry !== row.docEntry)) {
-        return false
-      }
-      const existing = byPortalRef.get(ref)
-      if (existing && sapOrderKey(existing.companyId, existing.docEntry) !==
-        sapOrderKey(row.companyId, row.docEntry)) {
-        // Ambiguous reference: refuse to choose either SAP document.
-        byPortalRef.delete(ref)
-        return false
-      }
-      byPortalRef.set(ref, row)
-      return true
-    }
-    for (const row of documents) {
-      if (row.portalRef) registerRef(row.portalRef, row)
-    }
-    // A document that has not named its portal order can still be recognised: the
-    // sync copies the reference into the SAP remarks, and the id can be read out
-    // of it here.
-    for (const row of documents) {
-      if (row.portalRef) continue
-      const adopted = portalRefFromRemarks(row.remarks)
-      if (adopted) {
-        if (!registerRef(adopted, { ...row, portalRef: adopted })) continue
-        const updated = await prisma.salesOrder.updateMany({
-          where: { companyId: row.companyId, docEntry: row.docEntry, portalRef: null },
-          data: { portalRef: adopted },
-        }).catch(() => ({ count: 0 }))
-        if (updated.count !== 1) byPortalRef.delete(adopted)
-      }
-    }
-    const coverage = await deliveryCoverage(documents.map((row) => ({
-      companyId: row.companyId,
-      docEntry: row.docEntry,
-    })))
+
+    const coverage = await deliveryCoverage(
+      documents.map((doc) => ({
+        companyId: doc.companyId,
+        docEntry: doc.docEntry,
+      })),
+    )
+
     for (const request of requests) {
-      const row =
-        (request.sapCompanyId !== null && request.sapDocEntry !== null
-          ? byDocEntry.get(sapOrderKey(request.sapCompanyId, request.sapDocEntry))
-          : undefined) ?? byPortalRef.get(request.id)
-      if (!row || (row.portalRef && row.portalRef !== request.id)) continue
-      if (request.sapCompanyId !== null && request.sapDocEntry !== null &&
-        (request.sapCompanyId !== row.companyId || request.sapDocEntry !== row.docEntry)) continue
-      const result = await reconcileRequest(request, row, coverage.get(sapOrderKey(row.companyId, row.docEntry)) ?? null)
+      const linked =
+        request.sapCompanyId !== null &&
+        request.sapDocEntry !== null
+
+      const doc = linked
+        ? byEntry.get(
+          sapOrderKey(request.sapCompanyId!, request.sapDocEntry!),
+        )
+        : byRef.get(request.id)
+
+      if (!doc) continue
+
+      // Reject mismatched references.
+      if (doc.portalRef && doc.portalRef !== request.id) continue
+
+      const key = sapOrderKey(doc.companyId, doc.docEntry)
+
+      const result = await reconcileRequest(
+        request,
+        doc,
+        coverage.get(key) ?? null,
+      )
+
       views.set(request.id, result.view)
     }
-  } catch {
-    // A sync hiccup must not take the orders list down with it: the portal keeps
-    // showing its own status and the next read tries again.
+  } catch (error) {
+    console.error('[SAP] Reconciliation failed:', error)
   }
+
   return views
 }
 /**
