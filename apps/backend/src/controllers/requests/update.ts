@@ -7,7 +7,7 @@ import type { Actor } from '@/services/requests/access'
 import { FLOW, actorRoleName } from '@/services/requests/status-flow'
 import { prepareDraftItems, prepareDraftSubmission } from '@/services/requests/draft'
 import { publishRequestStatusChange } from '@/services/requests/notifications'
-import type { PortalRequestUpdateManyMutationInput } from '@/generated/prisma/models'
+import type { PortalRequestGetPayload, PortalRequestUpdateManyMutationInput } from '@/generated/prisma/models'
 
 type DraftItemInput = {
   productId: string
@@ -22,6 +22,14 @@ type UpdateRequestBody = {
   updatedAt?: string
   priceAccepted: boolean
 }
+
+type RequestWithCustomer = PortalRequestGetPayload<{
+  include: {
+    customer: {
+      select: typeof customerSelect
+    }
+  }
+}>
 
 type ValidationResult = { ok: true; body: UpdateRequestBody } | { ok: false; message: string }
 
@@ -74,25 +82,41 @@ const parseItems = (value: unknown): DraftItemInput[] | null => {
   return ids.size === items.length ? items : null
 }
 
+const isInvalidText = (value: unknown): boolean =>
+  value !== undefined &&
+  (typeof value !== 'string' || value.length > 5000)
+
+const isInvalidDate = (value: unknown): boolean =>
+  value !== undefined &&
+  (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    Number.isNaN(Date.parse(value))
+  )
+
 const validateBody = (value: unknown): ValidationResult => {
   if (!isRecord(value)) {
     return invalid('Body request tidak valid.')
   }
 
-  const { status, salesNotes, items, notes, updatedAt, priceAccepted = false } = value
+  const {
+    status,
+    salesNotes,
+    items,
+    notes,
+    updatedAt,
+    priceAccepted = false,
+  } = value
 
-  if (salesNotes !== undefined && (typeof salesNotes !== 'string' || salesNotes.length > 5000)) {
+  if (isInvalidText(salesNotes)) {
     return invalid('Catatan sales tidak valid.')
   }
 
-  if (notes !== undefined && (typeof notes !== 'string' || notes.length > 5000)) {
+  if (isInvalidText(notes)) {
     return invalid('Catatan tidak valid.')
   }
 
-  if (
-    updatedAt !== undefined &&
-    (typeof updatedAt !== 'string' || !updatedAt.trim() || Number.isNaN(Date.parse(updatedAt)))
-  ) {
+  if (isInvalidDate(updatedAt)) {
     return invalid('Versi draft tidak valid.')
   }
 
@@ -104,7 +128,8 @@ const validateBody = (value: unknown): ValidationResult => {
     return invalid('Status tidak valid.')
   }
 
-  const parsedItems = items === undefined ? undefined : parseItems(items)
+  const parsedItems =
+    items === undefined ? undefined : parseItems(items)
 
   if (items !== undefined && parsedItems === null) {
     return invalid('Item pesanan tidak valid atau duplikat.')
@@ -148,7 +173,63 @@ const canAccessRequest = (
   return null
 }
 
-export const updateRequest = async (req: AuthenticatedRequest, res: Response) => {
+const validateUpdateAccess = async (
+  req: AuthenticatedRequest,
+  actor: NonNullable<ReturnType<typeof actorOf>>,
+  row: RequestWithCustomer,
+  hasDraftChanges: boolean,
+): Promise<string | null> => {
+  if (actor.role === 'customer' && !(await currentCustomer(req))) {
+    return 'Akun pelanggan tidak aktif.'
+  }
+
+  const accessError = canAccessRequest(req, actor, row)
+
+  if (accessError) return accessError
+
+  if (hasDraftChanges && row.status !== 'draft') {
+    return 'Hanya draft yang dapat diedit.'
+  }
+
+  if (actor.role === 'customer' && row.status !== 'draft') {
+    return 'Customer hanya dapat mengubah draft.'
+  }
+
+  return null
+}
+
+const validateStatusTransition = (
+  row: { kind: string; status: string },
+  effectiveStatus: string,
+  actor: NonNullable<ReturnType<typeof actorOf>>,
+): string | null => {
+  const flow = FLOW[row.kind]?.[row.status]
+
+  if (!flow) {
+    return 'Status saat ini tidak valid.'
+  }
+
+  if (effectiveStatus === row.status) {
+    return null
+  }
+
+  const allowedRoles: readonly string[] =
+    flow.next[effectiveStatus] ?? []
+
+  if (!allowedRoles.includes(actorRoleName(actor))) {
+    return (
+      `Status ${row.status} tidak dapat diubah menjadi ` +
+      `${effectiveStatus} oleh peran Anda.`
+    )
+  }
+
+  return null
+}
+
+export const updateRequest = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const validation = validateBody(req.body)
 
   if (!validation.ok) {
@@ -156,8 +237,6 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
       message: validation.message,
     })
   }
-
-  const { status, salesNotes, items, notes, updatedAt, priceAccepted } = validation.body
 
   const actor = actorOf(req)
 
@@ -167,11 +246,8 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
     })
   }
 
-  if (actor.role === 'customer' && !(await currentCustomer(req))) {
-    return res.status(403).json({
-      message: 'Akun pelanggan tidak aktif.',
-    })
-  }
+  const { status, salesNotes, items, notes, updatedAt, priceAccepted } =
+    validation.body
 
   const row = await prisma.portalRequest.findUnique({
     where: { id: String(req.params.id) },
@@ -186,7 +262,12 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
     })
   }
 
-  const accessError = canAccessRequest(req, actor, row)
+  const accessError = await validateUpdateAccess(
+    req,
+    actor,
+    row,
+    items !== undefined || notes !== undefined,
+  )
 
   if (accessError) {
     return res.status(403).json({
@@ -194,39 +275,19 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
     })
   }
 
-  if ((items !== undefined || notes !== undefined) && row.status !== 'draft') {
-    return res.status(409).json({
-      message: 'Hanya draft yang dapat diedit.',
-    })
-  }
-
-  if (actor.role === 'customer' && row.status !== 'draft') {
-    return res.status(403).json({
-      message: 'Customer hanya dapat mengubah draft.',
-    })
-  }
-
   const effectiveStatus = status ?? row.status
-  const flow = FLOW[row.kind]?.[row.status]
-
-  if (!flow) {
-    return res.status(400).json({
-      message: 'Status saat ini tidak valid.',
-    })
-  }
-
   const sameStatus = effectiveStatus === row.status
 
-  if (!sameStatus) {
-    const allowedRoles: readonly string[] = flow.next[effectiveStatus] ?? []
+  const statusError = validateStatusTransition(
+    row,
+    effectiveStatus,
+    actor,
+  )
 
-    if (!allowedRoles.includes(actorRoleName(actor))) {
-      return res.status(400).json({
-        message:
-          `Status ${row.status} tidak dapat diubah menjadi ` +
-          `${effectiveStatus} oleh peran Anda.`,
-      })
-    }
+  if (statusError) {
+    return res.status(400).json({
+      message: statusError,
+    })
   }
 
   const data: PortalRequestUpdateManyMutationInput = {}
@@ -243,7 +304,12 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
     data.status = effectiveStatus
   }
 
-  const draftResult = await prepareDraftItems(row, items, data, res)
+  const draftResult = await prepareDraftItems(
+    row,
+    items,
+    data,
+    res,
+  )
 
   if (!draftResult.ok) return
 
@@ -264,7 +330,9 @@ export const updateRequest = async (req: AuthenticatedRequest, res: Response) =>
     where: {
       id: row.id,
       status: row.status,
-      ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
+      ...(updatedAt
+        ? { updatedAt: new Date(updatedAt) }
+        : {}),
     },
     data,
   })
