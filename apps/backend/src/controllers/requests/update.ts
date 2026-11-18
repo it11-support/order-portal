@@ -226,6 +226,45 @@ const validateStatusTransition = (
   return null
 }
 
+const buildUpdateData = (
+  body: Extract<ValidationResult, { ok: true }>['body'],
+  actor: NonNullable<ReturnType<typeof actorOf>>,
+  currentStatus: string,
+): PortalRequestUpdateManyMutationInput => {
+  const data: PortalRequestUpdateManyMutationInput = {}
+
+  if (body.salesNotes !== undefined && actor.role !== 'customer') {
+    data.salesNotes = body.salesNotes
+  }
+
+  if (body.notes !== undefined) {
+    data.notes = body.notes
+  }
+
+  if (body.status !== undefined && body.status !== currentStatus) {
+    data.status = body.status
+  }
+
+  return data
+}
+
+const saveRequestUpdate = async (
+  row: { id: string; status: string },
+  updatedAt: string | undefined,
+  data: PortalRequestUpdateManyMutationInput,
+): Promise<boolean> => {
+  const result = await prisma.portalRequest.updateMany({
+    where: {
+      id: row.id,
+      status: row.status,
+      ...(updatedAt ? { updatedAt: new Date(updatedAt) } : {}),
+    },
+    data,
+  })
+
+  return result.count === 1
+}
+
 export const updateRequest = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -246,8 +285,7 @@ export const updateRequest = async (
     })
   }
 
-  const { status, salesNotes, items, notes, updatedAt, priceAccepted } =
-    validation.body
+  const body = validation.body
 
   const row = await prisma.portalRequest.findUnique({
     where: { id: String(req.params.id) },
@@ -266,7 +304,7 @@ export const updateRequest = async (
     req,
     actor,
     row,
-    items !== undefined || notes !== undefined,
+    body.items !== undefined || body.notes !== undefined,
   )
 
   if (accessError) {
@@ -275,8 +313,7 @@ export const updateRequest = async (
     })
   }
 
-  const effectiveStatus = status ?? row.status
-  const sameStatus = effectiveStatus === row.status
+  const effectiveStatus = body.status ?? row.status
 
   const statusError = validateStatusTransition(
     row,
@@ -290,23 +327,11 @@ export const updateRequest = async (
     })
   }
 
-  const data: PortalRequestUpdateManyMutationInput = {}
-
-  if (salesNotes !== undefined && actor.role !== 'customer') {
-    data.salesNotes = salesNotes
-  }
-
-  if (notes !== undefined) {
-    data.notes = notes
-  }
-
-  if (!sameStatus) {
-    data.status = effectiveStatus
-  }
+  const data = buildUpdateData(body, actor, row.status)
 
   const draftResult = await prepareDraftItems(
     row,
-    items,
+    body.items,
     data,
     res,
   )
@@ -320,35 +345,30 @@ export const updateRequest = async (
     actor,
     effectiveStatus,
     draftResult.items,
-    priceAccepted,
+    body.priceAccepted,
     data,
   )
 
   if (!canSubmit) return
 
-  const updated = await prisma.portalRequest.updateMany({
-    where: {
-      id: row.id,
-      status: row.status,
-      ...(updatedAt
-        ? { updatedAt: new Date(updatedAt) }
-        : {}),
-    },
+  const saved = await saveRequestUpdate(
+    row,
+    body.updatedAt,
     data,
-  })
+  )
 
-  if (updated.count !== 1) {
+  if (!saved) {
     return res.status(409).json({
       message: 'Draft telah berubah. Muat ulang sebelum menyimpan.',
     })
   }
 
-  if (!sameStatus) {
+  if (effectiveStatus !== row.status) {
     await publishRequestStatusChange(
       req,
       row,
       effectiveStatus,
-      actor.role === 'customer' ? undefined : salesNotes,
+      actor.role === 'customer' ? undefined : body.salesNotes,
     )
   }
 
