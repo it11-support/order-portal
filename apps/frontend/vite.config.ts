@@ -1,8 +1,11 @@
+
 import { defineConfig } from 'vite'
-import path from 'path'
+import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
+
+const rootDir = import.meta.dirname
 
 const figmaAssetResolver = () => {
   return {
@@ -10,7 +13,7 @@ const figmaAssetResolver = () => {
     resolveId(id: string) {
       if (id.startsWith('figma:asset/')) {
         const filename = id.replace('figma:asset/', '')
-        return path.resolve(__dirname, 'src/assets', filename)
+        return path.resolve(rootDir, 'src/assets', filename)
       }
     },
   }
@@ -19,8 +22,6 @@ const figmaAssetResolver = () => {
 export default defineConfig({
   plugins: [
     figmaAssetResolver(),
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
     visualizer({
@@ -30,22 +31,22 @@ export default defineConfig({
       open: false,
     }),
   ],
+
   build: {
     sourcemap: true,
   },
+
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@hooks': path.resolve(__dirname, './src/app/hooks'),
-      '@components': path.resolve(__dirname, './src/app/components'),
-      '@contexts': path.resolve(__dirname, './src/app/contexts'),
-      '@layouts': path.resolve(__dirname, './src/app/layouts'),
-      '@pages': path.resolve(__dirname, './src/app/pages'),
+      '@': path.resolve(rootDir, './src'),
+      '@lib': path.resolve(rootDir, './src/lib'),
+      '@hooks': path.resolve(rootDir, './src/app/hooks'),
+      '@components': path.resolve(rootDir, './src/app/components'),
+      '@contexts': path.resolve(rootDir, './src/app/contexts'),
+      '@layouts': path.resolve(rootDir, './src/app/layouts'),
+      '@pages': path.resolve(rootDir, './src/app/pages'),
     },
   },
 
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
