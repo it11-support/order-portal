@@ -1,44 +1,38 @@
 import { useMemo } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
-import type { Product } from '@repo/shared'
 import { SalesProductRow } from '../SalesProductRow'
 import { Loader } from '../../common'
-import { OrderLine, ProductMeta } from './types'
+
+import type { ProductSelectionProps } from './types'
+
+type Catalog = ProductSelectionProps['catalog']
+type Order = ProductSelectionProps['order']
 
 type ProductCatalogGroupProps = {
-  title: string
-  description: string
-  products: Product[]
-  meta?: ProductMeta
-  page: number
-  setPage: Dispatch<SetStateAction<number>>
-  loading: boolean
-  error: unknown
-  lines: OrderLine[]
+  group: {
+    key: 'actual' | 'pricelist'
+    title: string
+    description: string
+    products: Catalog['historyProducts']
+    meta?: Catalog['historyMeta']
+    page: number
+    setPage: Catalog['setHistoryPage']
+    loading: boolean
+    error: unknown
+  }
+  order: Pick<Order, 'lines' | 'addLine' | 'onSetLineQty' | 'onRemoveLine'>
   cardcode?: string
-  addLine: (product: Product, qty?: number) => void
-  onSetLineQty: (productId: string, qty: number) => void
-  onRemoveLine: (productId: string) => void
   resetProductSearch: () => void
 }
 
-const ProductCatalogGroup = (props: ProductCatalogGroupProps) => {
-  const {
-    title,
-    description,
-    products,
-    meta,
-    page,
-    setPage,
-    loading,
-    error,
-    lines,
-    cardcode,
-    addLine,
-    onSetLineQty,
-    onRemoveLine,
-    resetProductSearch,
-  } = props
+const ProductCatalogGroup = ({
+  group,
+  order,
+  cardcode,
+  resetProductSearch,
+}: ProductCatalogGroupProps) => {
+  const { title, description, products, meta, page, setPage, loading, error } = group
+
+  const { lines, addLine, onSetLineQty, onRemoveLine } = order
 
   const qtyByProductId = useMemo(
     () => new Map(lines.map((line) => [String(line.product.id), line.qty])),

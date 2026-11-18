@@ -2,7 +2,7 @@ import { Search, X } from 'lucide-react'
 import { formatRupiah } from '@/lib/formatCurrency'
 import type { Product } from '@repo/shared'
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from 'react'
-import { ProductSuggestion } from './types'
+import type { ProductSuggestion } from './types'
 
 type ProductSearchProps = {
   productSearchRef: RefObject<HTMLInputElement>
@@ -72,7 +72,9 @@ export const ProductSearch = ({
               e.preventDefault()
               setProductSuggestionsOpen(true)
 
-              if (suggestionsLoading || productSuggestions.length === 0) return
+              if (!searchingProducts || suggestionsLoading || productSuggestions.length === 0) {
+                return
+              }
 
               setActiveSuggestionIndex((current) => {
                 if (e.key === 'ArrowDown') {
@@ -99,7 +101,7 @@ export const ProductSearch = ({
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={showSuggestions}
-          aria-controls="product-suggestions"
+          aria-controls={showSuggestions ? 'product-suggestions' : undefined}
           aria-activedescendant={
             showSuggestions && activeSuggestionIndex >= 0
               ? `product-option-${activeSuggestionIndex}`

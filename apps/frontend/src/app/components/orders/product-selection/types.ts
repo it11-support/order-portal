@@ -1,4 +1,4 @@
-import { Customer, Product } from "@repo/shared"
+import type { Customer, Product } from '@repo/shared'
 
 export type SelectedCustomer = Pick<Customer, 'id' | 'CardName'> & Partial<Customer>
 
