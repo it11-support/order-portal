@@ -61,7 +61,6 @@ const SalesOrderEntryPage = () => {
     activeSuggestionIndex,
     setActiveSuggestionIndex,
     suggestionRefs,
-    productSearchRef,
     cartDialogProduct,
     setCartDialogProduct,
     cartOpenRequest,
@@ -189,10 +188,6 @@ const SalesOrderEntryPage = () => {
             onConfirm={() => setStep('confirm')}
             addLine={addLine}
             resetProductSearch={resetProductSearch}
-
-            productSearchRef={(element) => {
-              productSearchRef.current = element
-            }}
             productSearch={productSearch}
             onProductSearch={onProductSearch}
             productSuggestionsOpen={productSuggestionsOpen}
