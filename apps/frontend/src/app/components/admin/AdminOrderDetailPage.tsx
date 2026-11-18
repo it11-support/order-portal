@@ -1,86 +1,41 @@
-import { useParams } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
-import { useOrders, useCategories, useAuth } from '@contexts'
+import { useCategories } from '@contexts'
 import { fmtDate } from '@lib'
 import { AlertCircle } from 'lucide-react'
-import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
+import type { RequestKind } from '@repo/shared'
 import CategoryIcon from '@/app/components/categories/CategoryIcon'
-import { useState, useEffect, useRef } from 'react'
-import { toast } from 'sonner'
 import OrderKindMismatch from '../orders/OrderKindMismatch'
 import FollowUpThread from '../orders/FollowUpThread'
+import { useAdminOrderDetail } from './hooks'
+import { LIST_PATH } from './constants'
 
-const LIST_PATH: Record<RequestKind, string> = { order: '/admin/orders', quote: '/admin/inquiries' }
-
-/**
- * Which transitions belong to whom.
- *
- * Mirrors the server flow table: admin runs orders, while the negotiation of an
- * inquiry is the customer's sales person's. An inquiry is opened for ordering by
- * the price gate once every line is priced, not by a button, and admin should not
- * have to carry the customer conversation.
- */
 
 const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
-  const { orderId } = useParams<{ orderId: string }>()
-  const { user } = useAuth()
-  const {
-    orders,
-    addFollowUp,
-    fetchFollowUps,
-    fetchOrder,
-    linkSapDocument,
-    followUps,
-    error,
-    loading,
-  } = useOrders()
   const { getCategoryIcon } = useCategories()
-  const [order, setOrder] = useState<Order | null>(null)
-  const [orderLoading, setOrderLoading] = useState(true)
-  const [noteInput, setNoteInput] = useState('')
-  const [internalNote, setInternalNote] = useState(false)
-  const [docEntry, setDocEntry] = useState('')
-  const [posting, setPosting] = useState(false)
-  // The conversation starts closed: the page is read as a document first, and a
-  // negotiation thread is only worth the space once someone asks for it.
-  const [threadOpen, setThreadOpen] = useState(false)
 
-  const notes: FollowUpNote[] = followUps[orderId ?? ''] ?? []
-  const threadRef = useRef<HTMLDivElement>(null)
-
-  /**
-   * Opening the thread from the button scrolls it into view, so the tap lands
-   * on the messages rather than leaving them collapsed above the fold.
-   */
-  const toggleThread = () => {
-    setThreadOpen((open) => !open)
-    if (threadOpen) return
-    requestAnimationFrame(() =>
-      threadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
-    )
-  }
-
-  // Notifications are not cleared on visit. Opening a page is not an explicit
-  // "I have seen this", so the badge keeps counting until the user opens the
-  // notification itself or dismisses it.
-
-  useEffect(() => {
-    const loadOrder = async () => {
-      if (!orderId) return
-      setOrderLoading(true)
-      const existingOrder = orders.find((o) => o.id === orderId)
-      if (existingOrder) {
-        setOrder(existingOrder)
-      } else {
-        const fetchedOrder = await fetchOrder(orderId)
-        setOrder(fetchedOrder)
-      }
-      await fetchFollowUps(orderId)
-      setOrderLoading(false)
-    }
-    loadOrder()
-  }, [orderId, orders, fetchOrder, fetchFollowUps])
+  const {
+    order,
+    orderLoading,
+    loading,
+    error,
+    user,
+    notes,
+    isQuote,
+    isAdmin,
+    noteInput,
+    setNoteInput,
+    internalNote,
+    setInternalNote,
+    docEntry,
+    setDocEntry,
+    posting,
+    threadOpen,
+    threadRef,
+    toggleThread,
+    handleSendNote,
+    handleSapLink,
+  } = useAdminOrderDetail(kind)
 
   if (loading || orderLoading)
     return (
@@ -102,52 +57,6 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
         admin
       />
     )
-  }
-
-  const handleSendNote = async () => {
-    if (!order || !noteInput.trim()) return
-    setPosting(true)
-    try {
-      await toast.promise(
-        addFollowUp(order.id, noteInput, internalNote ? 'internal' : 'customer'),
-        {
-          loading: 'Mengirim pesan...',
-          success: internalNote ? 'Pesan internal terkirim' : 'Pesan terkirim',
-          error: 'Gagal mengirim pesan',
-        },
-      )
-      setNoteInput('')
-      // The reply belongs with the thread it answers, so a conversation that
-      // just started is not left folded away behind its own button.
-      setThreadOpen(true)
-    } finally {
-      setPosting(false)
-    }
-  }
-
-  const isQuote = order.kind === 'quote'
-  const isAdmin = user?.role.name === 'admin'
-
-  const handleSapLink = async () => {
-    if (!order) return
-    const value = parseInt(docEntry, 10)
-    if (!Number.isInteger(value) || value < 1) {
-      toast.error('Masukkan nomor dokumen (angka).')
-      return
-    }
-    setPosting(true)
-    try {
-      await toast.promise(linkSapDocument(order.id, value), {
-        loading: 'Menyinkronkan dengan sistem...',
-        success: 'Dokumen diproses',
-        error: 'Gagal menautkan dokumen',
-      })
-      setDocEntry('')
-      const refreshed = await fetchOrder(order.id)
-      if (refreshed) setOrder(refreshed)
-    } finally {
-      setPosting(false)
-    }
   }
 
   return (
