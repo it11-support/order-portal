@@ -1,18 +1,12 @@
 import { Building2, Trash2 } from 'lucide-react'
-import { OrderLine, SelectedCustomer } from './types'
+import { ProductSelectionProps } from './types'
 
-type SelectedCustomerHeaderProps = {
-  selectedCustomer: SelectedCustomer
-  activeDraftId: string | null
-  posting: boolean
-  onBack: () => void
-  onCancelDraft: (draftId: string) => void | Promise<void>
-  onSaveDraft: () => void | Promise<void>
-  lines: OrderLine[]
+type SelectedCustomerHeaderProps = ProductSelectionProps['customer'] & {
+  hasLines: boolean
 }
 
 const SelectedCustomerHeader = (props: SelectedCustomerHeaderProps) => {
-  const { selectedCustomer, activeDraftId, posting, onBack, onCancelDraft, onSaveDraft, lines } =
+  const { selectedCustomer, activeDraftId, posting, onBack, onCancelDraft, onSaveDraft, hasLines } =
     props
   return (
     <section className="relative z-20 overflow-visible rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -57,7 +51,7 @@ const SelectedCustomerHeader = (props: SelectedCustomerHeaderProps) => {
             Hapus Draft
           </button>
         )}
-        {lines.length > 0 && (
+        {hasLines && (
           <button
             type="button"
             onClick={() => void onSaveDraft()}

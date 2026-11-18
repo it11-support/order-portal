@@ -1,16 +1,12 @@
 import { ArrowRight, ChevronDown, ClipboardList, Minus, Plus, Trash2 } from 'lucide-react'
-import { OrderLine } from './types'
+import { ProductSelectionProps } from './types'
 import { formatRupiah } from '@/lib/formatCurrency'
 import { useState } from 'react'
 
-type OrderSummaryProps = {
-  lines: OrderLine[]
-  totalQty: number
-  total: number
-  onRemoveLine: (productId: string) => void
-  onSetLineQty: (productId: string, qty: number) => void
-  onConfirm: () => void
-}
+type OrderSummaryProps = Pick<
+  ProductSelectionProps['order'],
+  'lines' | 'totalQty' | 'total' | 'onRemoveLine' | 'onSetLineQty' | 'onConfirm'
+>
 
 const OrderSummary = (props: OrderSummaryProps) => {
   const { lines, totalQty, total, onRemoveLine, onSetLineQty, onConfirm } = props

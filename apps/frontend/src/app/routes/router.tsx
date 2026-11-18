@@ -1,29 +1,31 @@
 import { createBrowserRouter } from 'react-router-dom'
 
-import {
-  Login,
-  SearchPage,
-  CatalogPage,
-  CategoryPage,
-  CartPage,
-  OrdersPage,
-  InquiriesPage,
-  OrderDetailPage,
-  AdminOrdersPage,
-  AdminInquiriesPage,
-  AdminOrderDetailPage,
-  CustomersPage,
-  AdminCategoriesPage,
-  AdminProductListPage,
-  UsersPage,
-  CustomerDashboardPage,
-  DashboardPage,
-  NotificationsPage,
-  SalesOrderEntryPage,
-} from '@pages'
-
 import { AppLayout } from '@layouts'
 import { ProtectedRoute } from '@contexts'
+import { lazy } from 'react'
+
+const Login = lazy(() => import('../pages/auth/Login'))
+const CatalogPage = lazy(() => import('../pages/CatalogPage'))
+const SearchPage = lazy(() => import('../pages/SearchPage'))
+const CustomersPage = lazy(() => import('../pages/CustomersPage'))
+const DashboardPage = lazy(() => import('../pages/DashboardPage'))
+const UsersPage = lazy(() => import('../pages/UsersPage'))
+const CustomerDashboardPage = lazy(() => import('../pages/CustomerDashboardPage'))
+const InquiriesPage = lazy(() => import('../pages/InquiriesPage'))
+
+const OrdersPage = lazy(() => import('../components/orders/OrdersPage'))
+const OrderDetailPage = lazy(() => import('../components/orders/OrderDetailPage'))
+const SalesOrderEntryPage = lazy(() => import('../components/orders/SalesOrderEntryPage'))
+
+const AdminOrdersPage = lazy(() => import('../components/admin/AdminOrdersPage'))
+const AdminInquiriesPage = lazy(() => import('../components/admin/AdminInquiriesPage'))
+const AdminOrderDetailPage = lazy(() => import('../components/admin/AdminOrderDetailPage'))
+const AdminCategoriesPage = lazy(() => import('../components/admin/AdminCategoriesPage'))
+const AdminProductListPage = lazy(() => import('../components/admin/AdminProductListPage'))
+
+const CartPage = lazy(() => import('../components/cart/CartPage'))
+const CategoryPage = lazy(() => import('../components/categories/CategoryPage'))
+const NotificationsPage = lazy(() => import('../components/notifications/NotificationsPage'))
 
 export const router = createBrowserRouter([
   {

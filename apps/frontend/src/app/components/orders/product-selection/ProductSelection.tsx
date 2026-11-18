@@ -14,9 +14,9 @@ const ProductSelection = ({
   catalog,
   cartDialog,
 }: ProductSelectionProps) => {
-  const { selectedCustomer, activeDraftId, posting, onBack, onCancelDraft, onSaveDraft } = customer
+  const { selectedCustomer } = customer
 
-  const { lines, totalQty, total, onRemoveLine, onSetLineQty, onConfirm, addLine } = order
+  const { addLine } = order
 
   const { productSearchRef, resetProductSearch, productSuggestionsOpen, searchingProducts } = search
 
@@ -48,27 +48,10 @@ const ProductSelection = ({
   return (
     <div className="space-y-3">
       {/* Active account context */}
-      <SelectedCustomerHeader
-        selectedCustomer={selectedCustomer}
-        activeDraftId={activeDraftId}
-        posting={posting}
-        lines={lines}
-        onBack={onBack}
-        onCancelDraft={onCancelDraft}
-        onSaveDraft={onSaveDraft}
-      />
+      <SelectedCustomerHeader {...customer} hasLines={order.lines.length > 0} />
 
       {/* Selected lines / order summary */}
-      {lines.length > 0 && (
-        <OrderSummary
-          lines={lines}
-          totalQty={totalQty}
-          total={total}
-          onRemoveLine={onRemoveLine}
-          onSetLineQty={onSetLineQty}
-          onConfirm={onConfirm}
-        />
-      )}
+      {order.lines.length > 0 && <OrderSummary {...order} />}
 
       {/* Product catalogue */}
       <section className="relative z-20 overflow-visible rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -98,7 +81,7 @@ const ProductSelection = ({
               cardcode={selectedCustomer?.CardCode ?? undefined}
               listMode
               qty={
-                lines.find((line) => String(line.product.id) === String(cartDialogProduct.id))
+                order.lines.find((line) => String(line.product.id) === String(cartDialogProduct.id))
                   ?.qty ?? 0
               }
               onAdd={(pricedProduct, qty) => addLine(pricedProduct, qty ?? 1)}
