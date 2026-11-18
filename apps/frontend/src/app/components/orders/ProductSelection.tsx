@@ -12,8 +12,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useState } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { SalesProductRow } from './SalesProductRow'
 import { QtyControl } from '../QtyControl'
 import { Loader } from '../common'
@@ -75,11 +75,12 @@ type ProductSelectionProps = {
   setPricelistPage: Dispatch<SetStateAction<number>>
   historyLoading: boolean
   pricelistLoading: boolean
+  productSearchRef: RefObject<HTMLInputElement>
 }
 
 const ProductSelection = (props: ProductSelectionProps) => {
   const [summaryExpanded, setSummaryExpanded] = useState(false)
-  const productInputRef = useRef<HTMLInputElement>(null)
+
   const {
     selectedCustomer,
     activeDraftId,
@@ -123,10 +124,11 @@ const ProductSelection = (props: ProductSelectionProps) => {
     setPricelistPage,
     historyLoading,
     pricelistLoading,
+    productSearchRef,
   } = props
 
   useEffect(() => {
-    const input = productInputRef.current
+    const input = productSearchRef.current
 
     if (!input || !selectedCustomer?.CardCode) return
 
@@ -324,7 +326,7 @@ const ProductSelection = (props: ProductSelectionProps) => {
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
             <input
-              ref={productInputRef}
+              ref={productSearchRef}
               value={productSearch}
               onChange={(e) => onProductSearch(e.target.value)}
               onFocus={() => setProductSuggestionsOpen(Boolean(productSearch.trim()))}

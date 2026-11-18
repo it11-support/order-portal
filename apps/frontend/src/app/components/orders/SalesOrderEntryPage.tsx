@@ -175,6 +175,7 @@ const SalesOrderEntryPage = () => {
         {step === 'product' && selectedCustomer && (
           <ProductSelection
             selectedCustomer={selectedCustomer}
+            productSearchRef={form.productSearchRef}
             activeDraftId={activeDraftId}
             onBack={() => setStep('customer')}
             onCancelDraft={cancelDraft}
