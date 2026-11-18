@@ -126,13 +126,11 @@ const ProductSelection = (props: ProductSelectionProps) => {
   } = props
 
   useEffect(() => {
-    if (!selectedCustomer?.CardCode) return
+    const input = productInputRef.current
 
-    const frame = requestAnimationFrame(() => {
-      productInputRef.current?.focus()
-    })
+    if (!input || !selectedCustomer?.CardCode) return
 
-    return () => cancelAnimationFrame(frame)
+    input.focus()
   }, [selectedCustomer?.CardCode])
 
   return (
