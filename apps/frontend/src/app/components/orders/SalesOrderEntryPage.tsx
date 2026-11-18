@@ -5,7 +5,7 @@ import { Shell } from '@layouts'
 import { useOrders } from '@contexts'
 import type { Order } from '@repo/shared'
 import ReviewOrder from './ReviewOrder'
-import ProductSelection from './ProductSelection'
+import ProductSelection from './product-selection/ProductSelection'
 import CustomerSelection from './CustomerSelection'
 import { OrderDraft } from './OrderDraft'
 import Stepper from './Stepper'
@@ -172,59 +172,64 @@ const SalesOrderEntryPage = () => {
           />
         )}
         {/* Step 2: Product - Enterprise workspace */}
+
         {step === 'product' && selectedCustomer && (
           <ProductSelection
-            selectedCustomer={selectedCustomer}
-            productSearchRef={form.productSearchRef}
-            activeDraftId={activeDraftId}
-            onBack={() => setStep('customer')}
-            onCancelDraft={cancelDraft}
-            posting={posting}
-            lines={lines}
-            onSaveDraft={saveDraft}
-            totalQty={totalQty}
-            total={total}
-            onRemoveLine={removeLine}
-            onSetLineQty={setLineQty}
-            onConfirm={() => setStep('confirm')}
-            addLine={addLine}
-            resetProductSearch={resetProductSearch}
-            productSearch={productSearch}
-            onProductSearch={onProductSearch}
-            productSuggestionsOpen={productSuggestionsOpen}
-            setProductSuggestionsOpen={setProductSuggestionsOpen}
-            activeSuggestionIndex={activeSuggestionIndex}
-            setActiveSuggestionIndex={setActiveSuggestionIndex}
-            suggestionsLoading={suggestionsLoading}
-            productSuggestions={productSuggestions}
-            suggestionRefs={suggestionRefs}
-            openProductCart={openProductCart}
-            searchingProducts={searchingProducts}
+            customer={{
+              selectedCustomer,
+              activeDraftId,
+              posting,
+              onBack: () => setStep('customer'),
+              onCancelDraft: cancelDraft,
+              onSaveDraft: saveDraft,
+            }}
+            order={{
+              lines,
+              totalQty,
+              total,
+              onRemoveLine: removeLine,
+              onSetLineQty: setLineQty,
+              onConfirm: () => setStep('confirm'),
+              addLine,
+            }}
+            search={{
+              productSearchRef: form.productSearchRef,
+              productSearch,
+              onProductSearch,
+              resetProductSearch,
+              productSuggestionsOpen,
+              setProductSuggestionsOpen,
+              activeSuggestionIndex,
+              setActiveSuggestionIndex,
+              suggestionsLoading,
+              productSuggestions,
+              suggestionRefs,
+              openProductCart,
+              searchingProducts,
+            }}
+            catalog={{
+              productTab,
+              setProductTab,
 
-            // Autocomplete cart
-            cartDialogProduct={cartDialogProduct}
-            setCartDialogProduct={setCartDialogProduct}
-            cartOpenRequest={cartOpenRequest}
+              historyProducts,
+              historyMeta,
+              historyPage,
+              setHistoryPage,
+              historyLoading,
+              historyError,
 
-            // Product tabs
-            productTab={productTab}
-            setProductTab={setProductTab}
-
-            // History Pembelian
-            historyProducts={historyProducts}
-            historyMeta={historyMeta}
-            historyPage={historyPage}
-            setHistoryPage={setHistoryPage}
-            historyLoading={historyLoading}
-            historyError={historyError}
-
-            // Produk Lainnya
-            pricelistProducts={pricelistProducts}
-            pricelistMeta={pricelistMeta}
-            pricelistPage={pricelistPage}
-            setPricelistPage={setPricelistPage}
-            pricelistLoading={pricelistLoading}
-            pricelistError={pricelistError}
+              pricelistProducts,
+              pricelistMeta,
+              pricelistPage,
+              setPricelistPage,
+              pricelistLoading,
+              pricelistError,
+            }}
+            cartDialog={{
+              cartDialogProduct,
+              setCartDialogProduct,
+              cartOpenRequest,
+            }}
           />
         )}
 
