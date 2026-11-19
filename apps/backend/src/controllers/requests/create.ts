@@ -26,7 +26,7 @@ export const createRequest = async (req: AuthenticatedRequest, res: Response) =>
     })
   }
 
-  const target = await targetCustomer(req, actor, input.data)
+  const target = await targetCustomer(req, actor, req.body)
 
   if ('error' in target) {
     return res.status(403).json({
