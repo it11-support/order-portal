@@ -1,5 +1,5 @@
 import type { Product } from '@repo/shared'
-import { QtyControl } from '../QtyControl'
+import { QtyControl } from '../qty-control/QtyControl'
 import { formatRupiah } from '@/lib/formatCurrency'
 
 type ProductRowProps = {

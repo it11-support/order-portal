@@ -95,7 +95,7 @@ export const StatusSteps = ({ status, kind }: { status: OrderStatus; kind?: Requ
               />
               {!isLast && (
                 <span
-                  className={`w-0.5 flex-1 rounded-full min-h-[1.5rem] ${
+                  className={`w-0.5 flex-1 rounded-full min-h-6 ${
                     done ? 'bg-accent/40' : 'bg-border'
                   }`}
                 />

@@ -1,6 +1,6 @@
 import { Package2 } from 'lucide-react'
 import { useEffect } from 'react'
-import { QtyControl } from '../../QtyControl'
+import { QtyControl } from '../../qty-control/QtyControl'
 import SelectedCustomerHeader from './SelectedCustomerHeader'
 import OrderSummary from './OrderSummary'
 import { ProductSearch } from './ProductSearch'
