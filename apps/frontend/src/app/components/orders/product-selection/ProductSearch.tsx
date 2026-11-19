@@ -5,7 +5,7 @@ import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from 'reac
 import type { ProductSuggestion } from './types'
 
 type ProductSearchProps = {
-  productSearchRef: RefObject<HTMLInputElement>
+  productSearchRef: RefObject<HTMLInputElement | null>
   productSearch: string
   onProductSearch: (value: string) => void
   productSuggestionsOpen: boolean

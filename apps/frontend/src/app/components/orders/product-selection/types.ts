@@ -46,7 +46,7 @@ export type ProductSelectionProps = {
     productSearch: string
     onProductSearch: (value: string) => void
     resetProductSearch: () => void
-    productSearchRef: RefObject<HTMLInputElement>
+    productSearchRef: RefObject<HTMLInputElement | null>
     productSuggestionsOpen: boolean
     setProductSuggestionsOpen: Dispatch<SetStateAction<boolean>>
     activeSuggestionIndex: number

@@ -14,11 +14,12 @@ import {
 import { useAuth, useCart } from '@contexts'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import React from 'react'
 
 type NavItem = {
   id: string
   label: string
-  icon?: JSX.Element
+  icon?: React.JSX.Element
   path?: string
   badge?: number
   children?: NavItem[]

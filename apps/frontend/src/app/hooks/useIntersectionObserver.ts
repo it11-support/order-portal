@@ -12,8 +12,8 @@ export const useIntersectionObserver = ({
   onIntersect,
   rootMargin = '0px 0px -100px 0px',
   threshold = 0,
-}: UseIntersectionObserverProps): RefObject<HTMLDivElement> => {
-  const targetRef = useRef<HTMLDivElement>(null)
+}: UseIntersectionObserverProps): RefObject<HTMLDivElement | null> => {
+  const targetRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef(false)
   const onIntersectRef = useRef(onIntersect)
 

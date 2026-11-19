@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode, RefObject } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { ConversationThread } from '@components'
 import type { FollowUpNote } from '@repo/shared'
@@ -8,7 +8,7 @@ type Props = {
   viewerId?: ComponentProps<typeof ConversationThread>['viewerId']
   open: boolean
   onToggle: () => void
-  threadRef: RefObject<HTMLDivElement>
+  threadRef: React.RefObject<HTMLDivElement | null>
   emptyLabel: string
   children: ReactNode
 }
