@@ -1,27 +1,46 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import useSWR from 'swr'
 
 import { useAuth, useOrders } from '@contexts'
+import { api } from '@lib'
 import type { Order, RequestKind } from '@repo/shared'
+
+type OrderResponse = { data: Order }
 
 export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
   const { orderId } = useParams<{ orderId: string }>()
   const { user } = useAuth()
 
   const {
-    orders,
     addFollowUp,
     fetchFollowUps,
-    fetchOrder,
     linkSapDocument,
     followUps,
     error,
     loading,
   } = useOrders()
 
-  const [order, setOrder] = useState<Order | null>(null)
-  const [orderLoading, setOrderLoading] = useState(true)
+  const {
+    data: orderResponse,
+    isLoading: orderLoading,
+    mutate: mutateOrder,
+  } = useSWR<OrderResponse>(
+    orderId ? `/requests/${encodeURIComponent(orderId)}` : null,
+    async (url: string) => (await api.get<OrderResponse>(url)).data,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 15_000,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      dedupingInterval: 2_000,
+      keepPreviousData: false,
+    },
+  )
+
+  const order = orderResponse?.data ?? null
   const [noteInput, setNoteInput] = useState('')
   const [internalNote, setInternalNote] = useState(false)
   const [docEntry, setDocEntry] = useState('')
@@ -35,49 +54,12 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
   const isAdmin = user?.role.name === 'admin'
 
   useEffect(() => {
-    let cancelled = false
+    if (!orderId) return
+    void fetchFollowUps(orderId)
+  }, [orderId, fetchFollowUps])
 
-    const loadOrder = async () => {
-      if (!orderId) {
-        setOrder(null)
-        setOrderLoading(false)
-        return
-      }
-
-      setOrderLoading(true)
-      setOrder(null)
-
-      try {
-        const existingOrder = orders.find((item) => item.id === orderId)
-        const result = existingOrder ?? (await fetchOrder(orderId))
-
-        if (!cancelled) {
-          setOrder(result ?? null)
-        }
-
-        await fetchFollowUps(orderId)
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Gagal memuat detail order:', error)
-          toast.error('Gagal memuat detail permintaan')
-        }
-      } finally {
-        if (!cancelled) {
-          setOrderLoading(false)
-        }
-      }
-    }
-
-    void loadOrder()
-
-    return () => {
-      cancelled = true
-    }
-  }, [orderId, orders, fetchOrder, fetchFollowUps])
-
-  const toggleThread = () => {
+  const toggleThread = useCallback(() => {
     setThreadOpen((open) => !open)
-
     if (threadOpen) return
 
     requestAnimationFrame(() => {
@@ -86,13 +68,12 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
         block: 'nearest',
       })
     })
-  }
+  }, [threadOpen])
 
   const handleSendNote = async () => {
     if (!order || !noteInput.trim() || posting) return
 
     setPosting(true)
-
     try {
       await toast.promise(
         addFollowUp(order.id, noteInput, internalNote ? 'internal' : 'customer'),
@@ -102,9 +83,9 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
           error: 'Gagal mengirim pesan',
         },
       )
-
       setNoteInput('')
       setThreadOpen(true)
+      await mutateOrder()
     } finally {
       setPosting(false)
     }
@@ -114,27 +95,20 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     if (!order || posting) return
 
     const value = Number(docEntry)
-
     if (!Number.isSafeInteger(value) || value < 1) {
       toast.error('Masukkan nomor dokumen (angka).')
       return
     }
 
     setPosting(true)
-
     try {
       await toast.promise(linkSapDocument(order.id, value), {
         loading: 'Menyinkronkan dengan sistem...',
         success: 'Dokumen diproses',
         error: 'Gagal menautkan dokumen',
       })
-
       setDocEntry('')
-
-      const refreshed = await fetchOrder(order.id)
-      if (refreshed) {
-        setOrder(refreshed)
-      }
+      await mutateOrder()
     } finally {
       setPosting(false)
     }
@@ -150,7 +124,6 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     isQuote,
     isAdmin,
     kind,
-
     noteInput,
     setNoteInput,
     internalNote,
@@ -160,7 +133,6 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     posting,
     threadOpen,
     threadRef,
-
     toggleThread,
     handleSendNote,
     handleSapLink,
