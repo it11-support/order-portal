@@ -1,13 +1,8 @@
 import type { User } from '@repo/shared'
 import { useState, type ReactNode } from 'react'
 import useSWR from 'swr'
-import { api } from '@lib'
+import { api, swrFetcher } from '@lib'
 import { AuthContext, type AuthContextType } from './authHook'
-
-const fetchMe = async (): Promise<User> => {
-  const response = await api.get<User>('/me')
-  return response.data
-}
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
@@ -18,7 +13,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     data: user,
     isLoading,
     mutate,
-  } = useSWR<User>(token ? ['/me', token] : null, fetchMe, {
+  } = useSWR<User>(token ? (['/me', token] as const) : null, ([url]) => swrFetcher<User>(url), {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     shouldRetryOnError: false,
