@@ -158,9 +158,12 @@ export const useQtyControl = ({
       : null,
     swrFetcher,
     {
-      revalidateOnFocus: false,
-      keepPreviousData: false,
       revalidateOnMount: true,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      revalidateIfStale: true,
+      keepPreviousData: false,
+      dedupingInterval: 0,
     },
   )
 
@@ -174,9 +177,12 @@ export const useQtyControl = ({
       : null,
     swrFetcher,
     {
-      revalidateOnFocus: false,
-      keepPreviousData: false,
       revalidateOnMount: true,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      revalidateIfStale: true,
+      keepPreviousData: false,
+      dedupingInterval: 0,
     },
   )
 

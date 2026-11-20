@@ -138,9 +138,9 @@ export const useOrderDraft = ({
       }
       const response = activeDraftId
         ? await api.patch(`/requests/${activeDraftId}`, {
-            ...payload,
-            ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
-          })
+          ...payload,
+          ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
+        })
         : await api.post('/requests', { kind: 'order', customerId, ...payload, status: 'draft' })
       if (!activeDraftId) setActiveDraftId(response.data.data.id)
       await refreshOrders()
@@ -222,6 +222,5 @@ export const useOrderDraft = ({
       setPosting(false)
     }
   }
-
   return { allDrafts, resumeDraft, saveDraft, cancelDraft, submit }
 }
