@@ -29,8 +29,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     (url: string) => swrFetcher<OrderResponse>(url),
     {
       revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      refreshInterval: 15_000,
+      revalidateOnReconnect: true,     
       refreshWhenHidden: false,
       refreshWhenOffline: false,
       dedupingInterval: 2_000,

@@ -1,7 +1,7 @@
 import { Search, X, Package, ArrowLeft, ChevronDown, Save, Send } from 'lucide-react'
 import { ProductList } from '@components'
 import { BottomNav } from '@layouts'
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   useAuth,
@@ -28,6 +28,7 @@ const SearchPage = () => {
   const [savingDraft, setSavingDraft] = useState(false)
   const { editingDraftId, setEditingDraftId } = useActiveDraft()
   const navigate = useNavigate()
+  const productSearchRef = useRef<HTMLInputElement | null>(null)
   const {
     categories,
     search,
@@ -51,6 +52,7 @@ const SearchPage = () => {
     [selectedCategory, search],
   )
   const isSearching = query.mode === 'search'
+
   const isCustomer = currentUser?.role.name === 'customer'
   const handleCategoryChange = (code: string) => {
     setSearch('')
@@ -100,19 +102,39 @@ const SearchPage = () => {
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1 flex items-center bg-input-background border border-border rounded-xl px-3 gap-2">
-          <Search size={14} className="text-muted-foreground shrink-0" />
+        <div className="flex flex-1 min-w-0 items-center gap-2 rounded-xl border border-border bg-input-background px-3 focus-within:border-accent">
+          <Search size={16} className="shrink-0 text-muted-foreground" />
           <input
+            ref={productSearchRef}
             autoFocus
-            type="text"
+            type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari semua produk ..."
-            className="flex-1 min-w-0 bg-transparent py-2.5 text-sm focus:outline-none"
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setSearch('')
+                productSearchRef.current?.blur()
+              }
+            }}
+            placeholder="Cari nama atau kode produk"
+            autoComplete="off"
+            aria-label="Cari produk"
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none [appearance:textfield] [&::-webkit-search-cancel-button]:hidden"
           />
+          {catalogIsFetching && search.trim() && (
+            <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent/25 border-t-accent" aria-label="Memperbarui hasil" />
+          )}
           {search && (
-            <button type="button" onClick={() => setSearch('')} aria-label="Hapus pencarian">
-              <X size={14} className="text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('')
+                productSearchRef.current?.focus()
+              }}
+              aria-label="Hapus pencarian"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <X size={16} />
             </button>
           )}
         </div>
@@ -126,7 +148,7 @@ const SearchPage = () => {
               {catalogError}
             </p>
           )}
-          {isCustomer && (
+          {isCustomer && !isSearching && (
             <section>
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 <button
@@ -150,7 +172,7 @@ const SearchPage = () => {
               </div>
             </section>
           )}
-          {loading ? (
+          {loading && filteredProducts.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <p className="text-sm">Mencari produk...</p>
             </div>
@@ -168,7 +190,7 @@ const SearchPage = () => {
             </div>
           ) : (
             <div className="space-y-5">
-              <p className="text-xs text-muted-foreground font-semibold">
+              <p className="text-xs text-muted-foreground font-semibold" aria-live="polite">
                 {isSearching
                   ? `${catalogTotal || filteredProducts.length} produk untuk "${query.search}"`
                   : selectedCategory

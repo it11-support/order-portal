@@ -213,8 +213,10 @@ export const useAllProducts = (page = 1, pageSize = CATALOG_PAGE_SIZE) => {
 export const useCatalogProducts = (priceSource?: 'actual' | 'pricelist') => {
   const { selectedCategory, search } = useCategories()
   const { user } = useAuth()
-  const debouncedSearch = useDebounce(search.trim(), 500)
+  const normalizedSearch = search.trim()
+  const debouncedSearch = useDebounce(normalizedSearch, 200)
   const identity = user ? `${user.role.name}:${user.id}` : ''
+  const searchPending = normalizedSearch !== debouncedSearch
 
   const query = useMemo(
     () => resolveCatalogQuery(selectedCategory, debouncedSearch),
@@ -223,54 +225,35 @@ export const useCatalogProducts = (priceSource?: 'actual' | 'pricelist') => {
 
   const baseQuery = useMemo(() => {
     const params = new URLSearchParams()
-
-    if (identity) {
-      params.set('viewer', identity)
-    }
-
-    // Search bersifat global dan mengabaikan kategori
+    if (identity) params.set('viewer', identity)
     if (query.search?.trim()) {
       params.set('search', query.search.trim())
     } else if (query.category) {
       params.set('category', query.category)
     }
-
-    // Filter sumber harga opsional
-    if (priceSource) {
-      params.set('priceSource', priceSource)
-    }
-
+    if (priceSource) params.set('priceSource', priceSource)
     return params.toString()
   }, [identity, query.search, query.category, priceSource])
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: ApiResponse<Product> | null) => {
-      if (!identity) return null
+      if (!identity || searchPending) return null
 
       if (previousPageData) {
-        if (!previousPageData.data?.length) {
-          return null
-        }
-
+        if (!previousPageData.data?.length) return null
         const totalPages = previousPageData.meta?.total_pages
-
-        if (typeof totalPages === 'number' && pageIndex + 1 > totalPages) {
-          return null
-        }
-
+        if (typeof totalPages === 'number' && pageIndex + 1 > totalPages) return null
         if (totalPages == null && previousPageData.data.length < CATALOG_PAGE_SIZE) {
           return null
         }
       }
 
       const params = new URLSearchParams(baseQuery)
-
       params.set('page', String(pageIndex + 1))
       params.set('pageSize', String(CATALOG_PAGE_SIZE))
-
       return `/categories/products?${params.toString()}`
     },
-    [baseQuery, identity],
+    [baseQuery, identity, searchPending],
   )
 
   const {
@@ -286,62 +269,59 @@ export const useCatalogProducts = (priceSource?: 'actual' | 'pricelist') => {
     revalidateOnReconnect: false,
     persistSize: false,
     keepPreviousData: false,
+    dedupingInterval: 2_000,
   })
 
-  // Gabungkan seluruh halaman dan hilangkan duplikat
   const products = useMemo(() => {
-    if (!pages?.length) return []
-
+    if (searchPending || !pages?.length) return []
     const seen = new Set<string>()
     const result: Product[] = []
-
     for (const page of pages) {
       for (const product of page.data ?? []) {
         const code = product.itemCode?.trim().toUpperCase()
-
         if (!code || seen.has(code)) continue
-
         seen.add(code)
         result.push(product)
       }
     }
-
     return result
-  }, [pages])
+  }, [pages, searchPending])
 
-  const firstPage = pages?.[0]
-  const lastPage = pages?.[pages.length - 1]
-
+  const firstPage = searchPending ? undefined : pages?.[0]
+  const lastPage = searchPending ? undefined : pages?.[pages.length - 1]
   const total = firstPage?.meta?.total_records ?? 0
-
   const totalPages = firstPage?.meta?.total_pages ?? 0
-
-  const isLoadingMore = isValidating && !!pages && size > pages.length
-
+  const isLoadingMore = !searchPending && isValidating && !!pages && size > pages.length
   const isReachingEnd = Boolean(
     lastPage &&
     (lastPage.data.length === 0 ||
-      (totalPages > 0 && pages.length >= totalPages) ||
+      (totalPages > 0 && pages!.length >= totalPages) ||
       (totalPages === 0 && lastPage.data.length < CATALOG_PAGE_SIZE)),
   )
 
   const loadMore = useCallback(() => {
-    if (!identity || !pages?.length || isLoading || isValidating || isReachingEnd) {
+    if (
+      !identity ||
+      searchPending ||
+      !pages?.length ||
+      isLoading ||
+      isValidating ||
+      isReachingEnd
+    ) {
       return
     }
-
     void setSize((currentSize) => currentSize + 1)
-  }, [identity, pages, isLoading, isValidating, isReachingEnd, setSize])
+  }, [identity, searchPending, pages, isLoading, isValidating, isReachingEnd, setSize])
 
   return {
     products,
-    loading: !!identity && !pages && isLoading,
-    isFetching: isValidating || isLoadingMore,
+    loading: Boolean(identity) && (searchPending || (!pages && isLoading)),
+    isFetching: searchPending || isValidating || isLoadingMore,
     isReachingEnd,
     loadMore,
     total,
     totalPages,
-    error: error?.message ?? '',
+    error: searchPending ? '' : (error?.message ?? ''),
   }
 }
 

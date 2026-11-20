@@ -83,7 +83,6 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      refreshInterval: 15_000,
       refreshWhenHidden: false,
       refreshWhenOffline: false,
       dedupingInterval: 2_000,

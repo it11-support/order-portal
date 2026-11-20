@@ -130,7 +130,17 @@ export const ProductSearch = ({
             className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
           >
             {suggestionsLoading ? (
-              <div className="px-4 py-3 text-xs text-slate-500">Mencari produk...</div>
+              <div
+                role="status"
+                aria-label="Mencari produk"
+                className="flex items-center justify-center px-4 py-5"
+              >
+                <span
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-accent/25 border-t-accent"
+                />
+                <span className="sr-only">Mencari produk...</span>
+              </div>
             ) : historyError || pricelistError ? (
               <div className="px-4 py-3 text-xs text-red-600">Gagal mencari produk.</div>
             ) : productSuggestions.length === 0 ? (
