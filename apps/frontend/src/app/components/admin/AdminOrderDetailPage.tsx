@@ -26,14 +26,11 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
     setNoteInput,
     internalNote,
     setInternalNote,
-    docEntry,
-    setDocEntry,
     posting,
     threadOpen,
     threadRef,
     toggleThread,
     handleSendNote,
-    handleSapLink,
   } = useAdminOrderDetail(kind)
 
   if (loading || orderLoading)
@@ -105,26 +102,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
                     Belum terhubung ke dokumen order di sistem internal.
                   </span>
                 )}
-              </div>
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <input
-                    value={docEntry}
-                    onChange={(e) => setDocEntry(e.target.value.replace(/[^0-9]/g, ''))}
-                    inputMode="numeric"
-                    placeholder="Nomor dokumen"
-                    className="w-40 rounded-xl border border-border bg-input-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSapLink}
-                    disabled={posting || !docEntry}
-                    className="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary disabled:opacity-50"
-                  >
-                    {order.sap?.docEntry ? 'Perbarui tautan' : 'Tautkan'}
-                  </button>
-                </div>
-              )}
+              </div>              
             </div>
           )}
           {order.source === 'sales' && (
