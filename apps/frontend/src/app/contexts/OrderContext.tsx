@@ -10,7 +10,7 @@
 } from 'react'
 import type { Order, OrderStatus, CartItem, FollowUpNote, PriceChange } from '@repo/shared'
 import { api, swrFetcher } from '@lib'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import { useAuth } from './authHook'
 import { useWSEvent } from './WebSocketContext'
 
@@ -66,6 +66,7 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [followUps, setFollowUps] = useState<Record<string, FollowUpNote[]>>({})
   const busy = useRef(false)
+  const { mutate: globalMutate } = useSWRConfig()
 
   type RequestsResponse = {
     data: Order[]
@@ -80,12 +81,15 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     identity ? (['/requests', identity] as const) : null,
     ([url]) => swrFetcher<RequestsResponse>(url),
     {
-      revalidateOnFocus: false,
-      dedupingInterval: 30_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 15_000,
+      refreshWhenHidden: false,
+      refreshWhenOffline: false,
+      dedupingInterval: 2_000,
       keepPreviousData: false,
     },
   )
-
   const orders = response?.data ?? []
   const loading = Boolean(identity) && isLoading
   const displayError = error || (swrError ? 'Gagal memuat pesanan dan penawaran.' : '')
@@ -101,34 +105,57 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     setFollowUps({})
   }, [identity])
 
-  const fetchFollowUpsInternal = useCallback(
-    async (id: string) => {
-      if (!identity) return
-      try {
-        const response = await api.get(`/requests/${id}/follow-ups`)
-        setFollowUps((prev) => ({ ...prev, [id]: response.data.data }))
-      } catch {
-        setFollowUps((prev) => ({ ...prev, [id]: [] }))
-      }
-    },
-    [identity],
+  const followUpKey = useCallback(
+    (id: string) => `/requests/${encodeURIComponent(id)}/follow-ups`,
+    [],
   )
 
-  useWSEvent('order.status_changed', () => {
-    if (identity) void refresh()
+  const refreshFollowUps = useCallback(
+    async (id: string): Promise<FollowUpNote[]> => {
+      if (!identity) return []
+      const key = followUpKey(id)
+      const response = await globalMutate(
+        key,
+        () => swrFetcher<{ data: FollowUpNote[] }>(key),
+        { revalidate: false, populateCache: true },
+      )
+      const notes = response?.data ?? []
+      // Compatibility for existing consumers of useOrders().followUps.
+      setFollowUps((previous) => ({ ...previous, [id]: notes }))
+      return notes
+    },
+    [identity, followUpKey, globalMutate],
+  )
+
+  const refreshDetail = useCallback(
+    async (id: string) => {
+      if (!identity) return
+      await globalMutate(`/requests/${encodeURIComponent(id)}`)
+    },
+    [identity, globalMutate],
+  )
+
+  useWSEvent('order.status_changed', (event) => {
+    if (!identity) return
+    void refresh()
+    const orderId = String(event.data?.orderId ?? '')
+    if (orderId) void refreshDetail(orderId)
   })
   // SAP moved the document behind an order. The portal mirrors that status, so
   // the list has to be re-read rather than patched locally.
-  useWSEvent('order.sap_synced', () => {
-    if (identity) void refresh()
+  useWSEvent('order.sap_synced', (event) => {
+    if (!identity) return
+    void refresh()
+    const orderId = String(event.data?.orderId ?? '')
+    if (orderId) void refreshDetail(orderId)
   })
   useWSEvent('quote.followup_added', (event) => {
     const orderId = String(event.data?.orderId ?? '')
-    if (orderId && identity) void fetchFollowUpsInternal(orderId)
+    if (orderId && identity) void refreshFollowUps(orderId).catch(() => undefined)
   })
   useWSEvent('order.followup_added', (event) => {
     const orderId = String(event.data?.orderId ?? '')
-    if (orderId && identity) void fetchFollowUpsInternal(orderId)
+    if (orderId && identity) void refreshFollowUps(orderId).catch(() => undefined)
   })
   const send = async (
     kind: 'order' | 'quote',
@@ -222,63 +249,70 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
       setError('')
       try {
         await api.patch(`/requests/${id}`, { status, salesNotes })
-        await refresh()
+        await Promise.all([refresh(), refreshDetail(id)])
       } catch (e: any) {
         setError(e.response?.data?.message ?? 'Gagal menyimpan tindak lanjut.')
         throw e
       }
     },
-    [refresh],
+    [refresh, refreshDetail],
   )
   const fetchFollowUps = useCallback(
     async (id: string): Promise<FollowUpNote[]> => {
-      if (!identity) return []
       try {
-        const response = await api.get(`/requests/${id}/follow-ups`)
-        setFollowUps((prev) => ({ ...prev, [id]: response.data.data }))
-        return response.data.data
+        return await refreshFollowUps(id)
       } catch {
         return []
       }
     },
-    [identity],
+    [refreshFollowUps],
   )
   const addFollowUp = useCallback(
     async (id: string, message: string, visibility: 'customer' | 'internal' = 'customer') => {
       setError('')
       try {
         await api.post(`/requests/${id}/follow-ups`, { message, visibility })
-        await fetchFollowUpsInternal(id)
-        await refresh()
+        await Promise.all([refreshFollowUps(id), refresh(), refreshDetail(id)])
       } catch (e: any) {
         setError(e.response?.data?.message ?? 'Gagal mengirim pesan.')
         throw e
       }
     },
-    [fetchFollowUpsInternal, refresh],
+    [refreshFollowUps, refresh, refreshDetail],
   )
   const linkSapDocument = useCallback(
     async (id: string, docEntry: number) => {
       setError('')
       try {
         const response = await api.post(`/requests/${id}/sap-link`, { docEntry })
-        await refresh()
+        await Promise.all([refresh(), refreshDetail(id)])
         return (response.data.message as string | null) ?? null
       } catch (e: any) {
         setError(e.response?.data?.message ?? 'Gagal menautkan dokumen.')
         throw e
       }
     },
-    [refresh],
+    [refresh, refreshDetail],
   )
-  const fetchOrder = useCallback(async (id: string): Promise<Order | null> => {
-    try {
-      const response = await api.get(`/requests/${id}`)
-      return response.data.data
-    } catch {
-      return null
-    }
-  }, [])
+  const fetchOrder = useCallback(
+    async (id: string): Promise<Order | null> => {
+      if (!identity) return null
+
+      const key = `/requests/${encodeURIComponent(id)}`
+
+      try {
+        const response = await globalMutate(key, () => swrFetcher<{ data: Order }>(key), {
+          revalidate: false,
+          populateCache: true,
+        })
+
+        return response?.data ?? null
+      } catch {
+        return null
+      }
+    },
+    [identity, globalMutate],
+  )
   return (
     <OrderContext.Provider
       value={{

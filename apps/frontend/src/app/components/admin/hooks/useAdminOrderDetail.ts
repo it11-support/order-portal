@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import useSWR from 'swr'
 
 import { useAuth, useOrders } from '@contexts'
-import { api } from '@lib'
-import type { Order, RequestKind } from '@repo/shared'
+import { swrFetcher } from '@lib'
+import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 
 type OrderResponse = { data: Order }
 
@@ -15,9 +15,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
 
   const {
     addFollowUp,
-    fetchFollowUps,
     linkSapDocument,
-    followUps,
     error,
     loading,
   } = useOrders()
@@ -28,7 +26,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     mutate: mutateOrder,
   } = useSWR<OrderResponse>(
     orderId ? `/requests/${encodeURIComponent(orderId)}` : null,
-    async (url: string) => (await api.get<OrderResponse>(url)).data,
+    (url: string) => swrFetcher<OrderResponse>(url),
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
@@ -40,6 +38,18 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     },
   )
 
+  const followUpKey = orderId
+    ? `/requests/${encodeURIComponent(orderId)}/follow-ups`
+    : null
+
+  const { data: followUpResponse, mutate: mutateFollowUps } = useSWR<{
+    data: FollowUpNote[]
+  }>(followUpKey, (url: string) => swrFetcher<{ data: FollowUpNote[] }>(url), {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    keepPreviousData: false,
+  })
+
   const order = orderResponse?.data ?? null
   const [noteInput, setNoteInput] = useState('')
   const [internalNote, setInternalNote] = useState(false)
@@ -49,14 +59,9 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
 
   const threadRef = useRef<HTMLDivElement>(null)
 
-  const notes = followUps[orderId ?? ''] ?? []
+  const notes = followUpResponse?.data ?? []
   const isQuote = order?.kind === 'quote'
   const isAdmin = user?.role.name === 'admin'
-
-  useEffect(() => {
-    if (!orderId) return
-    void fetchFollowUps(orderId)
-  }, [orderId, fetchFollowUps])
 
   const toggleThread = useCallback(() => {
     setThreadOpen((open) => !open)
@@ -85,7 +90,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
       )
       setNoteInput('')
       setThreadOpen(true)
-      await mutateOrder()
+      await Promise.all([mutateOrder(), mutateFollowUps()])
     } finally {
       setPosting(false)
     }
