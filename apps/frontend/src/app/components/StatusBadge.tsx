@@ -6,7 +6,7 @@ export const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; tex
   confirmed: { label: 'Confirm', bg: 'bg-blue-100', text: 'text-blue-700' },
   processing: { label: 'Processing', bg: 'bg-purple-100', text: 'text-purple-700' },
   delivered: { label: 'Delivered', bg: 'bg-green-100', text: 'text-green-700' },
-  cancelled: { label: 'Ditolak', bg: 'bg-red-100', text: 'text-red-700' },
+  cancelled: { label: 'Canceled', bg: 'bg-red-100', text: 'text-red-700' },
   ready: { label: 'Siap Dipesan', bg: 'bg-teal-100', text: 'text-teal-700' },
   converted: { label: 'Jadi Pesanan', bg: 'bg-green-100', text: 'text-green-700' },
 }
@@ -28,7 +28,7 @@ export const QUOTE_STATUS_LABELS: Record<OrderStatus, string> = {
   converted: 'Sudah jadi pesanan',
   delivered: 'Selesai',
   confirmed: 'Deal / Harga ditawarkan',
-  cancelled: 'Ditolak',
+  cancelled: 'Canceled',
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -37,7 +37,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   processing: 'Diproses',
   confirmed: 'Dikonfirmasi',
   delivered: 'Selesai',
-  cancelled: 'Ditolak',
+  cancelled: 'Canceled',
   ready: 'Siap dipesan',
   converted: 'Sudah jadi pesanan',
 }
