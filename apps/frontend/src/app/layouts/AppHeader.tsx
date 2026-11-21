@@ -29,7 +29,7 @@ const AppHeader = ({ title, showBack = false, backTo }: AppHeaderProps) => {
   }
 
   return (
-    <header className="sticky top-0 z-20 bg-white border-b border-border flex items-center gap-3 px-4 h-16 lg:h-16">
+    <header className="sticky top-0 z-50 bg-white border-b border-border flex items-center gap-3 px-4 h-16 lg:h-16">
       {showBack && (
         <button
           onClick={goBack}
