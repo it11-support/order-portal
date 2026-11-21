@@ -9,7 +9,6 @@ import SavedDrafts from '@components/catalog/SavedDrafts'
 import CatalogProducts from '@components/catalog/CatalogProducts'
 import InquiryActionBar from '@components/catalog/InquiryActionBar'
 import CartActionBar from '@components/catalog/CartActionBar'
-
 import { useCatalogDrafts } from '@components/catalog/hooks/useCatalogDrafts'
 import { useCatalogInquiry } from '@components/catalog/hooks/useCatalogInquiry'
 
@@ -34,6 +33,7 @@ const CatalogPage = () => {
     saveEditedDraft,
     cancelSavedDraft,
     saveCustomerDraft,
+    confirmExitDraft,
   } = useCatalogDrafts(isCustomer)
 
   const {
@@ -73,7 +73,7 @@ const CatalogPage = () => {
 
         {isCustomer && (
           <SavedDrafts
-            drafts={savedDrafts}
+            drafts={savedDrafts.filter((draft) => draft.id !== editingDraftId)}
             expandedDraftId={expandedDraftId}
             editingDraftId={editingDraftId}
             draftActionId={draftActionId}
@@ -119,6 +119,8 @@ const CatalogPage = () => {
           savingDraft={savingDraft}
           onSave={saveCustomerDraft}
           onSubmit={() => (editingDraftId ? saveEditedDraft(true) : navigate('/cart'))}
+          onExitDraft={confirmExitDraft}
+          onCancelDraft={(id) => void cancelSavedDraft(id)}
         />
       )}
     </Shell>

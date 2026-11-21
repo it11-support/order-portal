@@ -1,4 +1,3 @@
-
 import {
   useCallback,
   useEffect,
@@ -34,23 +33,13 @@ export const useCategories = () => {
   const tableRef = useRef<HTMLTableElement>(null)
   const busyRef = useRef(false)
 
-  const {
-    data,
-    isLoading,
-    mutate,
-  } = useSWR<ApiResponse<Category>>('/categories', swrFetcher)
+  const { data, isLoading, mutate } = useSWR<ApiResponse<Category>>('/categories', swrFetcher)
 
-  const categories = useMemo(
-    () => data?.data ?? [],
-    [data],
-  )
+  const categories = useMemo(() => data?.data ?? [], [data])
 
-  const updateForm = useCallback(
-    (values: Partial<CategoryForm>) => {
-      setForm((prev) => ({ ...prev, ...values }))
-    },
-    [],
-  )
+  const updateForm = useCallback((values: Partial<CategoryForm>) => {
+    setForm((prev) => ({ ...prev, ...values }))
+  }, [])
 
   const openCreate = useCallback(() => {
     setEditing(null)
@@ -113,9 +102,9 @@ export const useCategories = () => {
           (current) =>
             current
               ? {
-                ...current,
-                data: current.data.filter((cat) => cat.id !== id),
-              }
+                  ...current,
+                  data: current.data.filter((cat) => cat.id !== id),
+                }
               : current,
           { revalidate: false },
         )
@@ -146,13 +135,9 @@ export const useCategories = () => {
       }))
 
       try {
-        await mutate(
-          (current) =>
-            current
-              ? { ...current, data: reordered }
-              : current,
-          { revalidate: false },
-        )
+        await mutate((current) => (current ? { ...current, data: reordered } : current), {
+          revalidate: false,
+        })
 
         await api.put('/categories/reorder/batch', {
           orders: reordered.map(({ id, sortOrder }) => ({
@@ -178,11 +163,7 @@ export const useCategories = () => {
     async (index: number, direction: Direction) => {
       const newIndex = direction === 'up' ? index - 1 : index + 1
 
-      if (
-        busyRef.current ||
-        newIndex < 0 ||
-        newIndex >= categories.length
-      ) {
+      if (busyRef.current || newIndex < 0 || newIndex >= categories.length) {
         return
       }
 
@@ -195,19 +176,15 @@ export const useCategories = () => {
     [categories, saveOrder],
   )
 
+  const handleGripMouseDown = useCallback((event: ReactMouseEvent, index: number) => {
+    if (busyRef.current || event.button !== 0) return
 
-  const handleGripMouseDown = useCallback(
-    (event: ReactMouseEvent, index: number) => {
-      if (busyRef.current || event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
 
-      event.preventDefault()
-      event.stopPropagation()
-
-      setDragIndex(index)
-      setTargetIndex(index)
-    },
-    [],
-  )
+    setDragIndex(index)
+    setTargetIndex(index)
+  }, [])
 
   useEffect(() => {
     if (dragIndex === null) return
@@ -234,16 +211,11 @@ export const useCategories = () => {
         }
       }
 
-      setTargetIndex((prev) =>
-        prev === newTarget ? prev : newTarget,
-      )
+      setTargetIndex((prev) => (prev === newTarget ? prev : newTarget))
     }
 
     const handleMouseUp = () => {
-      if (
-        targetIndex !== null &&
-        dragIndex !== targetIndex
-      ) {
+      if (targetIndex !== null && dragIndex !== targetIndex) {
         const updated = [...categories]
         const [moved] = updated.splice(dragIndex, 1)
         updated.splice(targetIndex, 0, moved)
@@ -286,6 +258,6 @@ export const useCategories = () => {
     targetIndex,
     tableRef,
     handleGripMouseDown,
-    saveOrder
+    saveOrder,
   }
 }

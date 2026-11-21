@@ -69,11 +69,11 @@ export const createPendingRequest = async ({
       qty,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          priceSource: price.source,
-          lineTotal: kind === 'order' ? round6(qty * price.price) : null,
-        }
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: kind === 'order' ? round6(qty * price.price) : null,
+          }
         : {}),
     }
   })

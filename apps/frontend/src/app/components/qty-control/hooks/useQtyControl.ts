@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import type { Product } from '@repo/shared'
@@ -9,23 +8,15 @@ import { useContactSales } from '@contexts/ContactSalesContext'
 import { swrFetcher } from '@lib'
 import { QtyControlProps, SapPayload } from '../types'
 
-
-
 const getSapPayload = (response: unknown): SapPayload => {
-  if (
-    !response ||
-    typeof response !== 'object' ||
-    Array.isArray(response)
-  ) {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) {
     return {}
   }
 
   const result = response as SapPayload
   const data = result.data
 
-  return data && typeof data === 'object' && !Array.isArray(data)
-    ? (data as SapPayload)
-    : result
+  return data && typeof data === 'object' && !Array.isArray(data) ? (data as SapPayload) : result
 }
 
 export const useQtyControl = ({
@@ -60,58 +51,43 @@ export const useQtyControl = ({
   const balance = Number(customer?.balance ?? 0)
   const remainingCredit = creditLimit - balance
 
-  const isOverCredit =
-    creditLimit > 0 && remainingCredit < 0
+  const isOverCredit = creditLimit > 0 && remainingCredit < 0
 
   const salesUnit = product.salesUnit || 'PCS'
   const purchaseUnit = product.purchaseUnit
-  const purchasePackSize = Number(
-    product.purchasePackSize ?? 1,
-  )
+  const purchasePackSize = Number(product.purchasePackSize ?? 1)
 
   const qty = propsQty ?? ctxGetQty(product.id)
 
   const onQtyChange =
-    propsOnQtyChange ??
-    ((_id: number, value: number) =>
-      ctxOnQtyChange(product, value))
+    propsOnQtyChange ?? ((_id: number, value: number) => ctxOnQtyChange(product, value))
 
   const onIncrease = propsOnIncrease ?? ctxIncrease
   const onDecrease = propsOnDecrease ?? ctxDecrease
   const onRemove = propsOnRemove ?? ctxRemove
 
   const isActualPrice = product.priceSource === 'actual'
-  const hasPrice =
-    product.price != null && Number(product.price) > 0
+  const hasPrice = product.price != null && Number(product.price) > 0
 
-  const customerCardCode =
-    customer?.CardCode ?? null
+  const customerCardCode = customer?.CardCode ?? null
 
   const targetCardCode = cardcode || customerCardCode
 
-  const [showCreditModal, setShowCreditModal] =
-    useState(false)
+  const [showCreditModal, setShowCreditModal] = useState(false)
 
-  const [showPriceConfirm, setShowPriceConfirm] =
-    useState(false)
+  const [showPriceConfirm, setShowPriceConfirm] = useState(false)
 
-  const [showQtyDialog, setShowQtyDialog] =
-    useState(false)
+  const [showQtyDialog, setShowQtyDialog] = useState(false)
 
-  const [selectedUnit, setSelectedUnit] =
-    useState<'salesUnit' | 'purchaseUnit'>('salesUnit')
+  const [selectedUnit, setSelectedUnit] = useState<'salesUnit' | 'purchaseUnit'>('salesUnit')
 
   const [dialogQty, setDialogQty] = useState('1')
 
-  const [localIsEditing, setLocalIsEditing] =
-    useState(false)
+  const [localIsEditing, setLocalIsEditing] = useState(false)
 
-  const editing =
-    propsQty != null ? false : localIsEditing
+  const editing = propsQty != null ? false : localIsEditing
 
-  const [inputValue, setInputValue] = useState(
-    String(qty),
-  )
+  const [inputValue, setInputValue] = useState(String(qty))
 
   const dialogUnitRef = useRef<HTMLSelectElement>(null)
   const handledOpenRequest = useRef(0)
@@ -125,37 +101,22 @@ export const useQtyControl = ({
   const dialogQuantity = Number(dialogQty)
 
   const validDialogQty =
-    /^\d+$/.test(dialogQty) &&
-    Number.isSafeInteger(dialogQuantity) &&
-    dialogQuantity > 0
+    /^\d+$/.test(dialogQty) && Number.isSafeInteger(dialogQuantity) && dialogQuantity > 0
 
-  const conversionFactor =
-    selectedUnit === 'purchaseUnit' && canConvert
-      ? purchasePackSize
-      : 1
+  const conversionFactor = selectedUnit === 'purchaseUnit' && canConvert ? purchasePackSize : 1
 
-  const convertedQty = validDialogQty
-    ? dialogQuantity * conversionFactor
-    : 0
+  const convertedQty = validDialogQty ? dialogQuantity * conversionFactor : 0
 
-  const validConvertedQty =
-    validDialogQty &&
-    Number.isSafeInteger(convertedQty) &&
-    convertedQty > 0
+  const validConvertedQty = validDialogQty && Number.isSafeInteger(convertedQty) && convertedQty > 0
 
-  const sapEnabled =
-    showQtyDialog &&
-    Boolean(targetCardCode) &&
-    Boolean(product.itemCode)
+  const sapEnabled = showQtyDialog && Boolean(targetCardCode) && Boolean(product.itemCode)
 
   const {
     data: stockData,
     error: stockError,
     isLoading: stockLoading,
   } = useSWR<unknown>(
-    sapEnabled
-      ? `/sap/stock?itemcode=${encodeURIComponent(product.itemCode)}`
-      : null,
+    sapEnabled ? `/sap/stock?itemcode=${encodeURIComponent(product.itemCode)}` : null,
     swrFetcher,
     {
       revalidateOnMount: true,
@@ -189,40 +150,23 @@ export const useQtyControl = ({
   const stockPayload = getSapPayload(stockData)
   const pricePayload = getSapPayload(priceData)
 
-  const rawStock =
-    stockPayload.Available ?? stockPayload.available
+  const rawStock = stockPayload.Available ?? stockPayload.available
 
-  const parsedStock =
-    rawStock == null || rawStock === ''
-      ? NaN
-      : Number(rawStock)
+  const parsedStock = rawStock == null || rawStock === '' ? NaN : Number(rawStock)
 
   const rawPrice =
-    pricePayload.price ??
-    pricePayload.Price ??
-    pricePayload.actualPrice ??
-    pricePayload.ActualPrice
+    pricePayload.price ?? pricePayload.Price ?? pricePayload.actualPrice ?? pricePayload.ActualPrice
 
-  const parsedPrice =
-    rawPrice == null || rawPrice === ''
-      ? NaN
-      : Number(rawPrice)
+  const parsedPrice = rawPrice == null || rawPrice === '' ? NaN : Number(rawPrice)
 
-  const stockChecked =
-    sapEnabled &&
-    Boolean(stockData) &&
-    Number.isFinite(parsedStock)
+  const stockChecked = sapEnabled && Boolean(stockData) && Number.isFinite(parsedStock)
 
   const priceChecked =
-    sapEnabled &&
-    Boolean(priceData) &&
-    Number.isFinite(parsedPrice) &&
-    parsedPrice > 0
+    sapEnabled && Boolean(priceData) && Number.isFinite(parsedPrice) && parsedPrice > 0
 
   const sapPrice = priceChecked ? parsedPrice : null
 
-  const sapChecking =
-    sapEnabled && (stockLoading || priceLoading)
+  const sapChecking = sapEnabled && (stockLoading || priceLoading)
 
   const sapCheckError = !showQtyDialog
     ? ''
@@ -314,12 +258,10 @@ export const useQtyControl = ({
 
   const handleContactSales = () => {
     setShowPriceConfirm(false)
-      ; (onContactSales ?? openContactSales)(product)
+    ;(onContactSales ?? openContactSales)(product)
   }
 
-  const handleQtyChange = (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleQtyChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
     setInputValue(value)
 
@@ -343,11 +285,7 @@ export const useQtyControl = ({
 
     const newQty = Number(inputValue)
 
-    if (
-      inputValue === '' ||
-      Number.isNaN(newQty) ||
-      newQty <= 0
-    ) {
+    if (inputValue === '' || Number.isNaN(newQty) || newQty <= 0) {
       onRemove(product.id)
       return
     }
@@ -389,22 +327,11 @@ export const useQtyControl = ({
   }
 
   const decreaseDialogQty = () => {
-    setDialogQty(
-      String(
-        Math.max(
-          1,
-          (validDialogQty ? dialogQuantity : 1) - 1,
-        ),
-      ),
-    )
+    setDialogQty(String(Math.max(1, (validDialogQty ? dialogQuantity : 1) - 1)))
   }
 
   const increaseDialogQty = () => {
-    setDialogQty(
-      String(
-        (validDialogQty ? dialogQuantity : 0) + 1,
-      ),
-    )
+    setDialogQty(String((validDialogQty ? dialogQuantity : 0) + 1))
   }
 
   useEffect(() => {
@@ -420,10 +347,7 @@ export const useQtyControl = ({
   }, [qty, editing])
 
   useEffect(() => {
-    if (
-      openRequest <= 0 ||
-      handledOpenRequest.current === openRequest
-    ) {
+    if (openRequest <= 0 || handledOpenRequest.current === openRequest) {
       return
     }
 

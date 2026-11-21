@@ -1,16 +1,15 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Shell } from '@layouts'
 import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
-import { useOrders, useCategories, useCart, useAuth } from '@contexts'
+import { useOrders, useCart, useAuth } from '@contexts'
 import { fmtDate } from '@lib'
-import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import { useEffect, useRef, useState } from 'react'
 import type { Order, FollowUpNote, RequestKind } from '@repo/shared'
 import { toast } from 'sonner'
 import { ShoppingCart } from 'lucide-react'
-import { formatRupiah } from '@/lib/formatCurrency'
 import OrderKindMismatch from './OrderKindMismatch'
 import FollowUpThread from './FollowUpThread'
+import OrderItemsList from './OrderItemsList'
 
 const LIST_PATH: Record<RequestKind, string> = { order: '/orders', quote: '/inquiries' }
 
@@ -18,7 +17,6 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
   const { orders, loading, error, fetchOrder, fetchFollowUps, followUps, addFollowUp } = useOrders()
-  const { getCategoryIcon } = useCategories()
   const { setCart, setInquiryId } = useCart()
   const { user } = useAuth()
   const [order, setOrder] = useState<Order | null>(null)
@@ -166,46 +164,12 @@ const OrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
         </div>
 
         {/* Items */}
-        <div>
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-            Item {isQuote ? 'Penawaran' : 'Order'}
-          </p>
-          <div className="bg-white rounded-2xl border border-border divide-y divide-border px-4">
-            {order.items.map((item) => (
-              <div key={item.product.id} className="flex items-center gap-3 py-3">
-                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">
-                  {getCategoryIcon(item.product.productCategory) ? (
-                    <CategoryIcon name={getCategoryIcon(item.product.productCategory)} size={20} />
-                  ) : (
-                    '-'
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{item.product.itemName}</p>
-                  <p className="text-xs text-muted-foreground">{item.product.salesUnit}</p>
-                  {typeof item.price === 'number' && (
-                    <p className="text-xs font-semibold mt-0.5">
-                      {formatRupiah(item.price)}
-                      <span className="ml-1 font-normal text-muted-foreground">
-                        {item.priceSource === 'actual' ? 'harga aktual' : 'harga price list'}
-                      </span>
-                    </p>
-                  )}
-                </div>
-                <span className="text-sm font-bold tabular-nums">
-                  {isQuote ? '-' : `×${item.qty}`}
-                </span>
-              </div>
-            ))}
-            {order.items.length === 0 && (
-              <p className="text-sm text-muted-foreground py-4">
-                {order.source === 'sap'
-                  ? 'Rincian produk belum tersinkron dari sistem internal. Hubungi tim sales bila Anda membutuhkan rinciannya.'
-                  : 'Belum ada item pada pesanan ini.'}
-              </p>
-            )}
-          </div>
-        </div>
+        <OrderItemsList
+          items={order.items}
+          source={order.source}
+          isQuote={isQuote}
+          variant="customer"
+        />
 
         <FollowUpThread
           notes={notes}

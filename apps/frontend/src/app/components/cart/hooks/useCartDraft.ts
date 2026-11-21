@@ -5,6 +5,8 @@ import { api } from '@lib'
 import { useCart, useOrders } from '@contexts'
 import { useActiveDraft } from '@hooks'
 import { useCartSummary } from './useCartSummary'
+import { mapDraftItemsToCart } from '@/app/utils'
+import { useNavigate } from 'react-router-dom'
 
 type DraftUpdate = { items?: Array<{ productId: string; qty: number }>; status?: 'pending' }
 const patchDraft = async (url: string, { arg }: { arg: DraftUpdate }) => {
@@ -13,6 +15,7 @@ const patchDraft = async (url: string, { arg }: { arg: DraftUpdate }) => {
 }
 
 export const useCartDraft = (onResetPriceChanges: () => void) => {
+  const navigate = useNavigate()
   const { cart, setCart } = useCart()
   const { orders, refreshOrders, submitting } = useOrders()
   const { editingDraftId, setEditingDraftId } = useActiveDraft()
@@ -32,34 +35,38 @@ export const useCartDraft = (onResetPriceChanges: () => void) => {
 
   const openDraft = (id: string) => {
     const draft = savedDrafts.find((o) => o.id === id)
-    if (!draft || activeDraftId === id) return
+    if (!draft) return
+
+    // Jika draft sudah aktif, langsung kembali ke katalog.
+    if (activeDraftId === id) {
+      navigate('/')
+      return
+    }
+
     if (
       cart.length > 0 &&
       !window.confirm(
         'Ganti isi keranjang aktif dengan draft ini? Perubahan yang belum disimpan akan hilang.',
       )
-    )
+    ) {
       return
+    }
+
     const validItems = (draft.items ?? []).filter((item) => item.product?.id != null)
+
     if (validItems.length !== (draft.items ?? []).length) {
       toast.error('Sebagian produk draft tidak tersedia. Draft tidak dibuka.')
       return
     }
-    setCart(
-      validItems.map((item) => ({
-        product: {
-          ...item.product,
-          id: Number(item.product.id),
-          price: item.price ?? item.product.price ?? null,
-          currency: item.currency ?? item.product.currency ?? null,
-          priceSource: item.priceSource ?? item.product.priceSource ?? null,
-        },
-        qty: item.qty ?? 1,
-      })),
-    )
+
+    setCart(mapDraftItemsToCart(validItems))
     setEditingDraftId(id)
     onResetPriceChanges()
-    toast.success('Draft dibuka di keranjang')
+
+    toast.success('Draft dipilih sebagai keranjang aktif')
+
+    // Pindah ke katalog produk
+    navigate('/')
   }
 
   const saveActiveDraft = async (send = false) => {

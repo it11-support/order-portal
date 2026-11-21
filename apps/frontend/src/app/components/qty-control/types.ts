@@ -1,5 +1,5 @@
-import { Product } from "@repo/shared"
-import { useQtyControl } from "./hooks/useQtyControl"
+import { Product } from '@repo/shared'
+import { useQtyControl } from './hooks/useQtyControl'
 
 export type QtyControlProps = {
   product: Product

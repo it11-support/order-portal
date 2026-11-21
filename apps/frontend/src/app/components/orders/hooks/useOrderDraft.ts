@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@lib'
-import type { Customer, Order, Product } from '@repo/shared'
+import type { Customer, Order } from '@repo/shared'
 import type { SelectedCustomer, DraftCustomerFields } from './types'
 import type { useOrderForm } from './useOrderForm'
 import type { useOrderLines } from './useOrderLines'
 import type { useCustomerSearch } from './useCustomerSearch'
+import { mapDraftItemsToCart } from '@/app/utils'
 
 type Args = {
   orders: Order[]
@@ -90,21 +91,7 @@ export const useOrderDraft = ({
       CardCode: embeddedCustomer?.CardCode ?? details.CardCode ?? details.cardCode ?? '',
     }
 
-    const draftLines = (draft.items ?? []).flatMap((item) => {
-      if (!item.product?.id) return []
-      return [
-        {
-          product: {
-            ...item.product,
-            id: Number(item.product.id),
-            price: item.price ?? item.product.price ?? null,
-            currency: item.currency ?? item.product.currency ?? null,
-            priceSource: item.priceSource ?? item.product.priceSource ?? null,
-          } as Product,
-          qty: Math.max(1, item.qty ?? 1),
-        },
-      ]
-    })
+    const draftLines = mapDraftItemsToCart(draft.items ?? [])
 
     setSelectedCustomer(customer)
     setLines(draftLines)
@@ -138,9 +125,9 @@ export const useOrderDraft = ({
       }
       const response = activeDraftId
         ? await api.patch(`/requests/${activeDraftId}`, {
-          ...payload,
-          ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
-        })
+            ...payload,
+            ...(activeDraftVersion ? { updatedAt: activeDraftVersion } : {}),
+          })
         : await api.post('/requests', { kind: 'order', customerId, ...payload, status: 'draft' })
       if (!activeDraftId) setActiveDraftId(response.data.data.id)
       await refreshOrders()

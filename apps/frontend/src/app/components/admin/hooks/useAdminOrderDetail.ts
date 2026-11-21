@@ -13,12 +13,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
   const { orderId } = useParams<{ orderId: string }>()
   const { user } = useAuth()
 
-  const {
-    addFollowUp,
-    linkSapDocument,
-    error,
-    loading,
-  } = useOrders()
+  const { addFollowUp, linkSapDocument, error, loading } = useOrders()
 
   const {
     data: orderResponse,
@@ -29,7 +24,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     (url: string) => swrFetcher<OrderResponse>(url),
     {
       revalidateOnFocus: true,
-      revalidateOnReconnect: true,     
+      revalidateOnReconnect: true,
       refreshWhenHidden: false,
       refreshWhenOffline: false,
       dedupingInterval: 2_000,
@@ -37,9 +32,7 @@ export const useAdminOrderDetail = (kind: RequestKind = 'order') => {
     },
   )
 
-  const followUpKey = orderId
-    ? `/requests/${encodeURIComponent(orderId)}/follow-ups`
-    : null
+  const followUpKey = orderId ? `/requests/${encodeURIComponent(orderId)}/follow-ups` : null
 
   const { data: followUpResponse, mutate: mutateFollowUps } = useSWR<{
     data: FollowUpNote[]

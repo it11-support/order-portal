@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -13,11 +12,7 @@ import {
 import { useAuth, useCart, useOrders } from '@contexts'
 import { Alert, DashboardStat, QuickAction } from '../types'
 
-
-
-const formatDate = (
-  value: Date | string | null | undefined,
-): string | null => {
+const formatDate = (value: Date | string | null | undefined): string | null => {
   if (!value) return null
 
   const date = new Date(value)
@@ -44,8 +39,7 @@ export const useCustomerDashboard = () => {
   const isOverCredit = remainingCredit < 0
   const hasCreditLimit = creditLimit > 0
 
-  const isFrozen =
-    customer?.frozenFor?.trim().toUpperCase() === 'Y'
+  const isFrozen = customer?.frozenFor?.trim().toUpperCase() === 'Y'
 
   const frozenFrom = formatDate(customer?.frozenFrom)
   const frozenTo = formatDate(customer?.frozenTo)
@@ -55,8 +49,7 @@ export const useCustomerDashboard = () => {
       ? `${frozenFrom} sampai ${frozenTo}`
       : (frozenFrom ?? frozenTo) === null
         ? null
-        : `${frozenFrom ?? 'sekarang'} sampai ${frozenTo ?? 'selamanya'
-        }`
+        : `${frozenFrom ?? 'sekarang'} sampai ${frozenTo ?? 'selamanya'}`
 
   const alerts = useMemo<Alert[]>(() => {
     const result: Alert[] = []
@@ -67,10 +60,9 @@ export const useCustomerDashboard = () => {
         tone: 'danger',
         icon: Snowflake,
         title: 'Akun Anda sedang dibekukan',
-        body: `Pesanan baru tidak dapat diproses selama akun dibekukan.${frozenWindow
-          ? ` Periode pembekuan: ${frozenWindow}.`
-          : ''
-          } Hubungi sales Anda untuk informasi lebih lanjut.`,
+        body: `Pesanan baru tidak dapat diproses selama akun dibekukan.${
+          frozenWindow ? ` Periode pembekuan: ${frozenWindow}.` : ''
+        } Hubungi sales Anda untuk informasi lebih lanjut.`,
       })
     }
 
@@ -115,18 +107,12 @@ export const useCustomerDashboard = () => {
     () => [
       {
         label: 'Pesanan Portal',
-        value: String(
-          orders.filter((order) => order.kind !== 'quote')
-            .length,
-        ),
+        value: String(orders.filter((order) => order.kind !== 'quote').length),
         icon: Clock,
       },
       {
         label: 'Permintaan Penawaran',
-        value: String(
-          orders.filter((order) => order.kind === 'quote')
-            .length,
-        ),
+        value: String(orders.filter((order) => order.kind === 'quote').length),
         icon: Package,
       },
     ],

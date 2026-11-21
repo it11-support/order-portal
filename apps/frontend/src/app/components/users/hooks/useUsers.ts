@@ -1,14 +1,8 @@
-
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { toast } from 'sonner'
 import { api, swrFetcher } from '@lib'
-import type {
-  User,
-  Role,
-  ApiResponse,
-  SalesPersonOption,
-} from '@repo/shared'
+import type { User, Role, ApiResponse, SalesPersonOption } from '@repo/shared'
 
 export interface UserForm {
   username: string
@@ -70,29 +64,18 @@ export const useUsers = () => {
     mutate: mutateUser,
   } = useSWR<ApiResponse<User>>(usersKey, swrFetcher)
 
-  const { data: roleData } = useSWR<ApiResponse<Role>>(
-    '/users/roles',
+  const { data: roleData } = useSWR<ApiResponse<Role>>('/users/roles', swrFetcher)
+
+  const { data: salesPersonData } = useSWR<ApiResponse<SalesPersonOption>>(
+    '/users/sales-persons',
     swrFetcher,
   )
 
-  const { data: salesPersonData } = useSWR<
-    ApiResponse<SalesPersonOption>
-  >('/users/sales-persons', swrFetcher)
+  const users = useMemo(() => userData?.data ?? [], [userData])
 
-  const users = useMemo(
-    () => userData?.data ?? [],
-    [userData],
-  )
+  const roles = useMemo(() => roleData?.data ?? [], [roleData])
 
-  const roles = useMemo(
-    () => roleData?.data ?? [],
-    [roleData],
-  )
-
-  const salesPersons = useMemo(
-    () => salesPersonData?.data ?? [],
-    [salesPersonData],
-  )
+  const salesPersons = useMemo(() => salesPersonData?.data ?? [], [salesPersonData])
 
   const availableRoles = useMemo(
     () =>
@@ -106,9 +89,7 @@ export const useUsers = () => {
   )
 
   const isSalesRole = useMemo(
-    () =>
-      roles.find((role) => role.id === form.roleId)?.name ===
-      'sales_admin',
+    () => roles.find((role) => role.id === form.roleId)?.name === 'sales_admin',
     [roles, form.roleId],
   )
 
@@ -116,19 +97,14 @@ export const useUsers = () => {
     (roleId: number) => {
       const role = roles.find((item) => item.id === roleId)
 
-      return role
-        ? role.name.replaceAll('_', ' ').toUpperCase()
-        : String(roleId)
+      return role ? role.name.replaceAll('_', ' ').toUpperCase() : String(roleId)
     },
     [roles],
   )
 
-  const updateForm = useCallback(
-    (values: Partial<UserForm>) => {
-      setForm((prev) => ({ ...prev, ...values }))
-    },
-    [],
-  )
+  const updateForm = useCallback((values: Partial<UserForm>) => {
+    setForm((prev) => ({ ...prev, ...values }))
+  }, [])
 
   const openCreate = useCallback(() => {
     setEditing(null)
@@ -195,11 +171,7 @@ export const useUsers = () => {
       await mutateUser()
       setDialogOpen(false)
 
-      toast.success(
-        editing
-          ? 'User berhasil diperbarui'
-          : 'User berhasil ditambahkan',
-      )
+      toast.success(editing ? 'User berhasil diperbarui' : 'User berhasil ditambahkan')
     } catch (error) {
       console.error(error)
       toast.error('Gagal menyimpan user')
@@ -231,19 +203,16 @@ export const useUsers = () => {
     setVisiblePw((prev) => (prev === id ? null : id))
   }, [])
 
-  const copyPassword = useCallback(
-    async (id: number, password: string) => {
-      try {
-        await navigator.clipboard.writeText(password)
-        setCopiedId(id)
-        toast.success('Password berhasil disalin')
-      } catch (error) {
-        console.error(error)
-        toast.error('Gagal menyalin password')
-      }
-    },
-    [],
-  )
+  const copyPassword = useCallback(async (id: number, password: string) => {
+    try {
+      await navigator.clipboard.writeText(password)
+      setCopiedId(id)
+      toast.success('Password berhasil disalin')
+    } catch (error) {
+      console.error(error)
+      toast.error('Gagal menyalin password')
+    }
+  }, [])
 
   useEffect(() => {
     if (copiedId === null) return
@@ -287,7 +256,7 @@ export const useUsers = () => {
     togglePassword,
     copyPassword,
     debouncedSearch,
-    setDebouncedSearch
+    setDebouncedSearch,
   }
 }
 

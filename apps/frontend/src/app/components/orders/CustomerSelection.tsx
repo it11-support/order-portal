@@ -1,8 +1,8 @@
 import type { Customer } from '@repo/shared'
 import { Building2, ChevronRight, Search, Users, X } from 'lucide-react'
-import { useRef } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { Loader } from '../common'
+import { handleComboboxKeyDown } from '@/app/hooks'
 
 type CustomerSelectionProps = {
   search: string
@@ -15,6 +15,8 @@ type CustomerSelectionProps = {
   customerSuggestions: Customer[]
   customers: Customer[]
   selectCustomer: (customer: Customer) => void
+  customerSearchRef: RefObject<HTMLInputElement | null>
+  customerOptionRefs: RefObject<(HTMLButtonElement | null)[]>
 }
 
 const CustomerSelection = (props: CustomerSelectionProps) => {
@@ -29,11 +31,9 @@ const CustomerSelection = (props: CustomerSelectionProps) => {
     customerSuggestions,
     customers,
     selectCustomer,
+    customerSearchRef,
+    customerOptionRefs,
   } = props
-
-  const customerSearchRef = useRef<HTMLInputElement | null>(null)
-  const customerOptionRefs = useRef<(HTMLButtonElement | null)[]>([])
-
   return (
     <section
       className={`relative overflow-visible rounded-xl border border-slate-200 bg-white shadow-sm ${
@@ -74,32 +74,20 @@ const CustomerSelection = (props: CustomerSelectionProps) => {
             }}
             onFocus={() => setCustomerSuggestionsOpen(Boolean(search.trim()))}
             onBlur={() => setCustomerSuggestionsOpen(false)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setCustomerSuggestionsOpen(false)
-                setActiveCustomerIndex(-1)
-                return
-              }
-              if (!search.trim()) return
-              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault()
-                setCustomerSuggestionsOpen(true)
-                if (!customerResultsReady || customerSuggestions.length === 0) return
-                setActiveCustomerIndex((index) =>
-                  event.key === 'ArrowDown'
-                    ? (index + 1) % customerSuggestions.length
-                    : index <= 0
-                      ? customerSuggestions.length - 1
-                      : index - 1,
-                )
-              } else if (event.key === 'Enter' && customerSuggestionsOpen) {
-                event.preventDefault()
-                if (!customerResultsReady) return
-                const customer =
-                  customerSuggestions[activeCustomerIndex >= 0 ? activeCustomerIndex : 0]
-                if (customer) selectCustomer(customer)
-              }
-            }}
+            onKeyDown={(event) =>
+              handleComboboxKeyDown(event, {
+                query: search,
+                open: customerSuggestionsOpen,
+                ready: customerResultsReady,
+                items: customerSuggestions,
+                activeIndex: activeCustomerIndex,
+                setOpen: setCustomerSuggestionsOpen,
+                setActiveIndex: setActiveCustomerIndex,
+                onSelect: selectCustomer,
+                selectFirstOnEnter: true,
+                preventEscapeDefault: false,
+              })
+            }
             autoComplete="off"
             role="combobox"
             aria-autocomplete="list"

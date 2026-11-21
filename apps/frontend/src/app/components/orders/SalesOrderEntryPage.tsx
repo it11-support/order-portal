@@ -169,6 +169,8 @@ const SalesOrderEntryPage = () => {
             customerSuggestions={customerSuggestions}
             customers={customers}
             selectCustomer={selectCustomer}
+            customerSearchRef={customerSearch.customerSearchRef}
+            customerOptionRefs={customerSearch.customerOptionRefs}
           />
         )}
         {/* Step 2: Product - Enterprise workspace */}

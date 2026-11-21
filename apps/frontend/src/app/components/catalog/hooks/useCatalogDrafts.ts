@@ -1,9 +1,9 @@
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@lib'
 import { useActiveDraft } from '@hooks'
 import { useCart, useOrders } from '@contexts'
+import { mapDraftItemsToCart } from '@/app/utils'
 
 type CartLine = {
   product: { id: number | string }
@@ -29,7 +29,6 @@ const orderItems = (lines: CartLine[]) =>
     }))
 
 export const useCatalogDrafts = (isCustomer: boolean) => {
-
   const { cart, setCart } = useCart()
   const { orders, refreshOrders } = useOrders()
   const { editingDraftId, setEditingDraftId } = useActiveDraft()
@@ -48,16 +47,8 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
   const savedDrafts = useMemo(
     () =>
       orders
-        .filter(
-          (order) =>
-            order.kind === 'order' &&
-            order.status === 'draft',
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() -
-            new Date(a.createdAt).getTime(),
-        ),
+        .filter((order) => order.kind === 'order' && order.status === 'draft')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [orders],
   )
 
@@ -74,9 +65,7 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
 
     if (
       editingDraftId &&
-      !window.confirm(
-        'Ganti draft aktif? Perubahan yang belum disimpan akan hilang.',
-      )
+      !window.confirm('Ganti draft aktif? Perubahan yang belum disimpan akan hilang.')
     ) {
       return
     }
@@ -97,24 +86,7 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
       }))
     }
 
-    setCart(
-      uniqueCartLines(
-        (draft.items ?? []).map((item) => ({
-          product: {
-            ...item.product,
-            id: Number(item.product.id),
-            price: item.price ?? item.product.price ?? null,
-            currency:
-              item.currency ?? item.product.currency ?? null,
-            priceSource:
-              item.priceSource ??
-              item.product.priceSource ??
-              null,
-          },
-          qty: item.qty ?? 1,
-        })),
-      ),
-    )
+    setCart(uniqueCartLines(mapDraftItemsToCart(draft.items ?? [])))
 
     setEditingDraftId(draft.id)
     setExpandedDraftId(null)
@@ -130,10 +102,10 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
   }
 
   const exitDraftEdit = () => {
-    setCart(cartBeforeEditing.current ?? [])
-    cartBeforeEditing.current = null
+    setCart([])
     setEditingDraftId(null)
     setExpandedDraftId(null)
+    cartBeforeEditing.current = null
   }
 
   useEffect(() => {
@@ -145,6 +117,19 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
       setCart(unique)
     }
   }, [cart, isCustomer, setCart])
+
+  const confirmExitDraft = () => {
+    if (!editingDraftId || savingDraft) return
+
+    if (
+      !window.confirm('Keluar dari draft aktif? Perubahan lokal yang belum disimpan akan dibuang.')
+    ) {
+      return
+    }
+
+    exitDraftEdit()
+    toast.success('Keluar dari draft aktif')
+  }
 
   const saveEditedDraft = async (submit = false) => {
     if (!editingDraftId || savingDraft) return
@@ -183,9 +168,7 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
       await refreshOrders()
     } catch (error) {
       console.error('Gagal memproses draft', error)
-      toast.error(
-        'Gagal memproses draft. Perubahan tetap berada di keranjang.',
-      )
+      toast.error('Gagal memproses draft. Perubahan tetap berada di keranjang.')
     } finally {
       setSavingDraft(false)
     }
@@ -228,7 +211,10 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
 
     const items = orderItems(cart)
 
-    if (savingDraft || items.length === 0) return
+    if (items.length === 0) {
+      toast.error('Draft kosong tidak dapat disimpan atau dikirim.')
+      return
+    }
 
     setSavingDraft(true)
 
@@ -245,9 +231,7 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
       toast.success('Draft berhasil disimpan')
     } catch (error) {
       console.error('Gagal menyimpan draft customer', error)
-      toast.error(
-        'Gagal menyimpan draft. Keranjang tetap tersimpan.',
-      )
+      toast.error('Gagal menyimpan draft. Keranjang tetap tersimpan.')
     } finally {
       setSavingDraft(false)
     }
@@ -267,5 +251,6 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
     saveEditedDraft,
     cancelSavedDraft,
     saveCustomerDraft,
+    confirmExitDraft,
   }
 }

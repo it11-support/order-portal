@@ -1,4 +1,3 @@
-
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
@@ -10,19 +9,8 @@ type Props = {
   disabled?: boolean
 }
 
-export function SortableCategoryRow({
-  id,
-  children,
-  disabled = false,
-}: Props) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+export function SortableCategoryRow({ id, children, disabled = false }: Props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled,
     transition: {
@@ -40,11 +28,7 @@ export function SortableCategoryRow({
         position: 'relative',
         zIndex: isDragging ? 10 : undefined,
       }}
-      className={
-        isDragging
-          ? 'bg-blue-50 shadow-md opacity-80'
-          : 'hover:bg-gray-50/70'
-      }
+      className={isDragging ? 'bg-blue-50 shadow-md opacity-80' : 'hover:bg-gray-50/70'}
     >
       <td className="p-3 text-gray-400">
         <button

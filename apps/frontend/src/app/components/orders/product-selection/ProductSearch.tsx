@@ -3,6 +3,7 @@ import { formatRupiah } from '@/lib/formatCurrency'
 import type { Product } from '@repo/shared'
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from 'react'
 import type { ProductSuggestion } from './types'
+import { handleComboboxKeyDown } from '@/app/hooks'
 
 type ProductSearchProps = {
   productSearchRef: RefObject<HTMLInputElement | null>
@@ -56,46 +57,19 @@ export const ProductSearch = ({
             setProductSuggestionsOpen(false)
             setActiveSuggestionIndex(-1)
           }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              if (productSuggestionsOpen) {
-                e.preventDefault()
-                setProductSuggestionsOpen(false)
-                setActiveSuggestionIndex(-1)
-              }
-              return
-            }
-
-            if (!productSearch.trim()) return
-
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-              e.preventDefault()
-              setProductSuggestionsOpen(true)
-
-              if (!searchingProducts || suggestionsLoading || productSuggestions.length === 0) {
-                return
-              }
-
-              setActiveSuggestionIndex((current) => {
-                if (e.key === 'ArrowDown') {
-                  return current >= productSuggestions.length - 1 ? 0 : current + 1
-                }
-
-                return current <= 0 ? productSuggestions.length - 1 : current - 1
-              })
-            } else if (
-              e.key === 'Enter' &&
-              showSuggestions &&
-              activeSuggestionIndex >= 0 &&
-              !suggestionsLoading
-            ) {
-              const selected = productSuggestions[activeSuggestionIndex]
-              if (!selected) return
-
-              e.preventDefault()
-              openProductCart(selected.product)
-            }
-          }}
+          onKeyDown={(event) =>
+            handleComboboxKeyDown(event, {
+              query: productSearch,
+              open: showSuggestions,
+              ready: searchingProducts && !suggestionsLoading,
+              items: productSuggestions,
+              activeIndex: activeSuggestionIndex,
+              setOpen: setProductSuggestionsOpen,
+              setActiveIndex: setActiveSuggestionIndex,
+              onSelect: ({ product }) => openProductCart(product),
+              selectFirstOnEnter: false,
+            })
+          }
           placeholder="Cari nama atau kode produk"
           autoComplete="off"
           role="combobox"

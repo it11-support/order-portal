@@ -60,11 +60,11 @@ export const createDraftRequest = async ({
       qty,
       ...(price
         ? {
-          price: price.price,
-          currency: price.currency,
-          priceSource: price.source,
-          lineTotal: round6(qty * price.price),
-        }
+            price: price.price,
+            currency: price.currency,
+            priceSource: price.source,
+            lineTotal: round6(qty * price.price),
+          }
         : {}),
     }
   })

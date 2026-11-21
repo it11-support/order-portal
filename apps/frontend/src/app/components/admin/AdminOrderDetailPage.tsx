@@ -1,18 +1,15 @@
 import { Shell } from '@layouts'
 import { Loader, StatusBadge, StatusSteps, SapStatusBadge, ChatComposer } from '@components'
-import { useCategories } from '@contexts'
 import { fmtDate } from '@lib'
 import { AlertCircle } from 'lucide-react'
 import type { RequestKind } from '@repo/shared'
-import CategoryIcon from '@/app/components/categories/CategoryIcon'
 import OrderKindMismatch from '../orders/OrderKindMismatch'
 import FollowUpThread from '../orders/FollowUpThread'
 import { useAdminOrderDetail } from './hooks'
 import { LIST_PATH } from './constants'
+import OrderItemsList from '../orders/OrderItemsList'
 
 const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
-  const { getCategoryIcon } = useCategories()
-
   const {
     order,
     orderLoading,
@@ -102,7 +99,7 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
                     Belum terhubung ke dokumen order di sistem internal.
                   </span>
                 )}
-              </div>              
+              </div>
             </div>
           )}
           {order.source === 'sales' && (
@@ -118,38 +115,12 @@ const AdminOrderDetailPage = ({ kind = 'order' }: { kind?: RequestKind }) => {
         </div>
 
         {/* Items */}
-        <div>
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-            Item {isQuote ? 'Penawaran' : 'Order'}
-          </p>
-          <div className="bg-white rounded-2xl border border-border divide-y divide-border px-4">
-            {order.items.map((item) => (
-              <div key={item.product.id} className="flex items-center gap-3 py-3">
-                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-xl shrink-0">
-                  {getCategoryIcon(item.product.productCategory) ? (
-                    <CategoryIcon name={getCategoryIcon(item.product.productCategory)} size={20} />
-                  ) : (
-                    '-'
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{item.product.itemName}</p>
-                  <p className="text-xs text-muted-foreground">{item.product.salesUnit}</p>
-                </div>
-                <span className="text-sm font-bold tabular-nums">
-                  {isQuote ? '' : `×${item.qty}`}
-                </span>
-              </div>
-            ))}
-            {order.items.length === 0 && (
-              <p className="text-sm text-muted-foreground py-4">
-                {order.source === 'sap'
-                  ? 'Baris item belum tersinkron dari sistem. Yang tampil baru header dokumennya.'
-                  : 'Belum ada item pada pesanan ini.'}
-              </p>
-            )}
-          </div>
-        </div>
+        <OrderItemsList
+          items={order.items}
+          source={order.source}
+          isQuote={isQuote}
+          variant="admin"
+        />
 
         {/* The customer's own words, kept apart from the negotiation so a staff
             reader is not tempted to treat it as the agreed price. */}

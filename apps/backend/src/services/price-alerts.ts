@@ -214,7 +214,6 @@ export const announcePriceChanges = async (
     })
   }
 
-
   // 2. Every open inquiry that mentions a moved item gets the news in its own
   //    conversation, so the negotiation continues from the current figure.
   const staffRecipients = await staffRecipientsFor(customer)

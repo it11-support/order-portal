@@ -1,5 +1,5 @@
-import { useCart, useCatalogProducts, useOrders } from "@/app/contexts"
-import { RefObject } from "react"
+import { useCart, useCatalogProducts, useOrders } from '@/app/contexts'
+import { RefObject } from 'react'
 
 export type CatalogHeaderProps = {
   name?: string | null
@@ -21,7 +21,6 @@ export type SavedDraftsProps = {
   onContinue: (draft: Draft) => void
   onCancel: (id: string) => void
 }
-
 
 export type CatalogMode = 'history' | 'inquiry'
 
@@ -63,4 +62,6 @@ export type CartActionBarProps = {
   savingDraft: boolean
   onSave: () => void | Promise<void>
   onSubmit: () => void | Promise<void>
+  onExitDraft: () => void
+  onCancelDraft: (id: string) => void
 }

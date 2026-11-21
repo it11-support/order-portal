@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@lib'
@@ -12,11 +11,9 @@ type InquiryItem = {
 }
 
 export const useCatalogInquiry = (isNonCustomer: boolean) => {
-  const [catalogMode, setCatalogMode] =
-    useState<CatalogMode>('history')
+  const [catalogMode, setCatalogMode] = useState<CatalogMode>('history')
 
-  const [inquiryItems, setInquiryItems] =
-    useState<InquiryItem[]>([])
+  const [inquiryItems, setInquiryItems] = useState<InquiryItem[]>([])
 
   const [sendingInquiry, setSendingInquiry] = useState(false)
 
@@ -31,11 +28,7 @@ export const useCatalogInquiry = (isNonCustomer: boolean) => {
     total: catalogTotal,
     error: catalogError,
   } = useCatalogProducts(
-    isNonCustomer
-      ? undefined
-      : catalogMode === 'history'
-        ? 'actual'
-        : 'pricelist',
+    isNonCustomer ? undefined : catalogMode === 'history' ? 'actual' : 'pricelist',
   )
 
   type CatalogProduct = (typeof catalogProducts)[number]
@@ -45,19 +38,14 @@ export const useCatalogInquiry = (isNonCustomer: boolean) => {
 
     setInquiryItems((items) =>
       items.some((item) => item.productId === productId)
-        ? items.filter(
-          (item) => item.productId !== productId,
-        )
+        ? items.filter((item) => item.productId !== productId)
         : [
-          ...items,
-          {
-            productId,
-            name:
-              product.itemName ??
-              product.itemCode ??
-              'Produk',
-          },
-        ],
+            ...items,
+            {
+              productId,
+              name: product.itemName ?? product.itemCode ?? 'Produk',
+            },
+          ],
     )
   }
 
@@ -83,9 +71,7 @@ export const useCatalogInquiry = (isNonCustomer: boolean) => {
     } catch (error) {
       console.error('Gagal mengirim inquiry', error)
 
-      toast.error(
-        'Inquiry gagal dikirim. Pilihan produk tetap tersimpan.',
-      )
+      toast.error('Inquiry gagal dikirim. Pilihan produk tetap tersimpan.')
     } finally {
       setSendingInquiry(false)
     }

@@ -1,6 +1,6 @@
-import { LucideIcon } from "lucide-react"
-import { useCustomerDashboard } from "./hooks/useCustomerDashboard"
-import { useAuth } from "@/app/contexts"
+import { LucideIcon } from 'lucide-react'
+import { useCustomerDashboard } from './hooks/useCustomerDashboard'
+import { useAuth } from '@/app/contexts'
 
 export type Alert = {
   key: string
@@ -33,9 +33,7 @@ export type CreditLimitCardProps = {
 }
 
 export type CustomerAlertsProps = {
-  alerts: ReturnType<
-    typeof useCustomerDashboard
-  >['alerts']
+  alerts: ReturnType<typeof useCustomerDashboard>['alerts']
 }
 
 export type DashboardStatsProps = {
@@ -51,4 +49,3 @@ export type CurrentUser = ReturnType<typeof useAuth>['user']
 export type CustomerAccountSummaryProps = {
   currentUser: CurrentUser
 }
-

@@ -1,32 +1,21 @@
-import { Search, X, Package, ArrowLeft, ChevronDown, Save, Send } from 'lucide-react'
+import { Search, X, Package, ArrowLeft, ChevronDown } from 'lucide-react'
 import { ProductList } from '@components'
 import { BottomNav } from '@layouts'
-import { memo, useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  useAuth,
-  useCart,
-  useCategories,
-  useCatalogProducts,
-  useOrders,
-  resolveCatalogQuery,
-} from '@contexts'
+import { useAuth, useCategories, useCatalogProducts, resolveCatalogQuery } from '@contexts'
 import CategoryIcon from '@components/categories/CategoryIcon'
 import ActiveCartList from '@components/cart/ActiveCartList'
-import { api } from '@lib'
-import { toast } from 'sonner'
 
-import { useActiveDraft } from '@hooks'
 import DraftOrdersList from '@components/orders/DraftOrdersList'
+import CartActionBar from '../components/catalog/CartActionBar'
+import { useCatalogDrafts } from '../components/catalog/hooks/useCatalogDrafts'
 
 const MemoProductList = memo(ProductList)
 
 const SearchPage = () => {
-  const { cart, setCart } = useCart()
-  const { user: currentUser } = useAuth()
-  const { refreshOrders } = useOrders()
-  const [savingDraft, setSavingDraft] = useState(false)
-  const { editingDraftId, setEditingDraftId } = useActiveDraft()
+  const { isCustomer } = useAuth()
+
   const navigate = useNavigate()
   const productSearchRef = useRef<HTMLInputElement | null>(null)
   const {
@@ -37,6 +26,17 @@ const SearchPage = () => {
     selectedCategory,
     loading: categoriesLoading,
   } = useCategories()
+
+  const {
+    cart,
+    savingDraft,
+    editingDraftId,
+    saveEditedDraft,
+    cancelSavedDraft,
+    saveCustomerDraft,
+    confirmExitDraft,
+  } = useCatalogDrafts(isCustomer)
+
   const {
     products: filteredProducts,
     loading: productsLoading,
@@ -53,7 +53,6 @@ const SearchPage = () => {
   )
   const isSearching = query.mode === 'search'
 
-  const isCustomer = currentUser?.role.name === 'customer'
   const handleCategoryChange = (code: string) => {
     setSearch('')
     setSelectedCategory(code)
@@ -67,30 +66,7 @@ const SearchPage = () => {
     const rest = categories.filter((c) => c.code !== 'OTHER')
     return [...(otherCat ? [otherCat] : []), ...rest]
   }, [categories])
-  const saveDraft = async () => {
-    if (savingDraft || !cart.length) return
-    setSavingDraft(true)
-    try {
-      const unique = new Map(cart.map((line) => [String(line.product.id), line]))
-      const items = [...unique.values()]
-        .filter((line) => (line.qty ?? 0) > 0)
-        .map((line) => ({ productId: String(line.product.id), qty: Number(line.qty) }))
-      if (editingDraftId) {
-        await api.patch(`/requests/${editingDraftId}`, { items })
-      } else {
-        await api.post('/requests', { kind: 'order', status: 'draft', items })
-      }
-      setCart([])
-      setEditingDraftId(null)
-      await refreshOrders()
-      toast.success('Draft berhasil disimpan')
-    } catch (error) {
-      console.error('Gagal menyimpan draft', error)
-      toast.error('Gagal menyimpan draft. Keranjang tetap tersimpan.')
-    } finally {
-      setSavingDraft(false)
-    }
-  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 bg-white border-b border-border flex items-center gap-2 px-4 h-14">
@@ -122,7 +98,10 @@ const SearchPage = () => {
             className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none [appearance:textfield] [&::-webkit-search-cancel-button]:hidden"
           />
           {catalogIsFetching && search.trim() && (
-            <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent/25 border-t-accent" aria-label="Memperbarui hasil" />
+            <span
+              className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent/25 border-t-accent"
+              aria-label="Memperbarui hasil"
+            />
           )}
           {search && (
             <button
@@ -220,32 +199,15 @@ const SearchPage = () => {
         </div>
       </main>
       {isCustomer && cart.length > 0 && (
-        <div className="fixed bottom-20 lg:bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-border bg-white/95 p-3 shadow-xl backdrop-blur-sm">
-          <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{cart.length} jenis produk</span>
-            <span>{cart.reduce((sum, line) => sum + (line.qty ?? 0), 0)} unit</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => void saveDraft()}
-              disabled={savingDraft}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-accent px-3 py-3 text-sm font-semibold text-accent disabled:opacity-50"
-            >
-              <Save size={16} />
-              {savingDraft ? 'Menyimpan...' : 'Simpan Draft'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/cart')}
-              disabled={savingDraft}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-3 py-3 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              <Send size={16} />
-              Kirim Order
-            </button>
-          </div>
-        </div>
+        <CartActionBar
+          cart={cart}
+          editingDraftId={editingDraftId}
+          savingDraft={savingDraft}
+          onSave={saveCustomerDraft}
+          onSubmit={() => (editingDraftId ? saveEditedDraft(true) : navigate('/cart'))}
+          onExitDraft={confirmExitDraft}
+          onCancelDraft={(id) => void cancelSavedDraft(id)}
+        />
       )}
       {isCustomer && <BottomNav />}
     </div>

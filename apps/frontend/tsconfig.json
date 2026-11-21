@@ -17,7 +17,7 @@
       "@contexts/*": ["./src/app/contexts/*"],
       "@layouts": ["./src/app/layouts/index.ts"],
       "@pages": ["./src/app/pages/index.ts"],
-      "@pages/*": ["./src/app/pages/*"],
+      "@pages/*": ["./src/app/pages/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "vite.config.ts"],

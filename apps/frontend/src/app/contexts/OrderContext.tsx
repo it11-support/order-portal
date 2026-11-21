@@ -113,11 +113,10 @@ export const OrderProvider = ({ children }: { children: React.ReactNode }) => {
     async (id: string): Promise<FollowUpNote[]> => {
       if (!identity) return []
       const key = followUpKey(id)
-      const response = await globalMutate(
-        key,
-        () => swrFetcher<{ data: FollowUpNote[] }>(key),
-        { revalidate: false, populateCache: true },
-      )
+      const response = await globalMutate(key, () => swrFetcher<{ data: FollowUpNote[] }>(key), {
+        revalidate: false,
+        populateCache: true,
+      })
       const notes = response?.data ?? []
       // Compatibility for existing consumers of useOrders().followUps.
       setFollowUps((previous) => ({ ...previous, [id]: notes }))
