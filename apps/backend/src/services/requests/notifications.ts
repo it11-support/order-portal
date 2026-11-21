@@ -2,15 +2,8 @@ import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@/utils'
 import { customerRecipientFor, staffRecipientsFor } from '@/services/audience'
 import { ws } from '@/services/websocket'
-import { PortalRequest } from '@/generated/prisma/client'
-
-type RequestKind = 'order' | 'quote'
-
-type RequestStatusRow = Pick<PortalRequest, 'id' | 'customerId' | 'status' | 'kind'> & {
-  customer: {
-    SlpCode: number | null
-  }
-}
+import { RequestStatusRow } from './types'
+import { RequestKind } from '@repo/shared'
 
 // Persisted notifications and realtime events for a successful status transition.
 export const publishRequestStatusChange = async (

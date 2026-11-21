@@ -1,15 +1,11 @@
 import { prisma } from '@/utils'
 import type { Prisma, Product } from '@/generated/prisma/client'
 import type { CreateRequestInput } from './validation'
-import {
-  priceableCustomer,
-  pricesForItems,
-  refreshCustomerPrices,
-  round6,
-} from '@/services/pricing'
 import { generateRequestNumber } from '@/services/order-number'
 import { actorOf, customerSelect } from '@/services/requests/access'
 import { settleInquiryOrderability } from '@/services/price-alerts'
+import { getRequestPrices } from '@/services/requests/request-pricing'
+import { buildRequestSnapshot } from '@/services/requests/request-snapshot'
 
 type PendingContext = {
   actor: NonNullable<ReturnType<typeof actorOf>>
@@ -38,47 +34,15 @@ export const createPendingRequest = async ({
     throw new Error('Status request harus pending.')
   }
 
-  const customerForPrices = await priceableCustomer(customerId)
+  const prices = await getRequestPrices(customerId, products, items)
 
-  if (customerForPrices) {
-    await refreshCustomerPrices(customerForPrices, [
-      ...new Set(products.map((product) => product.itemCode)),
-    ])
-  }
-
-  const linePrices = await pricesForItems(customerId, items)
-
-  const productMap = new Map(products.map((product) => [String(product.id), product]))
-
-  const sources = new Set<string>()
-
-  const snapshot = items.map((item) => {
-    const product = productMap.get(item.productId)
-
-    if (!product) {
-      throw new Error(`Produk ${item.productId} tidak ditemukan`)
-    }
-
-    const price = linePrices.get(product.itemCode)
-    const qty = item.qty ?? 1
-
-    if (price) sources.add(price.source)
-
-    return {
-      product,
-      qty,
-      ...(price
-        ? {
-            price: price.price,
-            currency: price.currency,
-            priceSource: price.source,
-            lineTotal: kind === 'order' ? round6(qty * price.price) : null,
-          }
-        : {}),
-    }
+  const { snapshot, priceBasis } = buildRequestSnapshot({
+    products,
+    items,
+    prices,
+    kind,
   })
 
-  const priceBasis = sources.size === 1 ? [...sources][0] : sources.size > 1 ? 'mixed' : null
 
   const id = await generateRequestNumber(kind)
 

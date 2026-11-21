@@ -10,18 +10,9 @@ type CartLine = {
   qty?: number
 }
 
-const uniqueCartLines = <T extends CartLine>(lines: T[]): T[] => {
-  const byProduct = new Map<string, T>()
-
-  for (const line of lines) {
-    byProduct.set(String(line.product.id), line)
-  }
-
-  return [...byProduct.values()]
-}
 
 const orderItems = (lines: CartLine[]) =>
-  uniqueCartLines(lines)
+  lines
     .filter((item) => Number(item.qty ?? 0) > 0)
     .map((item) => ({
       productId: String(item.product.id),
@@ -86,7 +77,7 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
       }))
     }
 
-    setCart(uniqueCartLines(mapDraftItemsToCart(draft.items ?? [])))
+    setCart(mapDraftItemsToCart(draft.items ?? []))
 
     setEditingDraftId(draft.id)
     setExpandedDraftId(null)
@@ -107,16 +98,6 @@ export const useCatalogDrafts = (isCustomer: boolean) => {
     setExpandedDraftId(null)
     cartBeforeEditing.current = null
   }
-
-  useEffect(() => {
-    if (!isCustomer || cart.length < 2) return
-
-    const unique = uniqueCartLines(cart)
-
-    if (unique.length !== cart.length) {
-      setCart(unique)
-    }
-  }, [cart, isCustomer, setCart])
 
   const confirmExitDraft = () => {
     if (!editingDraftId || savingDraft) return

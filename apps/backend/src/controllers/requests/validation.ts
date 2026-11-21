@@ -1,3 +1,5 @@
+import { isRecord, parseProductId, parseQuantity } from "./item-validations"
+
 type RequestKind = 'order' | 'quote'
 type RequestStatus = 'draft' | 'pending'
 
@@ -19,9 +21,6 @@ const invalid = (message: string) => ({
   ok: false as const,
   message,
 })
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
 
 const validateFields = (input: Record<string, unknown>): string | null => {
   const { kind, items, notes = '', priceAccepted = false, inquiryId, status } = input
@@ -53,6 +52,7 @@ const validateFields = (input: Record<string, unknown>): string | null => {
   return null
 }
 
+
 const normalizeItems = (
   items: unknown[],
   kind: 'order' | 'quote',
@@ -61,15 +61,21 @@ const normalizeItems = (
   const normalized: CreateRequestInput['items'] = []
 
   for (const item of items) {
-    if (!isRecord(item) || !/^\d+$/.test(String(item.productId))) {
+    if (!isRecord(item)) {
       return invalid('Produk atau jumlah tidak valid.')
     }
 
-    if (kind === 'order' && !isValidOrderQty(item.qty)) {
+    const productId = parseProductId(item.productId)
+
+    if (!productId) {
       return invalid('Produk atau jumlah tidak valid.')
     }
 
-    const productId = BigInt(String(item.productId)).toString()
+    const qty = parseQuantity(item.qty)
+
+    if (kind === 'order' && qty === null) {
+      return invalid('Produk atau jumlah tidak valid.')
+    }
 
     if (ids.has(productId)) {
       return invalid('Produk duplikat.')
@@ -79,15 +85,17 @@ const normalizeItems = (
 
     normalized.push({
       productId,
-      qty: typeof item.qty === 'number' ? item.qty : undefined,
+      qty: kind === 'order'
+        ? qty!
+        : typeof item.qty === 'number'
+          ? item.qty
+          : undefined,
     })
   }
 
   return { ok: true, data: normalized }
 }
 
-const isValidOrderQty = (value: unknown): boolean =>
-  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 100000
 
 export const validateRequestInput = (body: unknown): ValidationResult => {
   const input = isRecord(body) ? body : {}

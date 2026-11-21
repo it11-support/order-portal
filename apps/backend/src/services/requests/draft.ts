@@ -13,37 +13,11 @@ import {
 import type { PortalRequest, Product } from '@/generated/prisma/client'
 import type { PortalRequestUpdateInput } from '@/generated/prisma/models'
 import type { InputJsonValue } from '@prisma/client/runtime/client'
+import { hasDuplicateProductIds, isRecord, parseProductId, parseQuantity } from '@/controllers/requests'
+import { DraftItemInput, DraftItemSnapshot, DraftItemsResult, NormalizedItem, PreviousDraftItem } from './types'
+import { getRequestPrices } from './request-pricing'
+import { buildRequestSnapshot } from './request-snapshot'
 
-type DraftItemInput = {
-  productId: string
-  qty: number
-}
-
-type DraftItemSnapshot = {
-  product: Product
-  qty: number
-  price?: number
-  currency?: string | null
-  priceSource?: string | null
-  lineTotal?: number
-}
-
-type PreviousDraftItem = {
-  product?: { id?: string | number | bigint }
-  productId?: string | number | bigint
-  price?: number | null
-  acceptedPrice?: number | null
-  currency?: string | null
-  priceSource?: string | null
-}
-
-type NormalizedItem = {
-  productId: string
-  qty: number
-  price: number | null
-}
-
-type DraftItemsResult = { ok: true; items: DraftItemSnapshot[] | null } | { ok: false }
 
 const fail = (res: Response, status: number, message: string): false => {
   res.status(status).json({ message })
@@ -57,27 +31,6 @@ const toJsonValue = (value: unknown): InputJsonValue =>
     ),
   ) as InputJsonValue
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const parseId = (value: unknown): string | null => {
-  if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'bigint') {
-    return null
-  }
-
-  if (typeof value === 'number' && !Number.isSafeInteger(value)) {
-    return null
-  }
-
-  const id = String(value)
-
-  return /^[1-9]\d*$/.test(id) ? id : null
-}
-
-const parseQty = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= 100000
-    ? value
-    : null
 
 const parsePrice = (value: unknown): number | null => {
   if (value === null || value === undefined) return null
@@ -93,7 +46,7 @@ const parsePreviousItems = (value: unknown): PreviousDraftItem[] => {
 
     const product = isRecord(item.product) ? item.product : null
 
-    const id = parseId(product?.id ?? item.productId)
+    const id = parseProductId(product?.id ?? item.productId)
     if (!id) return []
 
     return [
@@ -119,8 +72,8 @@ const normalizeDraftItems = (value: unknown): NormalizedItem[] | null => {
 
     const product = isRecord(item.product) ? item.product : null
 
-    const productId = parseId(product?.id ?? item.productId)
-    const qty = parseQty(item.qty)
+    const productId = parseProductId(product?.id ?? item.productId)
+    const qty = parseQuantity(item.qty)
 
     if (!productId || qty === null) return null
 
@@ -136,9 +89,6 @@ const normalizeDraftItems = (value: unknown): NormalizedItem[] | null => {
 
   return result
 }
-
-const hasDuplicateIds = (items: { productId: string }[]): boolean =>
-  new Set(items.map((item) => item.productId)).size !== items.length
 
 const refreshPrices = async (customerId: bigint, products: Product[]): Promise<void> => {
   const customer = await priceableCustomer(customerId)
@@ -166,7 +116,7 @@ export const prepareDraftItems = async (
     return { ok: false }
   }
 
-  if (hasDuplicateIds(normalized)) {
+  if (hasDuplicateProductIds(normalized)) {
     fail(res, 400, 'Produk duplikat.')
     return { ok: false }
   }
@@ -210,11 +160,11 @@ export const prepareDraftItems = async (
       qty: item.qty,
       ...(price !== null
         ? {
-            price,
-            currency,
-            priceSource,
-            lineTotal: round6(item.qty * price),
-          }
+          price,
+          currency,
+          priceSource,
+          lineTotal: round6(item.qty * price),
+        }
         : {}),
     }
   })
@@ -282,7 +232,7 @@ export const prepareDraftSubmission = async (
     return fail(res, 400, 'Item draft tidak valid.')
   }
 
-  if (hasDuplicateIds(normalized)) {
+  if (hasDuplicateProductIds(normalized)) {
     return fail(res, 400, 'Produk duplikat.')
   }
 
@@ -311,37 +261,21 @@ export const prepareDraftSubmission = async (
     if (!valid) return false
   }
 
-  await refreshPrices(row.customerId, products)
+  const prices = await getRequestPrices(
+    row.customerId,
+    products,
+    normalized,
+  )
 
-  const prices = await pricesForItems(row.customerId, normalized)
-
-  const sources = new Set<string>()
-
-  const productMap = new Map(products.map((product) => [String(product.id), product]))
-
-  const snapshot = normalized.map((item) => {
-    const product = productMap.get(item.productId)!
-    const price = prices.get(product.itemCode)
-
-    if (price) sources.add(price.source)
-
-    return {
-      product,
-      qty: item.qty,
-      ...(price
-        ? {
-            price: price.price,
-            currency: price.currency,
-            lineTotal: round6(item.qty * price.price),
-            priceSource: price.source,
-          }
-        : {}),
-    }
+  const { snapshot, priceBasis } = buildRequestSnapshot({
+    products,
+    items: normalized,
+    prices,
+    kind: 'order',
   })
 
   data.items = toJsonValue(snapshot)
-
-  data.priceBasis = sources.size === 1 ? [...sources][0] : sources.size > 1 ? 'mixed' : null
+  data.priceBasis = priceBasis
 
   return true
 }

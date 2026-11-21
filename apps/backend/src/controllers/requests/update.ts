@@ -11,6 +11,7 @@ import type {
   PortalRequestGetPayload,
   PortalRequestUpdateManyMutationInput,
 } from '@/generated/prisma/models'
+import { hasDuplicateProductIds, isRecord, parseProductId, parseQuantity } from './item-validations'
 
 type DraftItemInput = {
   productId: string
@@ -36,8 +37,6 @@ type RequestWithCustomer = PortalRequestGetPayload<{
 
 type ValidationResult = { ok: true; body: UpdateRequestBody } | { ok: false; message: string }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const invalid = (message: string): ValidationResult => ({
   ok: false,
@@ -54,36 +53,17 @@ const parseItems = (value: unknown): DraftItemInput[] | null => {
   for (const entry of value) {
     if (!isRecord(entry)) return null
 
-    const rawId = entry.productId
+    const productId = parseProductId(entry.productId)
+    const qty = parseQuantity(entry.qty)
 
-    if (typeof rawId !== 'string' && typeof rawId !== 'number') {
-      return null
-    }
+    if (!productId || qty === null) return null
 
-    if (typeof rawId === 'number' && !Number.isSafeInteger(rawId)) {
-      return null
-    }
-
-    const productId = String(rawId)
-
-    if (!/^[1-9]\d*$/.test(productId)) return null
-
-    if (
-      typeof entry.qty !== 'number' ||
-      !Number.isSafeInteger(entry.qty) ||
-      entry.qty < 1 ||
-      entry.qty > 100000
-    ) {
-      return null
-    }
-
-    items.push({ productId, qty: entry.qty })
+    items.push({ productId, qty })
   }
 
-  const ids = new Set(items.map((item) => item.productId))
-
-  return ids.size === items.length ? items : null
+  return hasDuplicateProductIds(items) ? null : items
 }
+
 
 const isInvalidText = (value: unknown): boolean =>
   value !== undefined && (typeof value !== 'string' || value.length > 5000)

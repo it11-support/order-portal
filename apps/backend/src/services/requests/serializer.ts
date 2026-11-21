@@ -1,43 +1,5 @@
 import type { Actor } from './access'
-import type { Prisma } from '@/generated/prisma/client'
-
-type RequestRow = Prisma.PortalRequestGetPayload<{
-  include: {
-    customer: {
-      select: {
-        CntctPrsn: true
-        CardName: true
-        CardCode: true
-        Cellular: true
-        Phone1: true
-        SalesName: true
-      }
-    }
-    createdBy: {
-      select: {
-        name: true
-      }
-    }
-  }
-}>
-
-type SapDocumentStatus = 'open' | 'closed' | 'unknown'
-
-type SapViewData = {
-  companyId: string | null
-  docEntry: number | null
-  docNum: number | null
-  docStatus: SapDocumentStatus
-  canceled: boolean
-  syncedAt: string | null
-  portalStatus?: string
-}
-
-type SapView = SapViewData & {
-  status: 'open' | 'closed' | 'canceled' | 'unknown'
-}
-
-export type RequestViews = Map<string, SapViewData>
+import { RequestRow, RequestViews, SapView, SapViewData } from './types'
 
 export const sapView = (row: RequestRow, views?: RequestViews): SapView | null => {
   if (row.sapDocEntry === null) return null
