@@ -102,21 +102,23 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   const dismiss = useCallback(
     async (id: string) => {
       try {
-        const res = await api.patch<{ data: Notification }>(`/notifications/${id}/dismiss`)
+        await api.patch(`/notifications/${id}/dismiss`)
+
         await mutate(
           (current) =>
             current
               ? {
                   ...current,
-                  data: current.data.map((notification) =>
-                    notification.id === id ? res.data.data : notification,
+                  data: current.data.filter(
+                    (notification) => String(notification.id) !== String(id),
                   ),
                 }
               : current,
           { revalidate: false },
         )
-      } catch {
+      } catch (error) {
         await mutate()
+        throw error
       }
     },
     [mutate],
