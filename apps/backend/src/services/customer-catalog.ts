@@ -101,24 +101,27 @@ export const customerItemCodes = async (
   }
 
   const rows = await prisma.$queryRaw<{ item_code: string }[]>`
-    SELECT DISTINCT p.item_code
+    SELECT p.item_code
     FROM products p
-    INNER JOIN sales_invoices si
-      ON UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
-    INNER JOIN customers c
-      ON TRIM(c.card_code) = TRIM(si.card_code)
-    WHERE c.industry_c = ${industryCode}
-      AND TRIM(c.card_code) <> TRIM(${cardCode})
-      AND si.canceled = 'N'
-      AND si.quantity > 0
-      AND NOT EXISTS (
-        SELECT 1
-        FROM sales_invoices own
-        WHERE TRIM(own.card_code) = TRIM(${cardCode})
-          AND UPPER(TRIM(own.item_code)) = UPPER(TRIM(p.item_code))
-          AND own.canceled = 'N'
-          AND own.quantity > 0
-      )
+    WHERE EXISTS (
+      SELECT 1
+      FROM sales_invoices si
+      INNER JOIN customers c
+        ON TRIM(c.card_code) = TRIM(si.card_code)
+      WHERE UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
+        AND c.industry_c = ${industryCode}
+        AND TRIM(c.card_code) <> TRIM(${cardCode})
+        AND si.canceled = 'N'
+        AND si.quantity > 0
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM sales_invoices own
+      WHERE TRIM(own.card_code) = TRIM(${cardCode})
+        AND UPPER(TRIM(own.item_code)) = UPPER(TRIM(p.item_code))
+        AND own.canceled = 'N'
+        AND own.quantity > 0
+    )
   `
 
   return rows
