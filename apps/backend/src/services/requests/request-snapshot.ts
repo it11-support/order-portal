@@ -1,5 +1,5 @@
 
-import { round6 } from '@/services/pricing'
+import { round6 } from '@/services/pricing/pricing'
 import type { RequestSnapshotItem, SnapshotOptions } from './types'
 
 export const buildRequestSnapshot = ({

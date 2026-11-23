@@ -5,7 +5,7 @@ import {
   priceableCustomer,
   pricesForItems,
   refreshCustomerPrices,
-} from '@/services/pricing'
+} from '@/services/pricing/pricing'
 
 export const getRequestPrices = async (
   customerId: bigint,

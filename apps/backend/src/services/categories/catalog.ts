@@ -10,7 +10,7 @@ import {
 
 export type CatalogProduct = Awaited<ReturnType<typeof prisma.product.findMany>>[number]
 
-export class CatalogAccessError extends Error {}
+export class CatalogAccessError extends Error { }
 
 export type CatalogOptions = {
   category: string
@@ -21,14 +21,31 @@ export type CatalogOptions = {
 const searchWhere = (search: string): ProductWhereInput =>
   search
     ? {
-        OR: [
-          { itemName: { contains: search, mode: 'insensitive' } },
-          { itemCode: { contains: search, mode: 'insensitive' } },
-        ],
-      }
+      OR: [
+        { itemName: { contains: search, mode: 'insensitive' } },
+        { itemCode: { contains: search, mode: 'insensitive' } },
+      ],
+    }
     : {}
 
 const byName = { itemName: 'asc' as const }
+
+const productWhere = (
+  options: Pick<CatalogOptions, 'category' | 'search'>,
+): ProductWhereInput => ({
+  isActive: true,
+  ...(options.category
+    ? { productCategory: options.category }
+    : {}),
+  ...searchWhere(options.search),
+})
+
+const findProducts = (where: ProductWhereInput) =>
+  prisma.product.findMany({
+    where,
+    orderBy: byName,
+  })
+
 
 // Purchased products come first; normalize item codes before deduplication.
 const mergeDistinct = (first: CatalogProduct[], second: CatalogProduct[]): CatalogProduct[] => {
@@ -48,19 +65,19 @@ const purchasedFirst = async (
   where: ProductWhereInput,
 ): Promise<CatalogProduct[]> => {
   const purchased = codes.length
-    ? await prisma.product.findMany({
-        where: { isActive: true, itemCode: { in: codes }, ...where },
-        orderBy: byName,
-      })
-    : []
-  const claimedCodes = purchased.map((p) => p.itemCode)
-  const others = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      ...(claimedCodes.length ? { itemCode: { notIn: claimedCodes } } : {}),
+    ? await findProducts({
       ...where,
-    },
-    orderBy: byName,
+      itemCode: { in: codes },
+    })
+    : []
+
+  const claimedCodes = purchased.map((product) => product.itemCode)
+
+  const others = await findProducts({
+    ...where,
+    ...(claimedCodes.length
+      ? { itemCode: { notIn: claimedCodes } }
+      : {}),
   })
   return mergeDistinct(purchased, others)
 }
@@ -76,10 +93,16 @@ export const resolveTargetCustomer = async (req: AuthenticatedRequest, customerI
     (req.user?.role.name === 'admin' ||
       (req.user?.slpCode != null && String(target.SlpCode) === String(req.user.slpCode))),
   )
-  if (!allowed || !target?.CardCode)
+  if (!allowed || !target?.CardCode) {
     throw new CatalogAccessError('Customer not found or access denied.')
-  return target
+  }
+
+  return {
+    ...target,
+    CardCode: target.CardCode,
+  }
 }
+
 
 export const loadCatalog = async (
   req: AuthenticatedRequest,
@@ -88,51 +111,57 @@ export const loadCatalog = async (
   products: CatalogProduct[]
   priceCustomerId: bigint | null
 }> => {
-  const { category, search, customerId } = options
-  const where: ProductWhereInput = {
-    ...(category ? { productCategory: category } : {}),
-    ...searchWhere(search),
-  }
+  const { category, customerId } = options
+  const where = productWhere(options)
+
   if (req.user?.role.name === 'customer') {
     const priceCustomerId =
-      req.user?.customerId == null ? null : BigInt(String(req.user.customerId))
-    // Original behavior: category view includes all active category products.
+      req.user.customerId == null
+        ? null
+        : BigInt(String(req.user.customerId))
+
     if (category) {
       return {
-        products: await prisma.product.findMany({
-          where: { isActive: true, ...where },
-          orderBy: byName,
-        }),
+        products: await findProducts(where),
         priceCustomerId,
       }
     }
+
     const customer = await currentCustomer(req)
-    if (!customer?.CardCode) return { products: [], priceCustomerId }
-    const codes = await customerItemCodes(customer.CardCode, customer.IndustryC ?? null)
-    return { products: await purchasedFirst(codes, where), priceCustomerId }
+
+    if (!customer?.CardCode) {
+      return { products: [], priceCustomerId }
+    }
+
+    const codes = await customerItemCodes(
+      customer.CardCode,
+      customer.IndustryC ?? null,
+    )
+
+    return {
+      products: await purchasedFirst(codes, where),
+      priceCustomerId,
+    }
   }
+
   if (customerId) {
     const target = await resolveTargetCustomer(req, customerId)
 
-    if (!target.CardCode) {
-      return {
-        products: [],
-        priceCustomerId: null,
-      }
-    }
-
-    const codes = [...new Set(await customerPurchasedItemCodes(target.CardCode))]
+    const codes = [
+      ...new Set(
+        await customerPurchasedItemCodes(target.CardCode),
+      ),
+    ]
 
     return {
       products: await purchasedFirst(codes, where),
       priceCustomerId: target.id,
     }
   }
+
   return {
-    products: await prisma.product.findMany({
-      where: { isActive: true, ...where },
-      orderBy: byName,
-    }),
+    products: await findProducts(where),
     priceCustomerId: null,
   }
 }
+

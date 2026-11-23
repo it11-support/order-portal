@@ -17,6 +17,16 @@ import type { AuthenticatedRequest } from '@auth'
  */
 export const normalizeItemCode = (value: string): string => value.trim().toUpperCase()
 
+const emptyProductFilter = (): ProductWhereInput => ({
+  isActive: true,
+  itemCode: { in: [] },
+})
+
+const itemCodeFilter = (itemCodes: string[]): ProductWhereInput => ({
+  isActive: true,
+  itemCode: { in: itemCodes },
+})
+
 /**
  * Mengambil customer yang sedang login.
  */
@@ -83,7 +93,7 @@ export const customerItemCodes = async (
   industryCode: number | null,
 ): Promise<string[]> => {
   // =========================================================
-  // PURCHASED
+  // SUGGESTED: purchased by other customers in the same industry
   // =========================================================
 
   if (industryCode == null) {
@@ -91,43 +101,29 @@ export const customerItemCodes = async (
   }
 
   const rows = await prisma.$queryRaw<{ item_code: string }[]>`
-    SELECT DISTINCT TRIM(si.item_code) AS item_code
-
-    FROM sales_invoices si
-
+    SELECT DISTINCT p.item_code
+    FROM products p
+    INNER JOIN sales_invoices si
+      ON UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
     INNER JOIN customers c
       ON TRIM(c.card_code) = TRIM(si.card_code)
-
-    WHERE
-      -- customer lain harus subgroup / industry yang sama
-      c.industry_c = ${industryCode}
-
-      -- bukan transaksi customer sendiri
+    WHERE c.industry_c = ${industryCode}
       AND TRIM(c.card_code) <> TRIM(${cardCode})
-
       AND si.canceled = 'N'
       AND si.quantity > 0
-      AND si.item_code IS NOT NULL
-      AND TRIM(si.item_code) <> ''
-
-      -- =====================================================
-      -- WAJIB BELUM PERNAH DIBELI CUSTOMER SEKARANG
-      -- =====================================================
-
       AND NOT EXISTS (
         SELECT 1
         FROM sales_invoices own
-
         WHERE TRIM(own.card_code) = TRIM(${cardCode})
-          AND TRIM(own.item_code) = TRIM(si.item_code)
+          AND UPPER(TRIM(own.item_code)) = UPPER(TRIM(p.item_code))
           AND own.canceled = 'N'
           AND own.quantity > 0
-          AND own.item_code IS NOT NULL
-          AND TRIM(own.item_code) <> ''
       )
   `
 
-  return rows.map((row) => row.item_code?.trim()).filter((code): code is string => Boolean(code))
+  return rows
+    .map((row) => row.item_code)
+    .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
 }
 
 /**
@@ -152,20 +148,19 @@ export const customerItemCodes = async (
  */
 export const customerPurchasedItemCodes = async (cardCode: string): Promise<string[]> => {
   const rows = await prisma.$queryRaw<{ item_code: string }[]>`
-    SELECT DISTINCT TRIM(si.item_code) AS item_code
-
-    FROM sales_invoices si
-
-    WHERE
-      TRIM(si.card_code) = TRIM(${cardCode})
-
+    SELECT DISTINCT p.item_code
+    FROM products p
+    INNER JOIN sales_invoices si
+      ON UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
+    WHERE TRIM(si.card_code) = TRIM(${cardCode})
       AND si.canceled = 'N'
       AND si.quantity > 0
-      AND si.item_code IS NOT NULL
-      AND TRIM(si.item_code) <> ''
+      AND p.item_code IS NOT NULL
   `
 
-  return rows.map((row) => row.item_code?.trim()).filter((code): code is string => Boolean(code))
+  return rows
+    .map((row) => row.item_code)
+    .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
 }
 
 /**
@@ -181,33 +176,11 @@ export const customerPurchasedProductFilter = async (
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
-  if (!customer?.CardCode) {
-    return {
-      isActive: true,
-
-      itemCode: {
-        in: [],
-      },
-    }
-  }
+  if (!customer?.CardCode) return emptyProductFilter()
 
   const itemCodes = await customerPurchasedItemCodes(customer.CardCode)
 
-  // Dicocokkan per item code, bukan sebagai satu daftar, supaya beda
-  // kapitalisasi antara sales_invoices dan products tidak membuat pembelian
-  // customer tampak seperti produk yang belum pernah dibeli.
-  const filter: ProductWhereInput = {
-    isActive: true,
-
-    OR: itemCodes.map((itemCode) => ({
-      itemCode: {
-        equals: itemCode,
-        mode: 'insensitive' as const,
-      },
-    })),
-  }
-
-  return filter
+  return itemCodeFilter(itemCodes)
 }
 
 /**
@@ -223,33 +196,14 @@ export const customerSuggestedProductFilter = async (
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
-  if (!customer?.CardCode) {
-    return {
-      isActive: true,
+  if (!customer?.CardCode) return emptyProductFilter()
 
-      itemCode: {
-        in: [],
-      },
-    }
-  }
+  const itemCodes = await customerItemCodes(
+    customer.CardCode,
+    customer.IndustryC ?? null,
+  )
 
-  const itemCodes = await customerItemCodes(customer.CardCode, customer.IndustryC ?? null)
-
-  // Dicocokkan per item code, bukan sebagai satu daftar, supaya beda
-  // kapitalisasi antara sales_invoices dan products tidak membuat pembelian
-  // customer tampak seperti produk yang belum pernah dibeli.
-  const filter: ProductWhereInput = {
-    isActive: true,
-
-    OR: itemCodes.map((itemCode) => ({
-      itemCode: {
-        equals: itemCode,
-        mode: 'insensitive' as const,
-      },
-    })),
-  }
-
-  return filter
+  return itemCodeFilter(itemCodes)
 }
 
 /**
@@ -269,28 +223,14 @@ export const customerUnpurchasedProductFilter = async (
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
-  if (!customer?.CardCode) {
-    return {
-      isActive: true,
-      itemCode: { in: [] },
-    }
-  }
+  if (!customer?.CardCode) return emptyProductFilter()
 
   const purchasedCodes = await customerPurchasedItemCodes(customer.CardCode)
 
+  if (!purchasedCodes.length) return { isActive: true }
+
   return {
     isActive: true,
-    ...(purchasedCodes.length > 0
-      ? {
-          NOT: {
-            OR: purchasedCodes.map((itemCode) => ({
-              itemCode: {
-                equals: itemCode,
-                mode: 'insensitive' as const,
-              },
-            })),
-          },
-        }
-      : {}),
+    itemCode: { notIn: purchasedCodes },
   }
 }

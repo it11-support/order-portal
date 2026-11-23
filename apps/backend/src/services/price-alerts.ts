@@ -7,7 +7,7 @@ import {
   priceableCustomer,
   refreshCustomerPrices,
   type PriceMovement,
-} from '@/services/pricing'
+} from '@/services/pricing/pricing'
 
 /**
  * Where a detected price movement becomes visible.

@@ -227,8 +227,11 @@ export interface PriceMovement {
  */
 type InvoicePriceMap = Awaited<ReturnType<typeof resolveInvoicePrices>>
 type ResolvedInvoiceRow = InvoicePriceRow & { unitPrice: number }
-type CachedPriceRow = { itemCode: string; price: Decimal }
-
+type CachedPriceRow = {
+  itemCode: string
+  price: Decimal
+  lastInvoicePrice: Decimal | null
+}
 const removeStaleCustomerPrices = async (
   customerId: bigint,
   existing: CachedPriceRow[],
@@ -245,7 +248,10 @@ const removeStaleCustomerPrices = async (
   return new Map(
     existing
       .filter((row) => invoice.has(row.itemCode))
-      .map((row) => [row.itemCode, toNumber(row.price)]),
+      .map((row) => [
+        row.itemCode,
+        toNumber(row.lastInvoicePrice ?? row.price),
+      ] as const),
   )
 }
 
@@ -358,8 +364,15 @@ export const refreshCustomerPrices = async (
 
   const invoice = await resolveInvoicePrices(customer.CardCode, itemCodes)
   const existing = await prisma.customerItemPrice.findMany({
-    where: { customerId: customer.id, itemCode: { in: itemCodes } },
-    select: { itemCode: true, price: true },
+    where: {
+      customerId: customer.id,
+      itemCode: { in: itemCodes },
+    },
+    select: {
+      itemCode: true,
+      price: true,
+      lastInvoicePrice: true,
+    },
   })
   const previous = await removeStaleCustomerPrices(customer.id, existing, invoice)
   if (!invoice.size) return []
@@ -446,6 +459,17 @@ export const effectivePrices = async (
   return resolved
 }
 
+const observeCustomerPrices = async (
+  customer: PriceableCustomer,
+  itemCodes: string[],
+): Promise<void> => {
+  const movements = await refreshCustomerPrices(customer, itemCodes)
+
+  if (movements.length) {
+    await announcePriceChanges(customer.id, movements)
+  }
+}
+
 /**
  * Resolves prices for a customer's catalog page and observes movement.
  *
@@ -464,8 +488,7 @@ export const pricesForCatalog = async (
   const customer = await priceableCustomer(cid)
   if (!customer || !itemCodes.length) return new Map()
 
-  const movements = await refreshCustomerPrices(customer, itemCodes)
-  if (movements.length) await announcePriceChanges(cid, movements)
+  await observeCustomerPrices(customer, itemCodes)
 
   return effectivePrices(cid, itemCodes)
 }
@@ -501,6 +524,23 @@ export interface PendingPriceIncrease {
   currency: string | null
 }
 
+const productsForPriceItems = (
+  items: Array<{ productId: string }>,
+) =>
+  prisma.product.findMany({
+    where: {
+      id: {
+        in: items.map((item) => BigInt(item.productId)),
+      },
+    },
+    select: {
+      id: true,
+      itemCode: true,
+      itemName: true,
+    },
+  })
+
+
 /**
  * Order-time gate.
  *
@@ -520,22 +560,18 @@ export const priceIncreaseCheck = async (
   if (!items.length) return []
 
   const cid = BigInt(String(customerId))
-  const productIds = items.map((item) => item.productId)
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds.map((id) => BigInt(id)) } },
-    select: { id: true, itemCode: true, itemName: true },
-  })
+  const products = await productsForPriceItems(items)
   if (!products.length) return []
 
   // Observe and notify before deciding, so a customer who orders straight into
   // a price rise still receives the price-change notification.
   const customer = await priceableCustomer(cid)
+
   if (customer) {
-    const movements = await refreshCustomerPrices(
+    await observeCustomerPrices(
       customer,
       products.map((product) => product.itemCode),
     )
-    if (movements.length) await announcePriceChanges(cid, movements)
   }
 
   const net = await effectivePrices(
@@ -586,10 +622,7 @@ export const pricesForItems = async (
   const cid = BigInt(String(customerId))
   if (!items.length) return new Map()
 
-  const products = await prisma.product.findMany({
-    where: { id: { in: items.map((item) => BigInt(item.productId)) } },
-    select: { id: true, itemCode: true },
-  })
+  const products = await productsForPriceItems(items)
   if (!products.length) return new Map()
 
   return effectivePrices(cid, [...new Set(products.map((product) => product.itemCode))])

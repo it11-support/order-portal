@@ -9,7 +9,7 @@ import {
   pricesForItems,
   refreshCustomerPrices,
   round6,
-} from '@/services/pricing'
+} from '@/services/pricing/pricing'
 import type { PortalRequest, Product } from '@/generated/prisma/client'
 import type { PortalRequestUpdateInput } from '@/generated/prisma/models'
 import type { InputJsonValue } from '@prisma/client/runtime/client'

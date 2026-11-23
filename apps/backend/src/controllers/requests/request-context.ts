@@ -7,7 +7,7 @@ import {
   customerPurchasedProductFilter,
   customerUnpurchasedProductFilter,
 } from '@/services/customer-catalog'
-import { priceIncreaseCheck } from '@/services/pricing'
+import { priceIncreaseCheck } from '@/services/pricing/pricing'
 import { actorOf } from '@/services/requests/access'
 
 type Actor = NonNullable<ReturnType<typeof actorOf>>
@@ -77,8 +77,8 @@ const inquiryItemCodes = (items: unknown): string[] => {
 
 type ParentInquiry = NonNullable<
   Awaited<ReturnType<typeof resolveParentInquiry>> extends never
-    ? never
-    : Awaited<ReturnType<typeof prisma.portalRequest.findUnique>>
+  ? never
+  : Awaited<ReturnType<typeof prisma.portalRequest.findUnique>>
 >
 
 const resolveProductFilter = async (
