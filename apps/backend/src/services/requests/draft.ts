@@ -4,9 +4,7 @@ import type { Actor } from './access'
 import { prisma } from '@/utils'
 import { customerPurchasedProductFilter } from '@/services/customer-catalog'
 import {
-  priceIncreaseCheck,
   priceableCustomer,
-  pricesForItems,
   refreshCustomerPrices,
   round6,
 } from '@/services/pricing/pricing'
@@ -17,6 +15,7 @@ import { hasDuplicateProductIds, isRecord, parseProductId, parseQuantity } from 
 import { DraftItemInput, DraftItemSnapshot, DraftItemsResult, NormalizedItem, PreviousDraftItem } from './types'
 import { getRequestPrices } from './request-pricing'
 import { buildRequestSnapshot } from './request-snapshot'
+import { priceIncreaseCheck, pricesForItems } from '../pricing'
 
 
 const fail = (res: Response, status: number, message: string): false => {

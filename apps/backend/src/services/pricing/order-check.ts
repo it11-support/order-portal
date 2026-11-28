@@ -5,7 +5,7 @@ import { effectivePrices } from './resolver'
 import { round6, toNumber } from './utils'
 import type { PendingPriceIncrease, EffectivePrice } from './types'
 
-const productsForPriceItems = (
+export const productsForPriceItems = (
   items: Array<{ productId: string }>,
 ) =>
   prisma.product.findMany({

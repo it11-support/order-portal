@@ -7,8 +7,8 @@ import {
   customerPurchasedProductFilter,
   customerUnpurchasedProductFilter,
 } from '@/services/customer-catalog'
-import { priceIncreaseCheck } from '@/services/pricing/pricing'
 import { actorOf } from '@/services/requests/access'
+import { priceIncreaseCheck } from '@/services/pricing'
 
 type Actor = NonNullable<ReturnType<typeof actorOf>>
 
