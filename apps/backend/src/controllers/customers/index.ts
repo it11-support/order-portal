@@ -127,15 +127,29 @@ export const resetCustomerPassword = async (req: Request, res: Response): Promis
   res.status(200).json({ data: { username: user.username, password } })
 }
 
-export const getCustomers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const page = Math.max(parseInt(req.query.page as string) || DEFAULT_PAGE, DEFAULT_PAGE)
+export const getCustomers = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  const page = Math.max(
+    parseInt(req.query.page as string, 10) || DEFAULT_PAGE,
+    DEFAULT_PAGE,
+  )
 
   const limit = Math.min(
-    Math.max(parseInt(req.query.limit as string) || DEFAULT_LIMIT, 1),
+    Math.max(
+      parseInt(req.query.limit as string, 10) || DEFAULT_LIMIT,
+      1,
+    ),
     DEFAULT_LIMIT,
   )
 
-  const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
+  const skip = (page - 1) * limit
+
+  const search =
+    typeof req.query.search === 'string'
+      ? req.query.search.trim()
+      : ''
 
   const role = req.user?.role.name
   const slpCode = req.user?.slpCode
@@ -149,146 +163,181 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
   }
 
   const where: CustomersWhereInput = {
-    ...(role === 'sales_admin' ? { SlpCode: slpCode as number } : {}),
+    NonActive: { not: 'Y' },
+
+    ...(role === 'sales_admin'
+      ? { SlpCode: slpCode as number }
+      : {}),
 
     ...(role === 'customer'
-      ? req.user?.customerId != null
-        ? { id: BigInt(String(req.user.customerId)) }
-        : { id: BigInt(-1) }
+      ? {
+        id: BigInt(String(req.user?.customerId ?? -1)),
+      }
       : {}),
 
     ...(search
       ? {
-          OR: [
-            { CardCode: { contains: search, mode: 'insensitive' } },
-            { CardName: { contains: search, mode: 'insensitive' } },
-            { CntctPrsn: { contains: search, mode: 'insensitive' } },
-            { Phone1: { contains: search, mode: 'insensitive' } },
-            { Cellular: { contains: search, mode: 'insensitive' } },
-            { Address: { contains: search, mode: 'insensitive' } },
-            { City: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        OR: [
+          { CardCode: { contains: search, mode: 'insensitive' } },
+          { CardName: { contains: search, mode: 'insensitive' } },
+          { CntctPrsn: { contains: search, mode: 'insensitive' } },
+          { Phone1: { contains: search, mode: 'insensitive' } },
+          { Cellular: { contains: search, mode: 'insensitive' } },
+          { Address: { contains: search, mode: 'insensitive' } },
+          { City: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : {}),
-    NonActive: { not: 'Y' },
   }
 
-  // Periode aktivitas: 3 bulan terakhir
+  const customerKeys = await prisma.customers.findMany({
+    where,
+    select: {
+      id: true,
+      CardCode: true,
+      CardName: true,
+    },
+  })
+
+  const total = customerKeys.length
+
+  const pagination = {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  }
+
+  res.setHeader('Cache-Control', 'no-store')
+
+  // Tidak perlu query invoice jika halaman tidak tersedia.
+  if (skip >= total) {
+    res.status(200).json({
+      data: [],
+      pagination,
+    })
+    return
+  }
+
   const since = new Date()
   since.setMonth(since.getMonth() - 3)
 
-  // Ambil semua customer yang sesuai dengan filter akses.
-  const [customerKeys, total] = await Promise.all([
-    prisma.customers.findMany({
-      where,
-      select: {
-        id: true,
-        CardCode: true,
-        CardName: true,
-      },
-    }),
-    prisma.customers.count({ where }),
-  ])
+  const cardCodes = [
+    ...new Set(
+      customerKeys
+        .map(({ CardCode }) => CardCode)
+        .filter((code): code is string => code !== null),
+    ),
+  ]
 
-  // Hitung jumlah transaksi untuk customer yang boleh diakses.
-  const invoiceCounts = customerKeys.length
+  const invoiceCounts = cardCodes.length
     ? await prisma.salesInvoice.groupBy({
-        by: ['cardCode'],
-        where: {
-          cardCode: {
-            in: customerKeys
-              .map((customer) => customer.CardCode)
-              .filter((code): code is string => code !== null),
-          },
-          docDate: {
-            gte: since,
-          },
-        },
-        _count: {
-          _all: true,
-        },
-        _max: {
-          docDate: true,
-        },
-      })
+      by: ['cardCode'],
+      where: {
+        cardCode: { in: cardCodes },
+        docDate: { gte: since },
+      },
+      _count: {
+        _all: true,
+      },
+      _max: {
+        docDate: true,
+      },
+    })
     : []
 
   const activityMap = new Map(
-    invoiceCounts.map((invoice) => [
-      invoice.cardCode,
+    invoiceCounts.map(({ cardCode, _count, _max }) => [
+      cardCode,
       {
-        count: invoice._count._all,
-        lastDate: invoice._max.docDate?.getTime() ?? 0,
+        count: _count._all,
+        lastDate: _max.docDate?.getTime() ?? 0,
       },
     ]),
   )
 
-  // Urutkan berdasarkan jumlah transaksi dan tanggal terakhir.
-  const sortedCustomers = customerKeys.sort((a, b) => {
-    const activityA = a.CardCode ? activityMap.get(a.CardCode) : undefined
+  // Hitung aktivitas sekali untuk setiap customer.
+  const rankedCustomers = customerKeys.map((customer) => {
+    const activity = customer.CardCode
+      ? activityMap.get(customer.CardCode)
+      : undefined
 
-    const activityB = b.CardCode ? activityMap.get(b.CardCode) : undefined
-
-    const countDiff = (activityB?.count ?? 0) - (activityA?.count ?? 0)
-
-    if (countDiff !== 0) return countDiff
-
-    const dateDiff = (activityB?.lastDate ?? 0) - (activityA?.lastDate ?? 0)
-
-    if (dateDiff !== 0) return dateDiff
-
-    return (a.CardName ?? '').localeCompare(b.CardName ?? '')
+    return {
+      id: customer.id,
+      name: customer.CardName ?? '',
+      count: activity?.count ?? 0,
+      lastDate: activity?.lastDate ?? 0,
+    }
   })
 
-  // Pagination dilakukan setelah sorting.
-  const paginatedIds = sortedCustomers
-    .slice((page - 1) * limit, page * limit)
-    .map((customer) => customer.id)
+  rankedCustomers.sort(
+    (a, b) =>
+      b.count - a.count ||
+      b.lastDate - a.lastDate ||
+      a.name.localeCompare(b.name) ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  )
 
-  const customers = paginatedIds.length
-    ? await prisma.customers.findMany({
-        where: {
-          id: {
-            in: paginatedIds,
-          },
+  const paginatedIds = rankedCustomers
+    .slice(skip, skip + limit)
+    .map(({ id }) => id)
+
+  const customers = await prisma.customers.findMany({
+    where: {
+      AND: [
+        where,
+        {
+          id: { in: paginatedIds },
         },
-        include: {
-          Subgroup: true,
-          user: {
-            select: {
-              isActive: true,
-              username: true,
-              encryptedPassword: true,
-            },
-          },
+      ],
+    },
+    include: {
+      Subgroup: true,
+      user: {
+        select: {
+          isActive: true,
+          username: true,
+          encryptedPassword: true,
         },
-      })
-    : []
+      },
+    },
+  })
 
-  // findMany dengan IN tidak menjamin urutan.
-  const orderMap = new Map(paginatedIds.map((id, index) => [String(id), index]))
+  const customerMap = new Map(
+    customers.map((customer) => [customer.id, customer]),
+  )
 
-  customers.sort((a, b) => (orderMap.get(String(a.id)) ?? 0) - (orderMap.get(String(b.id)) ?? 0))
+  // Susun response sesuai urutan pagination tanpa sorting ulang.
+  const data = paginatedIds.flatMap((id) => {
+    const record = customerMap.get(id)
 
-  res.setHeader('Cache-Control', 'no-store')
+    if (!record) return []
+
+    const { user, ...customer } = record
+
+    return [
+      {
+        ...customer,
+        hasLogin: Boolean(
+          user?.isActive && user.encryptedPassword,
+        ),
+
+        ...(isAdmin
+          ? {
+            loginUsername: user?.username ?? null,
+            loginPassword:
+              user?.isActive && user.encryptedPassword
+                ? decryptCustomerPassword(user.encryptedPassword)
+                : null,
+          }
+          : {}),
+      },
+    ]
+  })
 
   res.status(200).json({
-    data: customers.map(({ user, ...customer }) => ({
-      ...customer,
-      hasLogin: Boolean(user?.isActive && user.encryptedPassword),
-      ...(isAdmin
-        ? {
-            loginUsername: user?.username ?? null,
-            loginPassword: user?.isActive ? decryptCustomerPassword(user.encryptedPassword) : null,
-          }
-        : {}),
-    })),
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
+    data,
+    pagination,
   })
 }
 
