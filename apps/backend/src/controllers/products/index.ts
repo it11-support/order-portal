@@ -14,7 +14,7 @@ export const getProducts = async (req: Request, res: Response) => {
   try {
     const page = Math.max(Number(req.query.page) || 1, 1)
 
-    const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 40, 1), 100)
+    const pageSize = Math.min(Math.max(Number(req.query.pageSize) || 20, 1), 100)
 
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
 

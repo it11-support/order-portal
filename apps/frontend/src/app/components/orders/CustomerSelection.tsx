@@ -98,7 +98,7 @@ const CustomerSelection = (props: CustomerSelectionProps) => {
                 ? `customer-option-${activeCustomerIndex}`
                 : undefined
             }
-            placeholder="Nama perusahaan atau CardCode"
+            placeholder="Nama atau kode perusahaan"
             className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-10 pr-10 text-sm text-slate-900 outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
           />
           {search && (

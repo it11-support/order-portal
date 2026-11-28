@@ -37,7 +37,7 @@ const parseCatalogQuery = (req: AuthenticatedRequest): CatalogQuery => {
     customerId,
     shouldPaginate: Boolean(pageParam || pageSizeParam),
     page: Math.max(Number(pageParam) || 1, 1),
-    pageSize: Math.min(Math.max(Number(pageSizeParam) || 40, 1), 100),
+    pageSize: Math.min(Math.max(Number(pageSizeParam) || 20, 1), 100),
   }
 }
 

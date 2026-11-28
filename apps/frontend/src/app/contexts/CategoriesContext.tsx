@@ -31,7 +31,7 @@ type CategoriesContextType = {
 
 const CategoriesContext = createContext<CategoriesContextType | null>(null)
 
-const CATALOG_PAGE_SIZE = 45
+const CATALOG_PAGE_SIZE = 20
 
 /**
  * Resolusi mode katalog untuk satu waktu.

@@ -15,7 +15,7 @@ export type ProductFilters = {
   isActive: boolean | null
 }
 
-const DEFAULT_PAGE_SIZE = 40
+const DEFAULT_PAGE_SIZE = 20
 
 type ProductsContextType = {
   products: Product[]

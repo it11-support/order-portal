@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { DEFAULT_LIMIT } from '@repo/shared'
 
 interface LoadMoreState {
   visibleItems: any[]
@@ -16,7 +17,7 @@ interface LoadMoreGridProps {
 
 export const useLoadMore = ({
   items,
-  pageSize = 45,
+  pageSize = DEFAULT_LIMIT,
 }: {
   items: any[]
   pageSize?: number
