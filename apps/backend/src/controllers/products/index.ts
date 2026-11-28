@@ -1,5 +1,6 @@
 import { ProductWhereInput } from '@/generated/prisma/models'
-import { prisma } from '@/utils'
+import { CACHE_KEYS, CACHE_TTL } from '@/services'
+import { cache, prisma } from '@/utils'
 import { Request, Response } from 'express'
 
 const ALLOWED_SORT_FIELDS = {
@@ -69,11 +70,20 @@ export const getProducts = async (req: Request, res: Response) => {
       }
     }
 
-    if (isActiveParam === 'true' || isActiveParam === 'false') {
-      where.isActive = isActiveParam === 'true'
+    const isActive =
+      isActiveParam === 'true'
+        ? true
+        : isActiveParam === 'false'
+          ? false
+          : undefined
+
+    if (isActive !== undefined) {
+      where.isActive = isActive
     }
 
     const skip = (page - 1) * pageSize
+
+    const countProducts = () => prisma.product.count({ where })
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({
@@ -86,7 +96,13 @@ export const getProducts = async (req: Request, res: Response) => {
         take: pageSize,
       }),
 
-      prisma.product.count({ where }),
+      search
+        ? countProducts()
+        : cache.remember(
+          CACHE_KEYS.product.count(category, isActive),
+          CACHE_TTL.PRODUCT_COUNT,
+          countProducts,
+        ),
     ])
 
     res.setHeader('Cache-Control', 'no-store')

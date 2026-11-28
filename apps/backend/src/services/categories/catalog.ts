@@ -1,12 +1,13 @@
 import type { AuthenticatedRequest } from '@auth'
 import type { ProductWhereInput } from '@/generated/prisma/models'
-import { prisma } from '@utils'
+import { cache, prisma } from '@utils'
 import {
   currentCustomer,
   customerItemCodes,
   customerPurchasedItemCodes,
   normalizeItemCode,
 } from '@/services/customer-catalog'
+import { CACHE_KEYS, CACHE_TTL } from '../cache'
 
 export type CatalogProduct = Awaited<ReturnType<typeof prisma.product.findMany>>[number]
 
@@ -40,45 +41,93 @@ const productWhere = (
   ...searchWhere(options.search),
 })
 
-const findProducts = (where: ProductWhereInput) =>
-  prisma.product.findMany({
-    where,
-    orderBy: byName,
-  })
+const findProducts = (
+  where: ProductWhereInput,
+): Promise<CatalogProduct[]> => {
+  const fetchProducts = () =>
+    prisma.product.findMany({
+      where,
+      orderBy: byName,
+    })
+
+  // Cache hanya untuk filter master produk yang dikenal.
+  const cacheable =
+    where.isActive === true &&
+    Object.keys(where).every(
+      (key) =>
+        key === 'isActive' ||
+        key === 'productCategory',
+    ) &&
+    (
+      where.productCategory === undefined ||
+      typeof where.productCategory === 'string'
+    )
+
+  if (!cacheable) {
+    return fetchProducts()
+  }
+
+  const category =
+    typeof where.productCategory === 'string'
+      ? where.productCategory
+      : undefined
+
+  const key =
+    category === undefined
+      ? CACHE_KEYS.product.catalog
+      : CACHE_KEYS.product.catalogByCategory(category)
+
+  return cache.remember(
+    key,
+    CACHE_TTL.PRODUCT_CATALOG,
+    fetchProducts,
+  )
+}
 
 
 // Purchased products come first; normalize item codes before deduplication.
-const mergeDistinct = (first: CatalogProduct[], second: CatalogProduct[]): CatalogProduct[] => {
+const mergeDistinct = (
+  first: CatalogProduct[],
+  second: CatalogProduct[],
+): CatalogProduct[] => {
   const seen = new Set<string>()
   const result: CatalogProduct[] = []
-  for (const product of [...first, ...second]) {
-    const key = normalizeItemCode(product.itemCode)
-    if (seen.has(key)) continue
-    seen.add(key)
-    result.push(product)
+
+  for (const products of [first, second]) {
+    for (const product of products) {
+      const key = normalizeItemCode(product.itemCode)
+
+      if (seen.has(key)) continue
+
+      seen.add(key)
+      result.push(product)
+    }
   }
+
   return result
 }
 
-const purchasedFirst = async (
+const purchasedFirst = (
   codes: string[],
-  where: ProductWhereInput,
-): Promise<CatalogProduct[]> => {
-  const purchased = codes.length
-    ? await findProducts({
-      ...where,
-      itemCode: { in: codes },
-    })
-    : []
+  products: CatalogProduct[],
+): CatalogProduct[] => {
+  if (!codes.length || !products.length) {
+    return mergeDistinct([], products)
+  }
 
-  const claimedCodes = purchased.map((product) => product.itemCode)
+  const codeSet = new Set(codes)
 
-  const others = await findProducts({
-    ...where,
-    ...(claimedCodes.length
-      ? { itemCode: { notIn: claimedCodes } }
-      : {}),
-  })
+  const purchased: CatalogProduct[] = []
+  const others: CatalogProduct[] = []
+
+  for (const product of products) {
+    if (codeSet.has(product.itemCode)) {
+      purchased.push(product)
+    } else {
+      others.push(product)
+    }
+  }
+
   return mergeDistinct(purchased, others)
 }
 
@@ -115,46 +164,46 @@ export const loadCatalog = async (
   const where = productWhere(options)
 
   if (req.user?.role.name === 'customer') {
-    const priceCustomerId =
-      req.user.customerId == null
-        ? null
-        : BigInt(String(req.user.customerId))
+    const customer = await currentCustomer(req)
+
+    if (!customer?.CardCode) {
+      return {
+        products: [],
+        priceCustomerId: null,
+      }
+    }
 
     if (category) {
       return {
         products: await findProducts(where),
-        priceCustomerId,
+        priceCustomerId: customer.id,
       }
     }
 
-    const customer = await currentCustomer(req)
-
-    if (!customer?.CardCode) {
-      return { products: [], priceCustomerId }
-    }
-
-    const codes = await customerItemCodes(
-      customer.CardCode,
-      customer.IndustryC ?? null,
-    )
+    const [codes, products] = await Promise.all([
+      customerItemCodes(
+        customer.CardCode,
+        customer.IndustryC ?? null,
+      ),
+      findProducts(where),
+    ])
 
     return {
-      products: await purchasedFirst(codes, where),
-      priceCustomerId,
+      products: purchasedFirst(codes, products),
+      priceCustomerId: customer.id,
     }
   }
 
   if (customerId) {
     const target = await resolveTargetCustomer(req, customerId)
 
-    const codes = [
-      ...new Set(
-        await customerPurchasedItemCodes(target.CardCode),
-      ),
-    ]
+    const [codes, products] = await Promise.all([
+      customerPurchasedItemCodes(target.CardCode),
+      findProducts(where),
+    ])
 
     return {
-      products: await purchasedFirst(codes, where),
+      products: purchasedFirst(codes, products),
       priceCustomerId: target.id,
     }
   }
@@ -164,4 +213,3 @@ export const loadCatalog = async (
     priceCustomerId: null,
   }
 }
-

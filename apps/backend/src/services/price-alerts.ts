@@ -1,14 +1,11 @@
 import { prisma } from '@/utils'
 import { ws } from '@/services/websocket'
 import { staffRecipientsFor } from '@/services/audience'
-import {
-  PRICE_INCREASE_ALERT_PERCENT,
-  hasNegotiatedPrices,
-  priceableCustomer,
-  refreshCustomerPrices,
-  type PriceMovement,
-} from '@/services/pricing/pricing'
-
+import { PRICE_INCREASE_ALERT_PERCENT } from './pricing/types'
+import type { PriceMovement } from './pricing/types'
+import { hasNegotiatedPrices } from './pricing/resolver'
+import { priceableCustomer } from './pricing/customer'
+import { refreshCustomerPrices } from './pricing/pricing'
 /**
  * Where a detected price movement becomes visible.
  *

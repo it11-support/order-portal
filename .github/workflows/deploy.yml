@@ -64,6 +64,7 @@ jobs:
               printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
               printf 'SAP_API_URL=%s\n' "$SAP_API_URL"
               printf 'SAP_SERVICE_TOKEN=%s\n' "$SAP_SERVICE_TOKEN"
+              printf 'REDIS_URL=redis://127.0.0.1:6379\n'
               printf 'TZ=Asia/Makassar\n'
               printf 'NODE_ENV=production\n'
               printf 'PORT=3001\n'

@@ -1,5 +1,5 @@
 
-import { pricesForCatalog } from '@/services/pricing/pricing'
+import { pricesForCatalog } from '@/services/pricing/resolver'
 import type { CatalogProduct } from './catalog'
 
 type CatalogPrices = Awaited<ReturnType<typeof pricesForCatalog>>
@@ -30,31 +30,47 @@ export const filterAndSortProducts = (
   hasPriceCustomer: boolean,
   priceSource: string,
 ): CatalogProduct[] => {
-  const filtered = products.filter((product) => {
-    const resolved = prices.get(product.itemCode)
-    const price = resolved?.price == null ? NaN : Number(resolved.price)
+  const ranked: {
+    product: CatalogProduct
+    priority: number
+  }[] = []
 
-    if (hasPriceCustomer && (!Number.isFinite(price) || price <= 0)) {
-      return false
+  for (const product of products) {
+    const resolved = prices.get(product.itemCode)
+
+    if (hasPriceCustomer) {
+      const price =
+        resolved?.price == null
+          ? NaN
+          : Number(resolved.price)
+
+      if (!Number.isFinite(price) || price <= 0) {
+        continue
+      }
     }
 
     if (priceSource && resolved?.source !== priceSource) {
-      return false
+      continue
     }
 
-    return true
-  })
+    ranked.push({
+      product,
+      priority: pricePriority(resolved?.source),
+    })
+  }
 
-  return filtered.sort((a, b) => {
-    const difference =
-      pricePriority(prices.get(a.itemCode)?.source) -
-      pricePriority(prices.get(b.itemCode)?.source)
+  ranked.sort(
+    (a, b) =>
+      a.priority - b.priority ||
+      productNameCollator.compare(
+        a.product.itemName,
+        b.product.itemName,
+      ),
+  )
 
-    return (
-      difference ||
-      a.itemName.localeCompare(b.itemName, 'id', {
-        sensitivity: 'base',
-      })
-    )
-  })
+  return ranked.map(({ product }) => product)
 }
+
+const productNameCollator = new Intl.Collator('id', {
+  sensitivity: 'base',
+})

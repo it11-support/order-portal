@@ -3,6 +3,7 @@ import { priceableCustomer } from './customer'
 import { observeCustomerPrices } from './price-refresh'
 import { round6, toNumber } from './utils'
 import type { EffectivePrice, PriceableCustomer } from './types'
+import { getCachedPriceList } from '../cache'
 
 /**
  * Net price-list prices for a set of items.
@@ -12,36 +13,65 @@ import type { EffectivePrice, PriceableCustomer } from './types'
 export const resolvePriceListNet = async (
   customer: PriceableCustomer,
   itemCodes: string[],
+  useCache = false,
 ): Promise<Map<string, EffectivePrice>> => {
   const resolved = new Map<string, EffectivePrice>()
-  if (customer.priceListNum == null || !itemCodes.length) return resolved
 
-  const rows = await prisma.$queryRaw<
-    { item_code: string; price: string | null; currency: string | null }[]
-  >`
-    SELECT DISTINCT ON (ip.item_code)
-      ip.item_code, ip.price, ip.currency
-    FROM item_prices ip
-    WHERE ip.list_num = ${customer.priceListNum}
-      AND ip.item_code = ANY(${itemCodes}::varchar[])
-      AND ip.price IS NOT NULL
-    ORDER BY ip.item_code, ip.updated_at DESC
-  `
+  if (customer.priceListNum == null || !itemCodes.length) {
+    return resolved
+  }
+
+  const priceList = useCache
+    ? await getCachedPriceList(customer.priceListNum)
+    : new Map(
+      (
+        await prisma.$queryRaw<
+          {
+            item_code: string
+            price: string
+            currency: string | null
+          }[]
+        >`
+            SELECT DISTINCT ON (ip.item_code)
+              ip.item_code,
+              ip.price::text AS price,
+              ip.currency
+            FROM item_prices ip
+            WHERE ip.list_num = ${customer.priceListNum}
+              AND ip.item_code = ANY(${itemCodes}::varchar[])
+              AND ip.price IS NOT NULL
+            ORDER BY ip.item_code, ip.updated_at DESC
+          `
+      ).map((row) => [
+        row.item_code,
+        {
+          price: row.price,
+          currency: row.currency,
+        },
+      ]),
+    )
 
   const discount = toNumber(customer.discountLevel) ?? 0
   const factor = 1 - discount / 100
 
-  for (const row of rows) {
+  for (const itemCode of itemCodes) {
+    const row = priceList.get(itemCode)
+
+    if (!row) continue
+
     const listPrice = toNumber(row.price)
+
     if (listPrice === null) continue
-    resolved.set(row.item_code, {
-      itemCode: row.item_code,
+
+    resolved.set(itemCode, {
+      itemCode,
       price: round6(listPrice * factor),
       currency: row.currency ?? null,
       source: 'pricelist',
       discountApplied: discount,
     })
   }
+
   return resolved
 }
 
@@ -52,22 +82,28 @@ export const actualPrices = async (
   customerId: bigint | string,
   itemCodes: string[],
 ): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
   const resolved = new Map<string, EffectivePrice>()
+
   if (!itemCodes.length) return resolved
+
   const rows = await prisma.customerItemPrice.findMany({
-    where: { customerId: cid, itemCode: { in: itemCodes } },
+    where: {
+      customerId: BigInt(String(customerId)),
+      itemCode: { in: itemCodes },
+    },
     select: {
       itemCode: true,
       price: true,
       currency: true,
       discountApplied: true,
-      source: true,
     },
   })
+
   for (const row of rows) {
     const price = toNumber(row.price)
+
     if (price === null) continue
+
     resolved.set(row.itemCode, {
       itemCode: row.itemCode,
       price,
@@ -76,6 +112,7 @@ export const actualPrices = async (
       discountApplied: toNumber(row.discountApplied) ?? 0,
     })
   }
+
   return resolved
 }
 
@@ -90,17 +127,13 @@ export const effectivePrices = async (
   customerId: bigint | string,
   itemCodes: string[],
 ): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
-  const customer = await priceableCustomer(cid)
-  if (!customer || !itemCodes.length) return new Map()
+  if (!itemCodes.length) return new Map()
 
-  const resolved = new Map(await actualPrices(cid, itemCodes))
-  const missing = itemCodes.filter((itemCode) => !resolved.has(itemCode))
-  if (missing.length) {
-    const list = await resolvePriceListNet(customer, missing)
-    for (const [itemCode, value] of list) resolved.set(itemCode, value)
-  }
-  return resolved
+  const customer = await priceableCustomer(customerId)
+
+  if (!customer) return new Map()
+
+  return resolveEffectivePrices(customer, itemCodes)
 }
 
 /**
@@ -117,13 +150,15 @@ export const pricesForCatalog = async (
   customerId: bigint | string,
   itemCodes: string[],
 ): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
-  const customer = await priceableCustomer(cid)
-  if (!customer || !itemCodes.length) return new Map()
+  if (!itemCodes.length) return new Map()
+
+  const customer = await priceableCustomer(customerId)
+
+  if (!customer) return new Map()
 
   await observeCustomerPrices(customer, itemCodes)
 
-  return effectivePrices(cid, itemCodes)
+  return resolveEffectivePrices(customer, itemCodes)
 }
 
 /**
@@ -145,4 +180,35 @@ export const hasNegotiatedPrices = async (
 
   const resolved = await effectivePrices(customerId, wanted)
   return wanted.every((itemCode) => resolved.get(itemCode)?.source === 'actual')
+}
+
+export const resolveEffectivePrices = async (
+  customer: PriceableCustomer,
+  itemCodes: string[],
+  useCache = false,
+): Promise<Map<string, EffectivePrice>> => {
+  if (!itemCodes.length) return new Map()
+
+  const resolved = await actualPrices(
+    customer.id,
+    itemCodes,
+  )
+
+  const missing = itemCodes.filter(
+    (itemCode) => !resolved.has(itemCode),
+  )
+
+  if (missing.length) {
+    const list = await resolvePriceListNet(
+      customer,
+      missing,
+      useCache,
+    )
+
+    for (const [itemCode, value] of list) {
+      resolved.set(itemCode, value)
+    }
+  }
+
+  return resolved
 }

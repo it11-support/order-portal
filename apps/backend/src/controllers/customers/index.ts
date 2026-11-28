@@ -17,6 +17,7 @@ import {
   saveCustomerLogin,
 } from '@/services/customer-login'
 import { CustomerLoginError } from '@/services/customer-login/validation'
+import { getCustomerActivity } from '@/services'
 
 export const disableCustomerLogin = async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id)
@@ -219,42 +220,7 @@ export const getCustomers = async (
     return
   }
 
-  const since = new Date()
-  since.setMonth(since.getMonth() - 3)
-
-  const cardCodes = [
-    ...new Set(
-      customerKeys
-        .map(({ CardCode }) => CardCode)
-        .filter((code): code is string => code !== null),
-    ),
-  ]
-
-  const invoiceCounts = cardCodes.length
-    ? await prisma.salesInvoice.groupBy({
-      by: ['cardCode'],
-      where: {
-        cardCode: { in: cardCodes },
-        docDate: { gte: since },
-      },
-      _count: {
-        _all: true,
-      },
-      _max: {
-        docDate: true,
-      },
-    })
-    : []
-
-  const activityMap = new Map(
-    invoiceCounts.map(({ cardCode, _count, _max }) => [
-      cardCode,
-      {
-        count: _count._all,
-        lastDate: _max.docDate?.getTime() ?? 0,
-      },
-    ]),
-  )
+  const activityMap = await getCustomerActivity()
 
   // Hitung aktivitas sekali untuk setiap customer.
   const rankedCustomers = customerKeys.map((customer) => {

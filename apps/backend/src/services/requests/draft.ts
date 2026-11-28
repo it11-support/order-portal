@@ -3,19 +3,36 @@ import type { AuthenticatedRequest } from '@auth'
 import type { Actor } from './access'
 import { prisma } from '@/utils'
 import { customerPurchasedProductFilter } from '@/services/customer-catalog'
+
+import { priceableCustomer } from '@/services/pricing/customer'
+import { refreshCustomerPrices } from '@/services/pricing/pricing'
+import { round6 } from '@/services/pricing/utils'
 import {
-  priceableCustomer,
-  refreshCustomerPrices,
-  round6,
-} from '@/services/pricing/pricing'
+  priceIncreaseCheck,
+  pricesForItems,
+} from '@/services/pricing/order-check'
+
 import type { PortalRequest, Product } from '@/generated/prisma/client'
 import type { PortalRequestUpdateInput } from '@/generated/prisma/models'
 import type { InputJsonValue } from '@prisma/client/runtime/client'
-import { hasDuplicateProductIds, isRecord, parseProductId, parseQuantity } from '@/controllers/requests'
-import { DraftItemInput, DraftItemSnapshot, DraftItemsResult, NormalizedItem, PreviousDraftItem } from './types'
+
+import {
+  hasDuplicateProductIds,
+  isRecord,
+  parseProductId,
+  parseQuantity,
+} from '@/controllers/requests'
+
+import type {
+  DraftItemInput,
+  DraftItemSnapshot,
+  DraftItemsResult,
+  NormalizedItem,
+  PreviousDraftItem,
+} from './types'
+
 import { getRequestPrices } from './request-pricing'
 import { buildRequestSnapshot } from './request-snapshot'
-import { priceIncreaseCheck, pricesForItems } from '../pricing'
 
 
 const fail = (res: Response, status: number, message: string): false => {

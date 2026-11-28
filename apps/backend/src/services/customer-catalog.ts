@@ -1,21 +1,11 @@
-import { ProductWhereInput } from '@/generated/prisma/models'
-import { prisma } from '@/utils'
+import type { ProductWhereInput } from '@/generated/prisma/models'
+import { cache, prisma } from '@/utils'
 import type { AuthenticatedRequest } from '@auth'
+import { CACHE_KEYS, CACHE_TTL } from './cache'
 
-/**
- * Normalisasi item code dari SAP/database.
- *
- * Mencegah item yang sama dianggap berbeda karena:
- * - whitespace
- * - trailing space
- * - perbedaan uppercase/lowercase
- *
- * Dipakai sebagai identitas produk, BUKAN sebagai nilai untuk query.
- * Nilai yang dikembalikan ke Prisma harus tetap nilai persis seperti
- * tersimpan di products.item_code, karena `in`/`notIn` membandingkan
- * kolom mentah dan tidak tahan trailing space.
- */
-export const normalizeItemCode = (value: string): string => value.trim().toUpperCase()
+
+export const normalizeItemCode = (value: string): string =>
+  value.trim().toUpperCase()
 
 const emptyProductFilter = (): ProductWhereInput => ({
   isActive: true,
@@ -27,9 +17,7 @@ const itemCodeFilter = (itemCodes: string[]): ProductWhereInput => ({
   itemCode: { in: itemCodes },
 })
 
-/**
- * Mengambil customer yang sedang login.
- */
+
 export const currentCustomer = async (req: AuthenticatedRequest) => {
   if (req.user?.role.name !== 'customer' || req.user.customerId == null) {
     return null
@@ -45,7 +33,6 @@ export const currentCustomer = async (req: AuthenticatedRequest) => {
     where: {
       id: BigInt(id),
     },
-
     select: {
       id: true,
       CardCode: true,
@@ -62,44 +49,49 @@ export const currentCustomer = async (req: AuthenticatedRequest) => {
   return customer
 }
 
-/**
- * Mengambil item code katalog berdasarkan histori customer.
- *
- * -----------------
- * Produk yang pernah dibeli customer sendiri.
- *
- * ----------------
- * Produk yang pernah dibeli customer lain
- * dengan industry yang sama,
- * tetapi BELUM pernah dibeli customer ini.
- *
- * Historical purchase:
- * - invoice tidak cancelled
- * - quantity > 0
- * - credit note tidak menghapus historical purchase
- *
- * Yang dikembalikan adalah `products.item_code` apa adanya, hasil join ke
- * tabel produk. sales_invoices.item_code disinkronkan dari SAP dan sering
- * berbeda dari products.item_code pada whitespace atau kapitalisasi, jadi
- * histori dicocokkan dengan UPPER(TRIM(...)) di kedua sisi.
- *
- * Penting: jangan menguppercase hasil sebelum memakainya di query Prisma.
- * `in`/`notIn` membandingkan kolom mentah, sehingga kode yang sudah
- * dinormalisasi tidak akan cocok dengan baris produk dan produk yang sama bisa
- * muncul di Purchased sekaligus Other.
- */
-export const customerItemCodes = async (
-  cardCode: string,
-  industryCode: number | null,
-): Promise<string[]> => {
-  // =========================================================
-  // SUGGESTED: purchased by other customers in the same industry
-  // =========================================================
 
-  if (industryCode == null) {
-    return []
+export const fetchCustomerPurchasedItemCodes = async (
+  cardCode: string,
+): Promise<string[]> => {
+  const rows = await prisma.$queryRaw<{ item_code: string }[]>`
+    SELECT DISTINCT p.item_code
+    FROM products p
+    INNER JOIN sales_invoices si
+      ON UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
+    WHERE TRIM(si.card_code) = TRIM(${cardCode})
+      AND si.canceled = 'N'
+      AND si.quantity > 0
+      AND p.item_code IS NOT NULL
+  `
+
+  return rows
+    .map(({ item_code }) => item_code)
+    .filter(
+      (code): code is string =>
+        typeof code === 'string' && code.trim().length > 0,
+    )
+}
+
+export const customerPurchasedItemCodes = async (
+  cardCode: string,
+  fresh = false,
+): Promise<string[]> => {
+  if (fresh) {
+    return fetchCustomerPurchasedItemCodes(cardCode)
   }
 
+  return cache.remember(
+    CACHE_KEYS.customer.purchased(cardCode),
+    CACHE_TTL.CUSTOMER_PURCHASED,
+    () => fetchCustomerPurchasedItemCodes(cardCode),
+  )
+}
+
+
+const fetchCustomerItemCodes = async (
+  cardCode: string,
+  industryCode: number,
+): Promise<string[]> => {
   const rows = await prisma.$queryRaw<{ item_code: string }[]>`
     SELECT p.item_code
     FROM products p
@@ -125,77 +117,69 @@ export const customerItemCodes = async (
   `
 
   return rows
-    .map((row) => row.item_code)
-    .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+    .map(({ item_code }) => item_code)
+    .filter(
+      (code): code is string =>
+        typeof code === 'string' && code.trim().length > 0,
+    )
 }
 
-/**
- * Membuat Prisma ProductWhereInput untuk customer.
- *
- *   hanya produk yang pernah dibeli.
- *
- * Filter ini mewakili histori pembelian customer, BUKAN filter kategori
- * katalog. Jangan dipakai untuk productCategory biasa seperti
- * CHEMICAL/SAUCE/TISSUE/OTHER.
- */
-/**
- * Item codes yang pernah dibeli customer sendiri (repeat order).
- *
- * Historical purchase:
- * - invoice tidak cancelled
- * - quantity > 0
- *
- * Dicocokkan dengan UPPER(TRIM(...)) di kedua sisi karena
- * sales_invoices.item_code sering berbeda dari products.item_code pada
- * whitespace atau kapitalisasi.
- */
-export const customerPurchasedItemCodes = async (cardCode: string): Promise<string[]> => {
-  const rows = await prisma.$queryRaw<{ item_code: string }[]>`
-    SELECT DISTINCT p.item_code
-    FROM products p
-    INNER JOIN sales_invoices si
-      ON UPPER(TRIM(si.item_code)) = UPPER(TRIM(p.item_code))
-    WHERE TRIM(si.card_code) = TRIM(${cardCode})
-      AND si.canceled = 'N'
-      AND si.quantity > 0
-      AND p.item_code IS NOT NULL
-  `
 
-  return rows
-    .map((row) => row.item_code)
-    .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+export const customerItemCodes = async (
+  cardCode: string,
+  industryCode: number | null,
+  fresh = false,
+): Promise<string[]> => {
+  if (industryCode == null) return []
+
+  if (fresh) {
+    return fetchCustomerItemCodes(cardCode, industryCode)
+  }
+
+  return cache.remember(
+    CACHE_KEYS.customer.suggested(cardCode, industryCode),
+    CACHE_TTL.CUSTOMER_SUGGESTED,
+    () => fetchCustomerItemCodes(cardCode, industryCode),
+  )
 }
 
-/**
- * Membuat Prisma ProductWhereInput untuk repeat order customer.
- *
- * Hanya produk yang pernah dibeli customer sendiri (histori pembelian
- * actual). Filter ini mewakli histori pembelian customer, BUKAN filter
- * kategori katalog. Jangan dipakai untuk productCategory biasa seperti
- * CHEMICAL/SAUCE/TISSUE/OTHER.
- */
+
+export const invalidateCustomerPurchasedItemCodes = async (
+  cardCode: string,
+): Promise<void> => {
+  await cache.del(CACHE_KEYS.customer.purchased(cardCode))
+}
+
+export const invalidateCustomerSuggestedItemCodes = async (
+  cardCode: string,
+  industryCode: number | null,
+): Promise<void> => {
+  if (industryCode == null) return
+
+  await cache.del(
+    CACHE_KEYS.customer.suggested(cardCode, industryCode),
+  )
+}
+
 export const customerPurchasedProductFilter = async (
   req: AuthenticatedRequest,
+  fresh = false,
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
   if (!customer?.CardCode) return emptyProductFilter()
 
-  const itemCodes = await customerPurchasedItemCodes(customer.CardCode)
+  const itemCodes = await customerPurchasedItemCodes(
+    customer.CardCode,
+    fresh,
+  )
 
   return itemCodeFilter(itemCodes)
 }
 
-/**
- * Membuat Prisma ProductWhereInput untuk saran (quote) customer.
- *
- * Hanya produk dari customer lain dengan industry yang sama yang BELUM
- * pernah dibeli customer ini. Filter ini mewakli histori pembelian
- * customer, BUKAN filter kategori katalog. Jangan dipakai untuk
- * productCategory biasa seperti CHEMICAL/SAUCE/TISSUE/OTHER.
- */
 export const customerSuggestedProductFilter = async (
   req: AuthenticatedRequest,
+  fresh = false,
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
@@ -204,31 +188,24 @@ export const customerSuggestedProductFilter = async (
   const itemCodes = await customerItemCodes(
     customer.CardCode,
     customer.IndustryC ?? null,
+    fresh,
   )
 
   return itemCodeFilter(itemCodes)
 }
 
-/**
- * Membuat Prisma ProductWhereInput untuk customer.
- *
- * @deprecated Gunakan customerPurchasedProductFilter untuk repeat order
- * atau customerSuggestedProductFilter untuk saran (quote).
- */
-export const customerProductFilter = async (
-  req: AuthenticatedRequest,
-): Promise<ProductWhereInput> => {
-  return customerSuggestedProductFilter(req)
-}
-
 export const customerUnpurchasedProductFilter = async (
   req: AuthenticatedRequest,
+  fresh = false,
 ): Promise<ProductWhereInput> => {
   const customer = await currentCustomer(req)
 
   if (!customer?.CardCode) return emptyProductFilter()
 
-  const purchasedCodes = await customerPurchasedItemCodes(customer.CardCode)
+  const purchasedCodes = await customerPurchasedItemCodes(
+    customer.CardCode,
+    fresh,
+  )
 
   if (!purchasedCodes.length) return { isActive: true }
 
@@ -236,4 +213,11 @@ export const customerUnpurchasedProductFilter = async (
     isActive: true,
     itemCode: { notIn: purchasedCodes },
   }
+}
+
+export const customerProductFilter = async (
+  req: AuthenticatedRequest,
+  fresh = false,
+): Promise<ProductWhereInput> => {
+  return customerSuggestedProductFilter(req, fresh)
 }

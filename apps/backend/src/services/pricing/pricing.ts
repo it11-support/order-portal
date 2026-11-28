@@ -1,8 +1,9 @@
 import { Decimal } from '@/generated/prisma/internal/prismaNamespace'
 import { prisma } from '@/utils'
 import { announcePriceChanges } from '@/services/price-alerts'
-import { effectivePrices } from './resolver'
+import { effectivePrices, resolveEffectivePrices } from './resolver'
 import { resolveInvoicePrices } from './invoice'
+import { productNames } from './product'
 
 /**
  * Two prices exist for every item, and which one applies depends on whether the
@@ -270,33 +271,73 @@ const refreshOneCustomerPrice = async (
 }
 
 export const refreshCustomerPrices = async (
-  customer: { id: bigint; CardCode: string | null },
+  customer: {
+    id: bigint
+    CardCode: string | null
+  },
   itemCodes: string[],
 ): Promise<PriceMovement[]> => {
-  if (!customer.CardCode || !itemCodes.length) return []
+  if (!customer.CardCode || !itemCodes.length) {
+    return []
+  }
 
-  const invoice = await resolveInvoicePrices(customer.CardCode, itemCodes)
-  const existing = await prisma.customerItemPrice.findMany({
-    where: {
-      customerId: customer.id,
-      itemCode: { in: itemCodes },
-    },
-    select: {
-      itemCode: true,
-      price: true,
-      lastInvoicePrice: true,
-    },
-  })
-  const previous = await removeStaleCustomerPrices(customer.id, existing, invoice)
+  const [invoice, existing] = await Promise.all([
+    resolveInvoicePrices(customer.CardCode, itemCodes),
+
+    prisma.customerItemPrice.findMany({
+      where: {
+        customerId: customer.id,
+        itemCode: { in: itemCodes },
+      },
+      select: {
+        itemCode: true,
+        price: true,
+        lastInvoicePrice: true,
+      },
+    }),
+  ])
+
+  const previous = await removeStaleCustomerPrices(
+    customer.id,
+    existing,
+    invoice,
+  )
+
   if (!invoice.size) return []
 
-  const names = await productNames([...invoice.keys()])
+  const changedCodes: string[] = []
+
+  for (const [itemCode, row] of invoice) {
+    const oldPrice = previous.get(itemCode)
+
+    if (
+      oldPrice != null &&
+      oldPrice !== round6(row.unitPrice)
+    ) {
+      changedCodes.push(itemCode)
+    }
+  }
+
+  const names = changedCodes.length
+    ? await productNames(changedCodes)
+    : new Map<string, string>()
+
   const now = new Date()
   const movements: PriceMovement[] = []
 
   for (const [itemCode, row] of invoice) {
-    const movement = await refreshOneCustomerPrice(customer.id, itemCode, row, previous, names, now)
-    if (movement) movements.push(movement)
+    const movement = await refreshOneCustomerPrice(
+      customer.id,
+      itemCode,
+      row,
+      previous,
+      names,
+      now,
+    )
+
+    if (movement) {
+      movements.push(movement)
+    }
   }
 
   return movements
@@ -305,14 +346,6 @@ export const refreshCustomerPrices = async (
 const invoiceRef = (row: InvoicePriceRow) =>
   row.doc_entry === null ? null : `INV ${row.doc_entry}/${row.line_num ?? 0}`
 
-const productNames = async (itemCodes: string[]) => {
-  if (!itemCodes.length) return new Map<string, string>()
-  const rows = await prisma.product.findMany({
-    where: { itemCode: { in: itemCodes } },
-    select: { itemCode: true, itemName: true },
-  })
-  return new Map(rows.map((row) => [row.itemCode, row.itemName]))
-}
 
 
 
@@ -341,13 +374,15 @@ export const pricesForCatalog = async (
   customerId: bigint | string,
   itemCodes: string[],
 ): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
-  const customer = await priceableCustomer(cid)
-  if (!customer || !itemCodes.length) return new Map()
+  if (!itemCodes.length) return new Map()
+
+  const customer = await priceableCustomer(customerId)
+
+  if (!customer) return new Map()
 
   await observeCustomerPrices(customer, itemCodes)
 
-  return effectivePrices(cid, itemCodes)
+  return resolveEffectivePrices(customer, itemCodes, true)
 }
 
 /**
@@ -382,4 +417,4 @@ export interface PendingPriceIncrease {
 }
 
 
-export { formatPrice, round6, toNumber, productNames }
+export { formatPrice, round6, toNumber }

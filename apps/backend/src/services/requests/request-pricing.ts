@@ -1,11 +1,9 @@
-
 import type { Product } from '@/generated/prisma/client'
 import type { RequestItem } from './types'
-import {
-  priceableCustomer,
-  refreshCustomerPrices,
-} from '@/services/pricing/pricing'
-import { pricesForItems } from '../pricing'
+
+import { priceableCustomer } from '@/services/pricing/customer'
+import { refreshCustomerPrices } from '@/services/pricing/pricing'
+import { pricesForItems } from '@/services/pricing/order-check'
 
 export const getRequestPrices = async (
   customerId: bigint,

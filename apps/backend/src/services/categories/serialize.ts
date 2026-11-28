@@ -1,5 +1,6 @@
 import { normalizeItemCode } from '@/services/customer-catalog'
-import { round6, pricesForCatalog } from '@/services/pricing/pricing'
+import { round6 } from '@/services/pricing/utils'
+import { pricesForCatalog } from '@/services/pricing/resolver'
 import type { CatalogProduct } from './catalog'
 import { asFiniteNumber, type PriceChange } from './price-changes'
 

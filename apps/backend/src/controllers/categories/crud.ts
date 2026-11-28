@@ -1,29 +1,12 @@
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '@auth'
 import { prisma } from '@utils'
+import { getCachedCategories } from '@/services'
 
 export const getCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const isCustomer = req.user?.role.name === 'customer'
 
-  // Kategori normal adalah filter katalog yang berdiri sendiri, bukan turunan
-  // dari histori pembelian. Memakai customerProductFilter di sini membuat
-  // kategori yang belum pernah dibeli customer hilang dari UI padahal produknya
-  // ada dan harus bisa dibuka. Syaratnya hanya: kategori aktif dan punya
-  // minimal satu produk aktif.
-  const availableCodes = isCustomer
-    ? (
-        await prisma.product.findMany({
-          where: { isActive: true },
-          select: { productCategory: true },
-          distinct: ['productCategory'],
-        })
-      ).map((product) => product.productCategory)
-    : []
-
-  const categories = await prisma.category.findMany({
-    where: isCustomer ? { isActive: true, code: { in: availableCodes } } : {},
-    orderBy: { sortOrder: 'asc' },
-  })
+  const categories = await getCachedCategories(isCustomer)
 
   res.status(200).json({ data: categories })
 }
@@ -97,9 +80,7 @@ export const reorderCategories = async (req: Request, res: Response): Promise<vo
     ),
   )
 
-  const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: 'asc' },
-  })
+  const categories = await getCachedCategories()
 
   res.status(200).json({ data: categories })
 }
