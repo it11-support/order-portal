@@ -78,6 +78,7 @@ const Login = () => {
                   ? 'border-destructive focus:ring-destructive'
                   : 'border-border focus:ring-accent'
               }`}
+              autoComplete="username"
             />
             {loginError?.username && (
               <p className="text-xs text-destructive font-semibold">{loginError.username}</p>
@@ -100,6 +101,7 @@ const Login = () => {
                   ? 'border-destructive focus:ring-destructive'
                   : 'border-border focus:ring-accent'
               }`}
+              autoComplete="current-password"
             />
             {loginError?.password && (
               <p className="text-xs text-destructive font-semibold">{loginError.password}</p>
