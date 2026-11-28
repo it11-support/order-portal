@@ -5,6 +5,6 @@ export type { PriceSource, EffectivePrice, InvoicePriceRow, PriceMovement, Pendi
 export { toNumber, round6, formatPrice } from './utils'
 export { priceableCustomer } from './customer'
 export { resolveInvoicePrices } from './invoice'
-export { productNames, refreshCustomerPrices } from './price-refresh'
+export { productNames } from './price-refresh'
 export { resolvePriceListNet, actualPrices, effectivePrices, pricesForCatalog, hasNegotiatedPrices } from './resolver'
 export { priceIncreaseCheck, pricesForItems } from './order-check'

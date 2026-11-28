@@ -1,6 +1,7 @@
 import { Decimal } from '@/generated/prisma/internal/prismaNamespace'
 import { prisma } from '@/utils'
 import { announcePriceChanges } from '@/services/price-alerts'
+import { effectivePrices } from './resolver'
 
 /**
  * Two prices exist for every item, and which one applies depends on whether the
@@ -113,46 +114,6 @@ export const priceableCustomer = async (
   }
 }
 
-/**
- * Net price-list prices for a set of items.
- * Returns a map keyed by item code. Customers without a price list, and items
- * without a price entry, are simply absent from the map.
- */
-export const resolvePriceListNet = async (
-  customer: PriceableCustomer,
-  itemCodes: string[],
-): Promise<Map<string, EffectivePrice>> => {
-  const resolved = new Map<string, EffectivePrice>()
-  if (customer.priceListNum == null || !itemCodes.length) return resolved
-
-  const rows = await prisma.$queryRaw<
-    { item_code: string; price: string | null; currency: string | null }[]
-  >`
-    SELECT DISTINCT ON (ip.item_code)
-      ip.item_code, ip.price, ip.currency
-    FROM item_prices ip
-    WHERE ip.list_num = ${customer.priceListNum}
-      AND ip.item_code = ANY(${itemCodes}::varchar[])
-      AND ip.price IS NOT NULL
-    ORDER BY ip.item_code, ip.updated_at DESC
-  `
-
-  const discount = toNumber(customer.discountLevel) ?? 0
-  const factor = 1 - discount / 100
-
-  for (const row of rows) {
-    const listPrice = toNumber(row.price)
-    if (listPrice === null) continue
-    resolved.set(row.item_code, {
-      itemCode: row.item_code,
-      price: round6(listPrice * factor),
-      currency: row.currency ?? null,
-      source: 'pricelist',
-      discountApplied: discount,
-    })
-  }
-  return resolved
-}
 
 /**
  * The last invoice line per item for one customer.
@@ -401,63 +362,7 @@ const productNames = async (itemCodes: string[]) => {
   return new Map(rows.map((row) => [row.itemCode, row.itemName]))
 }
 
-/**
- * Committed actual prices, i.e. items this customer has bought before.
- */
-export const actualPrices = async (
-  customerId: bigint | string,
-  itemCodes: string[],
-): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
-  const resolved = new Map<string, EffectivePrice>()
-  if (!itemCodes.length) return resolved
-  const rows = await prisma.customerItemPrice.findMany({
-    where: { customerId: cid, itemCode: { in: itemCodes } },
-    select: {
-      itemCode: true,
-      price: true,
-      currency: true,
-      discountApplied: true,
-      source: true,
-    },
-  })
-  for (const row of rows) {
-    const price = toNumber(row.price)
-    if (price === null) continue
-    resolved.set(row.itemCode, {
-      itemCode: row.itemCode,
-      price,
-      currency: row.currency ?? null,
-      source: 'actual',
-      discountApplied: toNumber(row.discountApplied) ?? 0,
-    })
-  }
-  return resolved
-}
 
-/**
- * The price that applies to a set of items for this customer right now.
- *
- * Repeat items keep their actual invoice price. Anything the customer has never
- * bought falls back to the price list, which is the figure an inquiry is quoted
- * at and the figure they may order at without any negotiation.
- */
-export const effectivePrices = async (
-  customerId: bigint | string,
-  itemCodes: string[],
-): Promise<Map<string, EffectivePrice>> => {
-  const cid = BigInt(String(customerId))
-  const customer = await priceableCustomer(cid)
-  if (!customer || !itemCodes.length) return new Map()
-
-  const resolved = new Map(await actualPrices(cid, itemCodes))
-  const missing = itemCodes.filter((itemCode) => !resolved.has(itemCode))
-  if (missing.length) {
-    const list = await resolvePriceListNet(customer, missing)
-    for (const [itemCode, value] of list) resolved.set(itemCode, value)
-  }
-  return resolved
-}
 
 const observeCustomerPrices = async (
   customer: PriceableCustomer,
